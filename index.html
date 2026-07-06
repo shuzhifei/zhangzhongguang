@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>掌中光 - 皮影戏AI互动游戏</title>
+    <link rel="stylesheet" href="css/theater.css">
+</head>
+<body>
+
+    <!-- ===== 顶部标题栏 ===== -->
+    <div class="header">掌 中 光 · 皮 影 戏</div>
+
+    <!-- ===== 主游戏区域 ===== -->
+    <div class="main-area">
+
+        <!-- 左侧：皮影箱 -->
+        <div class="puppet-box">
+            <h3>🏮 皮影箱</h3>
+            <div class="puppet-card" data-puppet="shouxing">
+                <span class="puppet-icon">👴</span>
+                <span class="puppet-name">老寿星</span>
+            </div>
+            <div class="puppet-card" data-puppet="tudi">
+                <span class="puppet-icon">🧙</span>
+                <span class="puppet-name">土地公</span>
+            </div>
+            <div class="puppet-card" data-puppet="lang">
+                <span class="puppet-icon">🐺</span>
+                <span class="puppet-name">狼</span>
+            </div>
+            <div class="puppet-card" data-puppet="he">
+                <span class="puppet-icon">🦢</span>
+                <span class="puppet-name">鹤</span>
+            </div>
+            <div class="puppet-card" data-puppet="yu">
+                <span class="puppet-icon">🐟</span>
+                <span class="puppet-name">鱼</span>
+            </div>
+            <div class="puppet-card" data-puppet="dao">
+                <span class="puppet-icon">🔪</span>
+                <span class="puppet-name">刀</span>
+            </div>
+        </div>
+
+        <!-- 中间：白布舞台 -->
+        <div class="stage" id="stage">
+            <div class="stage-hint">将皮影拖到这里</div>
+        </div>
+
+        <!-- 右侧：信息面板 -->
+        <div class="info-panel">
+            <div class="lamp-section">
+                <div class="lamp-label">🏮 灯 油</div>
+                <div class="flame-container">
+                    <div class="flame" id="flame"></div>
+                </div>
+                <div class="oil-bar-outer">
+                    <div class="oil-bar-inner" id="oilBar"></div>
+                </div>
+                <div class="oil-text" id="oilText">100 / 100</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 底部：对话框 ===== -->
+    <div class="dialogue-area">
+        <div class="dialogue-speaker" id="speaker">📜 路师傅</div>
+        <div class="dialogue-text" id="dialogueText">
+            各位好，我是路春福，北京皮影戏传承人。<br>
+            今天，我带你们看看皮影戏里的老北京。
+        </div>
+        <div class="btn-row">
+            <button class="btn" id="btnConfirm">确认摆影</button>
+            <button class="btn" id="btnAsk">追问师父</button>
+        </div>
+    </div>
+
+</body>
+</html>
