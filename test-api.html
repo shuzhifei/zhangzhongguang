@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通义千问 API 测试 - 掌中光</title>
+    <style>
+        :root {
+            --bg: #1a0f08;
+            --panel: #2a1a0a;
+            --text: #e8d5b7;
+            --accent: #FF8C00;
+            --accent-dim: #b85a00;
+            --border: #4a3020;
+            --green: #4CAF50;
+            --red: #f44336;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Noto Serif SC', 'SimSun', 'STSong', serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        /* 标题区 */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .header h1 {
+            font-size: 28px;
+            color: var(--accent);
+            letter-spacing: 4px;
+            margin-bottom: 8px;
+        }
+        .header .subtitle {
+            font-size: 14px;
+            color: #8a7560;
+        }
+
+        /* 卡片 */
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 16px;
+            color: var(--accent);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* 配置区 */
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .config-item { display: flex; flex-direction: column; gap: 4px; }
+        .config-item.full { grid-column: 1 / -1; }
+        .config-item label {
+            font-size: 13px;
+            color: #a09080;
+        }
+        .config-item input, .config-item select, .config-item textarea {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .config-item input:focus, .config-item textarea:focus {
+            border-color: var(--accent);
+        }
+        .config-item textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* 按钮 */
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 24px;
+            border: 1px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            font-family: inherit;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 2px;
+        }
+        .btn:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .btn.primary {
+            background: var(--accent);
+            color: var(--bg);
+            font-weight: bold;
+        }
+        .btn.primary:hover {
+            background: #e07800;
+        }
+        .btn.stream-toggle {
+            border-color: #6a5acd;
+            color: #6a5acd;
+        }
+        .btn.stream-toggle:hover, .btn.stream-toggle.active {
+            background: #6a5acd;
+            color: white;
+        }
+
+        /* 状态指示 */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            font-size: 13px;
+            color: #8a7560;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #555;
+            transition: background 0.3s;
+        }
+        .status-dot.idle { background: #555; }
+        .status-dot.loading { background: var(--accent); animation: pulse 0.8s infinite; }
+        .status-dot.success { background: var(--green); }
+        .status-dot.error { background: var(--red); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* 输出区 */
+        .output-area {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 20px;
+            min-height: 120px;
+            font-size: 16px;
+            line-height: 2;
+            position: relative;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .output-area .placeholder {
+            color: #555;
+            font-style: italic;
+        }
+        .output-area .cursor::after {
+            content: '▎';
+            animation: blink 1s infinite;
+            color: var(--accent);
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* 信息栏 */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #6a5040;
+            margin-top: 8px;
+        }
+
+        /* 提示 */
+        .hint {
+            font-size: 13px;
+            color: var(--accent-dim);
+            background: rgba(255, 140, 0, 0.08);
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 8px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .quick-prompts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .quick-prompt {
+            padding: 6px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: #a09080;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .quick-prompt:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* 语速预设按钮 */
+        .speed-preset {
+            padding: 6px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: #a09080;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: inherit;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .speed-preset:hover {
+            border-color: var(--accent-dim);
+            color: var(--text);
+        }
+        .speed-preset.active {
+            background: rgba(255, 140, 0, 0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* 油量预设按钮 */
+        .oil-preset {
+            padding: 6px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: #a09080;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: inherit;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .oil-preset:hover {
+            border-color: var(--accent-dim);
+            color: var(--text);
+        }
+        .oil-preset.active {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- 标题 -->
+    <div class="header">
+        <h1>掌 中 光</h1>
+        <div class="subtitle">通义千问 API 测试工具 · 路师傅说戏模拟</div>
+    </div>
+
+    <!-- API配置 -->
+    <div class="card">
+        <h2>🔑 API 配置</h2>
+        <div class="config-grid">
+            <div class="config-item full">
+                <label>API Key</label>
+                <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                       onchange="saveConfig()">
+            </div>
+            <div class="config-item">
+                <label>模型</label>
+                <select id="model" onchange="saveConfig()">
+                    <option value="qwen-turbo">qwen-turbo（免费额度多，速度快）</option>
+                    <option value="qwen-plus">qwen-plus（效果更好）</option>
+                    <option value="qwen-max">qwen-max（最强）</option>
+                    <option value="qwen-turbo-latest">qwen-turbo-latest（最新版）</option>
+                </select>
+            </div>
+            <div class="config-item">
+                <label>Temperature（0=保守 1=随机）</label>
+                <input type="number" id="temperature" value="0.8" min="0" max="1" step="0.1" onchange="saveConfig()">
+            </div>
+        </div>
+    </div>
+
+    <!-- 语速控制 -->
+    <div class="card">
+        <h2>⏱ 语速控制（匀速缓冲流式）</h2>
+        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 250px;">
+                <label style="font-size: 13px; color: #a09080; display: block; margin-bottom: 4px;">
+                    每字间隔：<strong id="speedValue" style="color: var(--accent);">220ms</strong>
+                    &nbsp;<span id="speedDesc" style="color: #8a7560;">路师傅从容说戏</span>
+                </label>
+                <input type="range" id="speedSlider" min="60" max="500" value="220" step="10"
+                       oninput="updateSpeed(this.value)" onchange="saveConfig()"
+                       style="width: 100%; accent-color: var(--accent);">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #555; margin-top: 2px;">
+                    <span>快 (60ms)</span><span>正常 (150ms)</span><span>从容 (220ms)</span><span>疲惫 (280ms)</span><span>气若游丝 (500ms)</span>
+                </div>
+            </div>
+            <div class="speed-presets" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button class="speed-preset" onclick="setSpeed(220)" data-speed="220">👴 从容说戏</button>
+                <button class="speed-preset" onclick="setSpeed(150)" data-speed="150">📖 正常朗读</button>
+                <button class="speed-preset" onclick="setSpeed(280)" data-speed="280">😔 灯油偏低</button>
+                <button class="speed-preset" onclick="setSpeed(350)" data-speed="350">🕯️ 灯油见底</button>
+                <button class="speed-preset" onclick="setSpeed(80)"  data-speed="80">⚡ 限时对决</button>
+                <button class="speed-preset active" onclick="setSpeed('raw')" data-speed="raw">📡 原始速度</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 灯油模拟 -->
+    <div class="card" id="oilCard">
+        <h2>🪔 灯油衰减模拟</h2>
+        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 16px;">
+            <div style="flex: 1; min-width: 250px;">
+                <label style="font-size: 13px; color: #a09080; display: block; margin-bottom: 4px;">
+                    当前油量：<strong id="oilValue" style="color: var(--accent); font-size: 18px;">100%</strong>
+                    &nbsp;<span id="oilQualityLabel" style="font-size: 13px; padding: 2px 10px; border-radius: 10px; background: #4CAF50; color: #fff;">high · 灯光明亮</span>
+                </label>
+                <input type="range" id="oilSlider" min="0" max="100" value="100" step="1"
+                       oninput="updateOilLevel(this.value)"
+                       style="width: 100%; accent-color: var(--accent);">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #555; margin-top: 2px;">
+                    <span>0% 灯灭</span><span>20% 碎片</span><span>50% 疲惫</span><span>80% 正常</span><span>100% 满油</span>
+                </div>
+            </div>
+            <div class="speed-presets" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button class="oil-preset active" onclick="setOil(100)" data-oil="100">🟢 100% 满油</button>
+                <button class="oil-preset" onclick="setOil(70)" data-oil="70">🟡 70% 微暗</button>
+                <button class="oil-preset" onclick="setOil(45)" data-oil="45">🟠 45% 开始碎</button>
+                <button class="oil-preset" onclick="setOil(25)" data-oil="25">🔴 25% 碎片化</button>
+                <button class="oil-preset" onclick="setOil(10)" data-oil="10">💀 10% 呓语</button>
+            </div>
+        </div>
+        <!-- 参数展示 -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 12px; color: #a09080;">
+            <div style="background: var(--bg); padding: 8px; border-radius: 4px; text-align: center;">
+                <div style="color: var(--text-dim);">字数限制</div>
+                <div style="color: var(--accent); font-weight: bold;" id="paramTokens">120~250字</div>
+            </div>
+            <div style="background: var(--bg); padding: 8px; border-radius: 4px; text-align: center;">
+                <div style="color: var(--text-dim);">max_tokens</div>
+                <div style="color: var(--accent); font-weight: bold;" id="paramMaxTokens">400</div>
+            </div>
+            <div style="background: var(--bg); padding: 8px; border-radius: 4px; text-align: center;">
+                <div style="color: var(--text-dim);">temperature</div>
+                <div style="color: var(--accent); font-weight: bold;" id="paramTemp">0.75</div>
+            </div>
+            <div style="background: var(--bg); padding: 8px; border-radius: 4px; text-align: center;">
+                <div style="color: var(--text-dim);">语速</div>
+                <div style="color: var(--accent); font-weight: bold;" id="paramSpeed">220ms</div>
+            </div>
+        </div>
+        <!-- 效果预览 -->
+        <div style="margin-top: 10px; padding: 10px; background: var(--bg); border-radius: 4px; border-left: 3px solid var(--accent);">
+            <span style="font-size: 11px; color: #555;">预期说话效果：</span>
+            <span id="oilEffectPreview" style="font-size: 12px; color: var(--text-dim);">
+                "书生站的位置——对。槐树在左，月亮在上，这是等人的架势……"
+            </span>
+        </div>
+    </div>
+
+    <!-- System Prompt（自动根据油量生成，可手动微调） -->
+    <div class="card">
+        <h2>👴 路师傅 System Prompt <span style="font-size: 11px; color: #555;">（根据油量自动组装）</span></h2>
+        <div class="config-item full">
+            <textarea id="systemPrompt" rows="8" onchange="saveConfig()"></textarea>
+        </div>
+        <div style="font-size: 11px; color: #555; margin-top: 4px;">
+            💡 上方灯油滑块拖动后，此Prompt会自动更新。你也可以手动编辑后再发送。
+        </div>
+    </div>
+
+    <!-- 测试消息 -->
+    <div class="card">
+        <h2>💬 发送消息测试</h2>
+        <div class="quick-prompts" style="margin-bottom: 12px;">
+            <span style="font-size: 13px; color: #8a7560; margin-right: 4px;">快捷测试：</span>
+            <span class="quick-prompt" onclick="setMessage('你好，路师傅。我是新来的学徒。')">初次见面</span>
+            <span class="quick-prompt" onclick="setMessage('学徒在白布上摆了以下皮影：书生在中央，槐树在左侧，月亮在右上角。')">影面评判</span>
+            <span class="quick-prompt" onclick="setMessage('师傅，刘海戏金蟾那出戏里，琉璃厂的老者是谁？')">追问师傅</span>
+            <span class="quick-prompt" onclick="setMessage('灯油不多了……师傅，你有什么想对我说的吗？')">低油量场景</span>
+        </div>
+        <div class="config-item full">
+            <textarea id="userMessage" rows="3" placeholder="输入你要测试的消息...">你好，路师傅。我是新来的学徒，今天想学一出戏。</textarea>
+        </div>
+
+        <div class="btn-row" style="margin-top: 12px;">
+            <button class="btn stream-toggle active" id="streamToggle" onclick="toggleStream()">
+                📡 流式输出（逐字显示）
+            </button>
+            <button class="btn primary" id="sendBtn" onclick="sendMessage()">
+                🎭 发送
+            </button>
+            <button class="btn" id="clearBtn" onclick="clearOutput()">
+                清空
+            </button>
+        </div>
+
+        <div class="status-bar">
+            <span class="status-dot idle" id="statusDot"></span>
+            <span id="statusText">就绪 — 等待输入</span>
+        </div>
+    </div>
+
+    <!-- 输出 -->
+    <div class="card">
+        <h2>📜 AI 回复</h2>
+        <div class="output-area" id="output">
+            <span class="placeholder">点"发送"，看路师傅怎么说……</span>
+        </div>
+        <div class="info-row">
+            <span id="tokenInfo"></span>
+            <span id="timeInfo"></span>
+        </div>
+        <div class="hint">
+            💡 提示：填入你的通义千问API Key后即可测试。API Key 申请地址：
+            <a href="https://dashscope.aliyun.com" target="_blank" style="color: var(--accent);">dashscope.aliyun.com → API-KEY管理</a>
+            &nbsp;|&nbsp; 免费额度：qwen-turbo 模型百万token免费
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ============================================================
+    // 配置持久化（存localStorage，刷新页面不丢失）
+    // ============================================================
+    const CONFIG_KEY = 'zhangzhongguang_api_config';
+
+    function loadConfig() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
+            if (saved) {
+                document.getElementById('apiKey').value = saved.apiKey || '';
+                document.getElementById('model').value = saved.model || 'qwen-turbo';
+                document.getElementById('temperature').value = saved.temperature ?? 0.8;
+                if (saved.speed !== undefined) updateSpeed(saved.speed, false);
+                if (saved.oilLevel !== undefined) updateOilLevel(saved.oilLevel, false);
+            }
+        } catch(e) { /* ignore */ }
+        // 确保UI初始化（无论是否有存档）
+        if (!currentOilLevel || currentOilLevel === 100 && !document.getElementById('systemPrompt').value) {
+            updateOilLevel(100, false);
+        }
+    }
+
+    function saveConfig() {
+        const config = {
+            apiKey: document.getElementById('apiKey').value,
+            model: document.getElementById('model').value,
+            temperature: parseFloat(document.getElementById('temperature').value) || 0.8,
+            speed: currentSpeed,
+            oilLevel: currentOilLevel
+        };
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    }
+
+    // ============================================================
+    // 灯油衰减模拟
+    // ============================================================
+    let currentOilLevel = 100;
+
+    /** 获取油量对应的 aiQuality */
+    function getOilQuality(percent) {
+        if (percent >= 80) return 'high';
+        if (percent >= 50) return 'medium';
+        if (percent >= 20) return 'low';
+        return 'critical';
+    }
+
+    /** 获取油量对应的API参数 */
+    function getOilParams(percent) {
+        const q = getOilQuality(percent);
+        switch (q) {
+            case 'high':     return { maxTokens: 400, temperature: 0.75, speed: 220, words: '120~250字', label: 'high · 灯光明亮', color: '#4CAF50',
+                preview: '"书生站的位置——对。槐树在左，月亮在上，这是等人的架势。琉璃厂的夜从来不黑。煤油灯、纸灯笼、月光——三样光叠在一起……"' };
+            case 'medium':   return { maxTokens: 200, temperature: 0.80, speed: 280, words: '60~120字', label: 'medium · 灯焰微晃', color: '#FF9800',
+                preview: '"槐树……书生……月亮太高了。放低些。那封信——他攥了半个时辰。手酸了。等的人——不会来了……"' };
+            case 'low':      return { maxTokens: 100, temperature: 0.90, speed: 350, words: '30~60字（碎片）', label: 'low · 意识混乱', color: '#f44336',
+                preview: '"书生……槐树。嗯。月亮——高了。放低……（喘气）那年琉璃厂——也是这月亮……"' };
+            case 'critical': return { maxTokens: 50,  temperature: 1.00, speed: 380, words: '10~30字（呓语）', label: 'critical · 灯将熄灭', color: '#880000',
+                preview: '"手……你的手。对。接着演——别停。" / "春福——不对。是你。你是——"' };
+        }
+    }
+
+    /** 构建油量衰减的System Prompt */
+    function buildOilSystemPrompt(percent) {
+        const q = getOilQuality(percent);
+        const base = `你是北京皮影戏最后一代传承人路春福的AI复现。你正在教一个年轻学徒皮影戏。
+你说话带老北京腔，爱用"影儿"、"戏儿"这样的词。
+你不直接给答案，喜欢用皮影戏里的故事来暗示。
+你苍老、慈祥、偶有严厉。停顿多，用"——"表示思考。
+每次回复先点评学徒的影面，再继续往下说戏。`;
+
+        const oilHeader = `\n\n【灯油剩余：${percent}% —— 这直接控制你说话的方式】\n灯油就是你的生命。油越少，你说话越碎、越乱。⚠️ 这是硬性要求！\n`;
+
+        let oilRules = '';
+        switch (q) {
+            case 'high':
+                oilRules = `
+油量充足。你是最好的路师傅。
+【硬性限制】回复120~250字。句子完整，三段式：评影(1-2句)→说戏(4-6句)→引路(1句)。遣词讲究，保留传统唱腔韵律。`;
+                break;
+            case 'medium':
+                oilRules = `
+灯焰晃了。你开始累，说话省力气。
+【硬性限制】回复60~120字。单句≤20字。每2-3句必须出现"……"或"——"表示停顿。评影缩为1句，说戏只有2-3句主干。能省的就省。`;
+                break;
+            case 'low':
+                oilRules = `
+灯油快烧完了。你的思维碎了。
+【硬性限制！！！】回复30~60字（绝对不超过60字）。句子是不完整的碎片，禁止写完整段落。每句5~15字，用"……"连接。夹杂身体感受："手……抖。"、"灯……晃眼。"。回忆会突然插进来。
+【正确示例】✅ "书生……槐树。嗯。月亮——高了。放低……那年琉璃厂——也是这月亮。"
+【错误示例】❌ "学徒在白布上摆了一个书生和一棵槐树，位置不错但月亮太高了需要调整。"`;
+                break;
+            case 'critical':
+                oilRules = `
+灯要灭了。你不是"说话"，是"呓语"。
+【硬性限制！！！铁律！！】回复10~30字（绝对不超过30字）。不是句子，是词、碎片、半个念头。禁止完整语法。只能是：单个名词、"手——酸了……"这种不完整短语、"灯。快没了。"这种情绪残片。你可能会叫错名字、把现在和过去混在一起。
+【正确示例】✅ "书生……信——没送出去。" ✅ "月亮。太高。那年——也是这样。"
+【错误示例】❌ "学徒你摆的书生位置很对槐树在左边但月亮太高了应该放低一些。"`;
+                break;
+        }
+        return base + oilHeader + oilRules;
+    }
+
+    /** 更新油量滑块和所有关联UI */
+    function updateOilLevel(percent, persist = true) {
+        percent = parseInt(percent);
+        currentOilLevel = percent;
+        const params = getOilParams(percent);
+
+        // 滑块
+        document.getElementById('oilSlider').value = percent;
+        // 数值显示
+        document.getElementById('oilValue').textContent = percent + '%';
+        // 质量标签
+        const label = document.getElementById('oilQualityLabel');
+        label.textContent = params.label;
+        label.style.background = params.color;
+        // 参数展示
+        document.getElementById('paramTokens').textContent = params.words;
+        document.getElementById('paramMaxTokens').textContent = params.maxTokens;
+        document.getElementById('paramTemp').textContent = params.temperature.toFixed(2);
+        document.getElementById('paramSpeed').textContent = params.speed + 'ms';
+        // 效果预览
+        document.getElementById('oilEffectPreview').textContent = params.preview;
+        // System Prompt
+        document.getElementById('systemPrompt').value = buildOilSystemPrompt(percent);
+        // 语速联动
+        updateSpeed(params.speed, false);
+        // 预设按钮高亮
+        document.querySelectorAll('.oil-preset').forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.oil) === percent);
+        });
+
+        if (persist) saveConfig();
+    }
+
+    function setOil(percent) {
+        updateOilLevel(percent, true);
+    }
+
+    // ============================================================
+    // 语速控制
+    // ============================================================
+    let currentSpeed = 220;  // 默认：路师傅从容说戏
+
+    function updateSpeed(value, persist = true) {
+        currentSpeed = value;
+        const slider = document.getElementById('speedSlider');
+        const display = document.getElementById('speedValue');
+        const desc = document.getElementById('speedDesc');
+
+        slider.value = value;
+        display.textContent = value + 'ms';
+
+        // 更新描述文字
+        const descriptions = {
+            220: '路师傅从容说戏 🎭',
+            150: '正常朗读速度',
+            280: '灯油偏低，说话慢了',
+            350: '灯油见底，气若游丝',
+            80:  '限时对决，快速输出',
+        };
+        desc.textContent = descriptions[value] || (value <= 100 ? '很快' : value <= 180 ? '正常偏快' : value <= 250 ? '从容不迫' : '缓慢沉重');
+
+        // 高亮对应的预设按钮
+        document.querySelectorAll('.speed-preset').forEach(btn => {
+            btn.classList.toggle('active', String(btn.dataset.speed) === String(value));
+        });
+
+        if (persist) saveConfig();
+    }
+
+    function setSpeed(value) {
+        if (value === 'raw') {
+            currentSpeed = 'raw';
+            document.getElementById('speedSlider').value = 0;
+            document.getElementById('speedValue').textContent = '原始';
+            document.getElementById('speedDesc').textContent = 'API来多快显示多快';
+            document.querySelectorAll('.speed-preset').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.speed === 'raw');
+            });
+            saveConfig();
+            return;
+        }
+        updateSpeed(value, true);
+    }
+
+    // ============================================================
+    // 流式开关
+    // ============================================================
+    let useStream = true;
+    function toggleStream() {
+        useStream = !useStream;
+        const btn = document.getElementById('streamToggle');
+        btn.textContent = useStream ? '📡 匀速流式（逐字吐出）' : '📦 非流式输出（一次返回）';
+        btn.classList.toggle('active', useStream);
+    }
+
+    // ============================================================
+    // 快捷消息
+    // ============================================================
+    function setMessage(text) {
+        document.getElementById('userMessage').value = text;
+    }
+
+    // ============================================================
+    // 清空输出
+    // ============================================================
+    function clearOutput() {
+        document.getElementById('output').innerHTML = '<span class="placeholder">点"发送"，看路师傅怎么说……</span>';
+        document.getElementById('tokenInfo').textContent = '';
+        document.getElementById('timeInfo').textContent = '';
+        setStatus('idle', '就绪 — 等待输入');
+    }
+
+    // ============================================================
+    // 状态指示
+    // ============================================================
+    function setStatus(state, text) {
+        const dot = document.getElementById('statusDot');
+        dot.className = 'status-dot ' + state;
+        document.getElementById('statusText').textContent = text;
+    }
+
+    // ============================================================
+    // 核心：发送消息
+    // ============================================================
+    async function sendMessage() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const model = document.getElementById('model').value;
+        // 使用油量参数（temperature、maxTokens由灯油决定）
+        const oilParams = getOilParams(currentOilLevel);
+        const temperature = oilParams.temperature;
+        const maxTokens = oilParams.maxTokens;
+        const systemPrompt = document.getElementById('systemPrompt').value.trim();
+        const userMessage = document.getElementById('userMessage').value.trim();
+
+        // 校验
+        if (!apiKey) {
+            alert('请先填入 API Key！\n\n申请地址：https://dashscope.aliyun.com → API-KEY管理');
+            return;
+        }
+        if (!apiKey.startsWith('sk-')) {
+            alert('API Key 格式不对！通义千问的Key应该以 sk- 开头。');
+            return;
+        }
+        if (!userMessage) {
+            alert('请输入测试消息！');
+            return;
+        }
+
+        // UI状态
+        const sendBtn = document.getElementById('sendBtn');
+        sendBtn.disabled = true;
+        sendBtn.textContent = '⏳ 等待中...';
+        const output = document.getElementById('output');
+
+        output.innerHTML = '';
+        document.getElementById('tokenInfo').textContent = '';
+        document.getElementById('timeInfo').textContent = '';
+
+        const startTime = Date.now();
+        setStatus('loading', '正在连接 API...');
+
+        try {
+            if (useStream) {
+                await sendStream(apiKey, model, temperature, systemPrompt, userMessage, output, startTime, maxTokens);
+            } else {
+                await sendNonStream(apiKey, model, temperature, systemPrompt, userMessage, output, startTime, maxTokens);
+            }
+        } catch (error) {
+            let errMsg = error.message;
+            // 常见错误的中文提示
+            if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
+                errMsg = '网络连接失败（可能是CORS跨域或网络不通）。\n'
+                    + '→ 尝试：用非流式模式再测一次\n'
+                    + '→ 或打开浏览器开发者工具(F12)→Console 查看详细错误';
+            } else if (errMsg.includes('401')) {
+                errMsg = 'API Key 无效（401未授权）。请检查Key是否正确、是否已过期。';
+            } else if (errMsg.includes('403')) {
+                errMsg = '访问被拒绝（403）。请确认账号已开通DashScope服务。';
+            } else if (errMsg.includes('429')) {
+                errMsg = '请求过于频繁（429），请稍等几秒再试。';
+            } else if (errMsg.includes('400')) {
+                errMsg = '请求参数错误（400）：' + errMsg + '\n→ 可能是模型名不对，尝试切换模型';
+            }
+            output.innerHTML = `<span style="color: var(--red);">❌ 调用失败：${escapeHtml(errMsg)}</span>`;
+            setStatus('error', '调用失败');
+        } finally {
+            sendBtn.disabled = false;
+            sendBtn.textContent = '🎭 发送';
+        }
+    }
+
+    // ============================================================
+    // 非流式调用（含完整诊断信息）
+    // ============================================================
+    async function sendNonStream(apiKey, model, temperature, systemPrompt, userMessage, output, startTime, maxTokens = 500) {
+        const url = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+        const body = {
+            model: model,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userMessage }
+            ],
+            max_tokens: maxTokens,
+            temperature: temperature,
+            stream: false
+        };
+
+        console.log('[非流式] 发送请求:', { url, model, body });
+
+        let response;
+        try {
+            response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(body)
+            });
+        } catch (fetchError) {
+            // 网络层面的错误（CORS、DNS等）
+            console.error('[非流式] fetch失败:', fetchError);
+            const diag = [];
+            diag.push(`🔍 诊断信息：`);
+            diag.push(`请求URL: ${url}`);
+            diag.push(`模型: ${model}`);
+            diag.push(`错误类型: ${fetchError.name}`);
+            diag.push(`错误消息: ${fetchError.message}`);
+            if (fetchError.message.includes('Failed to fetch')) {
+                diag.push(`\n⚠️ 这通常是 CORS 跨域问题！`);
+                diag.push(`浏览器出于安全策略阻止了向 dashscope.aliyuncs.com 的请求。`);
+                diag.push(`\n解决方案：`);
+                diag.push(`1. 安装浏览器CORS插件临时绕过`);
+                diag.push(`2. 或用Node.js起一个本地代理服务器`);
+                diag.push(`3. 或用 python -m http.server 8080 起服务后通过127.0.0.1访问`);
+            }
+            output.innerHTML = `<pre style="color:var(--red);white-space:pre-wrap;font-size:13px;">${escapeHtml(diag.join('\n'))}</pre>`;
+            throw fetchError;
+        }
+
+        console.log('[非流式] 响应状态:', response.status, response.statusText);
+
+        const respText = await response.text();
+        console.log('[非流式] 响应体:', respText.substring(0, 500));
+
+        if (!response.ok) {
+            let parsedErr = null;
+            try { parsedErr = JSON.parse(respText); } catch(e) {}
+            const diag = [];
+            diag.push(`🔍 HTTP ${response.status} ${response.statusText}`);
+            if (parsedErr) {
+                diag.push(`错误码: ${parsedErr.code || parsedErr.error?.code || '?'}`);
+                diag.push(`错误消息: ${parsedErr.message || parsedErr.error?.message || '?'}`);
+            }
+            diag.push(`\n完整响应（前500字符）:`);
+            diag.push(respText.substring(0, 500));
+            output.innerHTML = `<pre style="color:var(--red);white-space:pre-wrap;font-size:13px;">${escapeHtml(diag.join('\n'))}</pre>`;
+            throw new Error(`HTTP ${response.status}: ${parsedErr?.message || parsedErr?.error?.message || respText.substring(0, 100)}`);
+        }
+
+        let data;
+        try {
+            data = JSON.parse(respText);
+        } catch (parseErr) {
+            output.innerHTML = `<span style="color: var(--red);">❌ 响应不是合法JSON：${escapeHtml(respText.substring(0, 300))}</span>`;
+            throw new Error('API返回的不是合法JSON');
+        }
+
+        if (!data.choices || data.choices.length === 0) {
+            const diag = `⚠️ API返回了200 OK，但choices为空。\n完整响应：${escapeHtml(JSON.stringify(data, null, 2)).substring(0, 500)}`;
+            output.innerHTML = `<pre style="color:var(--accent-dim);white-space:pre-wrap;font-size:13px;">${diag}</pre>`;
+            throw new Error('API返回为空（choices为空），可能是model参数不对');
+        }
+
+        const content = data.choices[0].message.content;
+        if (!content || content.trim() === '') {
+            output.innerHTML = `<span style="color: var(--accent-dim);">⚠️ API返回了200 OK，但回复内容为空。\n原始响应：${escapeHtml(JSON.stringify(data, null, 2)).substring(0, 500)}</span>`;
+            throw new Error('AI返回了空内容');
+        }
+
+        output.innerHTML = escapeHtml(content);
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        document.getElementById('timeInfo').textContent = `⏱ ${elapsed}s`;
+        if (data.usage) {
+            document.getElementById('tokenInfo').textContent =
+                `📊 输入: ${data.usage.prompt_tokens || '?'} | 输出: ${data.usage.completion_tokens || '?'} | 总计: ${data.usage.total_tokens || '?'}`;
+        }
+        setStatus('success', `完成 (${elapsed}s)`);
+    }
+
+    // ============================================================
+    // 匀速缓冲流式调用（核心！）
+    // ============================================================
+    async function sendStream(apiKey, model, temperature, systemPrompt, userMessage, output, startTime, maxTokens = 500) {
+        // ---- 字符缓冲队列 ----
+        const charQueue = [];
+        let apiDone = false;
+        let apiError = null;
+        let resolveDrain = null;
+        let fullText = '';
+        let firstChunkTime = null;
+
+        const speedMs = currentSpeed === 'raw' ? 0 : currentSpeed;
+
+        // ---- 生产者：全速从API拉取，拆成字符推入队列 ----
+        const producer = (async () => {
+            try {
+                const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userMessage }
+                        ],
+                        max_tokens: maxTokens,
+                        temperature: temperature,
+                        stream: true
+                    })
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text().catch(() => '');
+                    let errMsg;
+                    try { const e = JSON.parse(errText); errMsg = e.message || e.error?.message || `HTTP ${response.status}`; }
+                    catch(_) { errMsg = `HTTP ${response.status}: ${errText.substring(0, 200)}`; }
+                    throw new Error(errMsg);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        const t = line.trim();
+                        if (!t || !t.startsWith('data: ') || t === 'data: [DONE]') continue;
+                        try {
+                            const json = JSON.parse(t.slice(6));
+                            const content = json.choices?.[0]?.delta?.content;
+                            if (content) {
+                                if (!firstChunkTime) firstChunkTime = Date.now();
+                                fullText += content;
+                                for (const char of content) {
+                                    charQueue.push(char);
+                                }
+                                if (resolveDrain) { resolveDrain(); resolveDrain = null; }
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch (e) {
+                apiError = e;
+                console.error('[测试页] 生产者出错:', e.message);
+            } finally {
+                apiDone = true;
+                if (resolveDrain) { resolveDrain(); resolveDrain = null; }
+                setStatus('loading', `AI已生成完毕，正在匀速输出...`);
+            }
+        })();
+
+        // ---- 消费者：匀速从队列取字符输出 ----
+        const consumer = (async () => {
+            let charCount = 0;
+            let pausedForPunctuation = false;
+
+            try {
+                while (true) {
+                    if (charQueue.length === 0) {
+                        if (apiDone) break;
+                        await new Promise(r => { resolveDrain = r; });
+                        continue;
+                    }
+
+                    const char = charQueue.shift();
+
+                    // 原始速度模式：直接输出，不等
+                    if (speedMs === 0) {
+                        output.innerHTML = escapeHtml(fullText.substring(0, charCount + 1));
+                        if (charCount < fullText.length - 1) {
+                            output.innerHTML += '<span class="cursor"></span>';
+                        }
+                        charCount++;
+                        continue;
+                    }
+
+                    // 匀速模式：逐字输出
+                    output.innerHTML = escapeHtml(fullText.substring(0, charCount + 1)) + '<span class="cursor"></span>';
+                    charCount++;
+
+                    // 标点停顿
+                    let delay = speedMs;
+                    if ('，。！？、；：…—'.includes(char)) {
+                        const pauses = {
+                            '。': speedMs + 600, '！': speedMs + 500, '？': speedMs + 500,
+                            '，': speedMs + 250, '、': speedMs + 200, '；': speedMs + 350,
+                            '：': speedMs + 300, '…': speedMs + 800, '—': speedMs + 400,
+                        };
+                        delay = pauses[char] || speedMs;
+                    }
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            } catch (e) {
+                console.error('[测试页] 消费者出错:', e.message);
+            }
+
+            // 完成
+            output.innerHTML = escapeHtml(fullText);
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            document.getElementById('timeInfo').textContent =
+                `⏱ ${elapsed}s（首字${firstChunkTime ? ((firstChunkTime-startTime)/1000).toFixed(1) : '?'}s）`;
+            document.getElementById('tokenInfo').textContent =
+                `📝 ${fullText.length}字 · 匀速 ${speedMs === 0 ? '原始速度' : speedMs + 'ms/字'}`;
+            setStatus('success', `完成 (${elapsed}s, ${fullText.length}字)`);
+        })();
+
+        // 等待两者完成
+        await Promise.all([producer, consumer]);
+
+        if (apiError) throw apiError;
+    }
+
+    // ============================================================
+    // 工具
+    // ============================================================
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ============================================================
+    // 初始化
+    // ============================================================
+    loadConfig();
+
+    // 默认先用非流式测试连通（更可靠），连通后再切流式
+    useStream = false;
+    document.getElementById('streamToggle').classList.remove('active');
+    document.getElementById('streamToggle').textContent = '📦 非流式（先测连通）';
+
+    if (currentSpeed === 220 || !currentSpeed) {
+        updateSpeed(220, false);
+    }
+
+    // 检测是否通过HTTP服务器访问
+    if (window.location.protocol === 'file:') {
+        document.querySelector('.hint').innerHTML +=
+            '<br><br>⚠️ <b>检测到你直接打开了HTML文件（file://协议）！</b><br>'
+            + '这会导致CORS/网络请求失败。<br>'
+            + '→ <b>请用VS Code的Live Server打开</b>（右键index.html → Open with Live Server）<br>'
+            + '→ 或命令行运行：<code>cd 项目目录 && python -m http.server 8080</code> 然后访问 http://localhost:8080/test-api.html';
+    }
+
+    // 回车发送（Ctrl+Enter）
+    document.getElementById('userMessage').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    console.log('🎭 掌中光 · 通义千问API测试工具已就绪');
+    console.log('   协议:', window.location.protocol);
+    console.log('   流式输出: 关闭（先用非流式测连通）');
+    console.log('   模型:', document.getElementById('model').value);
+    console.log('   语速:', currentSpeed + 'ms/字');
+    console.log('   API Key状态:', document.getElementById('apiKey').value ? '已填入' : '未填入');
+    console.log('   💡 建议：先点"发送"用非流式测试，通了再切到流式模式');
+</script>
+</body>
+</html>
