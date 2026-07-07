@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>掌中光 - 皮影戏AI互动游戏</title>
-    <link rel="stylesheet" href="css/theater.css">
+        <link rel="stylesheet" href="css/theater.css">
+    <link rel="stylesheet" href="css/puppets.css">
+    <link rel="stylesheet" href="css/lamp.css">
+    <link rel="stylesheet" href="css/ui.css">
+
 </head>
 <body>
 
@@ -74,10 +78,22 @@
             <button class="btn" id="btnAsk">追问师父</button>
         </div>
     </div>
-
     <!-- ===== JavaScript 模块 ===== -->
-    <!-- event-bus.js 必须第一个加载，所有模块都依赖它 -->
+    <!-- 加载顺序非常重要：先"听的"，再"喊的" -->
+    <!-- 基础层 -->
     <script src="js/event-bus.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/config.example.js"></script>
+    <!-- 队友模块（先加载，他们负责"听事件"） -->
+    <script src="js/lamp.js"></script>
+    <script src="js/ai-api.js"></script>
+    <script src="js/prompt-builder.js"></script>
+    <script src="js/shadow-judge.js"></script>
+    <script src="js/save.js"></script>
+    <!-- A的模块（最后加载，负责"喊事件"） -->
+    <script src="js/puppets.js"></script>
+    <!-- theater.js 和 audio.js 等写完再加 -->
+
 
 </body>
 </html>
