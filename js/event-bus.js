@@ -95,13 +95,16 @@ const EventBus = {
 
     /**
      * 调试用：打印所有事件和监听器数量
+     * @returns {Object} {events: 事件名数组, totalListeners: 总监听器数}
      */
     debug() {
+        const events = Object.keys(this.listeners);
+        const totalListeners = events.reduce((sum, key) => sum + this.listeners[key].length, 0);
         console.log('=== EventBus 调试信息 ===');
-        for (const eventName in this.listeners) {
-            console.log(eventName + ': ' + this.listeners[eventName].length + ' 个监听器');
-        }
+        events.forEach(e => console.log(e + ': ' + this.listeners[e].length + ' 个监听器'));
+        console.log('总监听器: ' + totalListeners);
         console.log('========================');
+        return { events, totalListeners };
     }
 };
 
