@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>B逻辑工程师 最终测试</title>
+    <style>
+        body { font-family: monospace; max-width: 700px; margin: 20px auto; background: #f5f0e8; }
+        .panel { background: white; border: 2px solid #2a1a0a; padding: 16px; margin: 12px 0; }
+        h2 { margin: 0 0 8px; font-size: 16px; color: #2a1a0a; }
+        button { padding: 6px 14px; margin: 4px; cursor: pointer; border: 1px solid #2a1a0a; background: #fff; }
+        button:hover { background: #2a1a0a; color: #fff; }
+        .log { background: #1a1a1a; color: #0f0; padding: 10px; max-height: 300px; overflow-y: auto; font-size: 12px; }
+        .warn { color: #e67e00; }
+        .err { color: #f44; }
+        .ok { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <h1>B 逻辑工程师 最终测试（全内置）</h1>
+
+    <div class="panel"><h2>1. 初始化检查</h2><button onclick="checkInit()">检查所有系统</button></div>
+    <div class="panel"><h2>2. A端事件</h2><button onclick="simPuppetPlaced()">puppet_placed</button><button onclick="simPuppetRemoved()">puppet_removed</button><button onclick="simAskMaster()">ask_master</button></div>
+    <div class="panel"><h2>3. C端评判</h2><button onclick="simJudgeGood()">judge_result高分</button><button onclick="simJudgeBad()">judge_result低分</button></div>
+    <div class="panel"><h2>4. 存档</h2><button onclick="simSave()">保存</button><button onclick="simLoad()">读取</button><button onclick="simClear()">清除</button></div>
+    <div class="panel"><h2>5. 结局</h2><button onclick="simEnding()">显示结局判定</button></div>
+    <div class="panel"><h2>日志</h2><div class="log" id="log">等待操作...</div></div>
+
+<script>
+// ==================== event-bus.js (内联) ====================
+const EventBus = {
+    listeners: {},
+    on(eventName, callback) {
+        if (!this.listeners[eventName]) this.listeners[eventName] = [];
+        this.listeners[eventName].push(callback);
+    },
+    emit(eventName, data) {
+        const callbacks = this.listeners[eventName];
+        if (!callbacks) return;
+        callbacks.forEach(function(cb) {
+            try { cb(data); }
+            catch(e) { console.error('EventBus err:' + eventName, e); }
+        });
+    },
+    debug() {
+        const events = Object.keys(this.listeners);
+        const total = events.reduce((s,k) => s + this.listeners[k].length, 0);
+        return { events, totalListeners: total };
+    }
+};
+window.EventBus = EventBus;
+
+// ==================== game.js (内联) ====================
+class GameState {
+    constructor() {
+        this.currentAct = 1;
+        this.lampOil = 100;
+        this.totalOilBurned = 0;
+        this.ownedPuppets = ["scholar","tree","moon","elder","frog"];
+        this.stagedPuppets = [];
+        this.aiQuality = "high";
+        this.endingStats = { faithfulness:0, creativity:0, oilConservation:0, questionsAsked:0 };
+    }
+    updateAIQuality() {
+        if (this.lampOil >= 80) this.aiQuality = "high";
+        else if (this.lampOil >= 50) this.aiQuality = "medium";
+        else if (this.lampOil >= 20) this.aiQuality = "low";
+        else this.aiQuality = "critical";
+    }
+    toJSON() {
+        return JSON.stringify({
+            currentAct: this.currentAct,
+            currentScene: this.currentScene,
+            isGameOver: this.isGameOver,
+            lampOil: this.lampOil,
+            totalOilBurned: this.totalOilBurned,
+            ownedPuppets: this.ownedPuppets,
+            stagedPuppets: this.stagedPuppets,
+            usedPuppets: this.usedPuppets,
+            endingStats: this.endingStats,
+            aiQuality: this.aiQuality
+        });
+    }
+    static fromJSON(s) {
+        const state = new GameState();
+        Object.assign(state, JSON.parse(s));
+        return state;
+    }
+}
+const gameState = new GameState();
+window.gameState = gameState;
+
+function determineEnding(s) {
+    const { lampOil, endingStats:{faithfulness, creativity} } = s;
+    if (creativity >= 80) return "shadow_master";
+    if (lampOil >= 30 && faithfulness >= 70 && creativity >= 50) return "light_passed";
+    if (lampOil >= 15 && faithfulness >= 60) return "light_kept";
+    if (faithfulness >= 40) return "shadow_remains";
+    return "light_out";
+}
+window.determineEnding = determineEnding;
+
+// ==================== lamp.js (内联) ====================
+const LampSystem = {
+    COSTS: { puppet_placed:3, puppet_removed:1, ask_master:8, time_penalty:2 },
+    REWARDS: { correct_judge:2, creativity_bonus:3 },
+    RECOVERY: { intermission:80 },
+
+    burn(reason) {
+        const cost = this.COSTS[reason] || 0;
+        gameState.lampOil = Math.max(0, gameState.lampOil - cost);
+        gameState.totalOilBurned += cost;
+        gameState.updateAIQuality();
+        EventBus.emit("oil_changed", { oil: gameState.lampOil, reason });
+        if (gameState.lampOil <= 0) EventBus.emit("oil_depleted");
+    },
+    reward(reason) {
+        const gain = this.REWARDS[reason] || 0;
+        gameState.lampOil = Math.min(100, gameState.lampOil + gain);
+        gameState.updateAIQuality();
+        EventBus.emit("oil_changed", { oil: gameState.lampOil, reason });
+    },
+    intermissionRecover() {
+        gameState.lampOil = this.RECOVERY.intermission;
+        EventBus.emit("oil_changed", { oil: gameState.lampOil, reason:"intermission" });
+    }
+};
+window.LampSystem = LampSystem;
+
+EventBus.on("puppet_placed", (data) => {
+    LampSystem.burn("puppet_placed");
+    // 同时兼容 id 和 puppetId 字段名
+    var pid = (data && data.id) || (data && data.puppetId);
+    gameState.stagedPuppets.push(pid);
+});
+EventBus.on("puppet_removed", () => LampSystem.burn("puppet_removed"));
+EventBus.on("ask_master_clicked", () => LampSystem.burn("ask_master"));
+EventBus.on("act_intermission", () => LampSystem.intermissionRecover());
+EventBus.on("judge_result", (res) => {
+    gameState.endingStats.faithfulness += res.score;
+    gameState.endingStats.creativity += res.creativity;
+    if (res.correct) LampSystem.reward("correct_judge");
+    if (res.creativity > 20) LampSystem.reward("creativity_bonus");
+    SaveSystem.save();
+});
+
+// ==================== save.js (内联) ====================
+const SaveSystem = {
+    KEY: "zzg_save",
+    _mem: {},
+
+    save() {
+        try {
+            this._mem[this.KEY] = gameState.toJSON();
+            return true;
+        } catch(e) {
+            console.error("save error", e);
+            return false;
+        }
+    },
+
+    load() {
+        try {
+            var json = this._mem[this.KEY] || null;
+            if (!json) return false;
+            Object.assign(gameState, GameState.fromJSON(json));
+            EventBus.emit("save_loaded", { state: gameState });
+            return true;
+        } catch(e) {
+            console.error("load error", e);
+            return false;
+        }
+    },
+
+    clear() {
+        delete this._mem[this.KEY];
+    }
+};
+window.SaveSystem = SaveSystem;
+</script>
+
+<script>
+// ==================== 测试面板 ====================
+var logEl = document.getElementById('log');
+function log(msg, type) {
+    var cls = type==='warn'?'warn':type==='err'?'err':type==='ok'?'ok':'';
+    logEl.innerHTML = '<span class="'+cls+'">['+new Date().toLocaleTimeString()+'] '+msg+'</span>\n'+logEl.innerHTML;
+}
+
+function checkInit() {
+    log('=== 初始化检查 ===');
+    log(typeof EventBus!=='undefined' && EventBus.on ? 'EventBus OK':'EventBus FAIL','ok');
+    log(typeof gameState!=='undefined' && gameState.lampOil===100 ? 'GameState OK (oil=100)':'GameState FAIL','ok');
+    log(typeof LampSystem!=='undefined' ? 'LampSystem OK':'LampSystem FAIL','ok');
+    log(typeof SaveSystem!=='undefined' ? 'SaveSystem OK':'SaveSystem FAIL','ok');
+    var d = EventBus.debug();
+    log('Events: ['+d.events.join(',')+'] listeners:'+d.totalListeners);
+    log('stagedPuppets: ['+gameState.stagedPuppets.join(',')+'] (len='+gameState.stagedPuppets.length+')');
+}
+
+function simPuppetPlaced() {
+    log('>>> puppet_placed {id:"scholar", x:200, y:150}');
+    EventBus.emit('puppet_placed', { id:'scholar', x:200, y:150 });
+    // emit 是同步的，马上检查
+    var val = gameState.stagedPuppets[gameState.stagedPuppets.length-1];
+    log('oil='+gameState.lampOil+' stagedPuppets='+JSON.stringify(gameState.stagedPuppets));
+    log('最后push的值 = '+JSON.stringify(val)+' 类型='+(typeof val), val==='scholar'?'ok':'err');
+}
+
+function simPuppetRemoved() {
+    log('>>> puppet_removed');
+    EventBus.emit('puppet_removed', {});
+    log('oil='+gameState.lampOil);
+}
+
+function simAskMaster() {
+    log('>>> ask_master_clicked');
+    EventBus.emit('ask_master_clicked', {});
+    log('oil='+gameState.lampOil+' (扣8油)');
+}
+
+function simJudgeGood() {
+    log('>>> judge_result (高分)');
+    EventBus.emit('judge_result', { score:80, correct:true, creativity:30, comment:'很好' });
+    log('oil='+gameState.lampOil+' faith='+gameState.endingStats.faithfulness+' creat='+gameState.endingStats.creativity);
+}
+
+function simJudgeBad() {
+    log('>>> judge_result (低分)');
+    EventBus.emit('judge_result', { score:20, correct:false, creativity:5, comment:'不对' });
+    log('oil='+gameState.lampOil+' faith='+gameState.endingStats.faithfulness+' creat='+gameState.endingStats.creativity);
+}
+
+function simSave() {
+    var ok = SaveSystem.save();
+    log(ok ? '保存成功':'保存失败', ok?'ok':'err');
+}
+
+function simLoad() {
+    var ok = SaveSystem.load();
+    log(ok ? '读取成功 oil='+gameState.lampOil : '无存档', ok?'ok':'warn');
+}
+
+function simClear() {
+    SaveSystem.clear();
+    log('存档已清除');
+}
+
+function simEnding() {
+    var ending = determineEnding(gameState);
+    var map = {shadow_master:'影子师傅',light_passed:'传灯',light_kept:'守灯',shadow_remains:'残影',light_out:'灯灭'};
+    log('结局: '+map[ending]+' oil='+gameState.lampOil+' faith='+gameState.endingStats.faithfulness+' creat='+gameState.endingStats.creativity, 'ok');
+}
+
+setTimeout(checkInit, 100);
+</script>
+</body>
+</html>
