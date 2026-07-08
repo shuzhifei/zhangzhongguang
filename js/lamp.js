@@ -80,7 +80,7 @@ window.LampSystem = LampSystem;
 // 自动监听前端A触发的事件，自动扣油
 EventBus.on("puppet_placed", (data) => {
     LampSystem.burn("puppet_placed");
-    gameState.stagedPuppets.push(data.puppetId);
+    gameState.stagedPuppets.push(data.id || data.puppetId);
 });
 EventBus.on("puppet_removed", () => LampSystem.burn("puppet_removed"));
 EventBus.on("ask_master_clicked", () => LampSystem.burn("ask_master"));

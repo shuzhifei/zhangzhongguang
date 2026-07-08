@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>B逻辑工程师 - 自测面板</title>
+    <style>
+        body { font-family: monospace; max-width: 700px; margin: 20px auto; background: #f5f0e8; }
+        .panel { background: white; border: 2px solid #2a1a0a; padding: 16px; margin: 12px 0; }
+        h2 { margin: 0 0 8px; font-size: 16px; color: #2a1a0a; }
+        button { padding: 6px 14px; margin: 4px; cursor: pointer; border: 1px solid #2a1a0a; background: #fff; }
+        button:hover { background: #2a1a0a; color: #fff; }
+        .log { background: #1a1a1a; color: #0f0; padding: 10px; max-height: 300px; overflow-y: auto; font-size: 12px; }
+        .warn { color: #e67e00; }
+        .err { color: #f44; }
+        .ok { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <h1>🔧 B 逻辑工程师自测面板</h1>
+
+    <div class="panel">
+        <h2>1. 基础初始化检查</h2>
+        <button onclick="checkInit()">检查 GameState / EventBus / LampSystem / SaveSystem</button>
+    </div>
+
+    <div class="panel">
+        <h2>2. 模拟 A 端事件（皮影拖拽）</h2>
+        <button onclick="simPuppetPlaced()">puppet_placed（书生，x=200, y=150）</button>
+        <button onclick="simPuppetRemoved()">puppet_removed</button>
+        <button onclick="simAskMaster()">ask_master_clicked</button>
+    </div>
+
+    <div class="panel">
+        <h2>3. 模拟 C 端事件（AI评判）</h2>
+        <button onclick="simJudgeGood()">judge_result（高分：score=80, correct=true, creativity=30）</button>
+        <button onclick="simJudgeBad()">judge_result（低分：score=20, correct=false, creativity=5）</button>
+    </div>
+
+    <div class="panel">
+        <h2>4. 存档读档</h2>
+        <button onclick="simSave()">保存存档</button>
+        <button onclick="simLoad()">读取存档</button>
+        <button onclick="simClear()">清除存档</button>
+    </div>
+
+    <div class="panel">
+        <h2>5. 结局判定</h2>
+        <button onclick="simEnding()">显示当前结局判定结果</button>
+    </div>
+
+    <div class="panel">
+        <h2>日志输出</h2>
+        <div class="log" id="log">等待操作...</div>
+    </div>
+
+    <script src="js/event-bus.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/lamp.js"></script>
+    <script src="js/save.js"></script>
+
+    <script>
+        const logEl = document.getElementById('log');
+        function log(msg, type) {
+            const cls = type === 'warn' ? 'warn' : type === 'err' ? 'err' : type === 'ok' ? 'ok' : '';
+            logEl.innerHTML = `<span class="${cls}">[${new Date().toLocaleTimeString()}] ${msg}</span>\n` + logEl.innerHTML;
+        }
+
+        function checkInit() {
+            log('=== 初始化检查 ===');
+            // 1. EventBus
+            if (typeof EventBus !== 'undefined' && EventBus.on && EventBus.emit && EventBus.debug) {
+                log('✅ EventBus 正常', 'ok');
+            } else {
+                log('❌ EventBus 未加载！检查 js/event-bus.js', 'err');
+            }
+            // 2. GameState
+            if (typeof gameState !== 'undefined' && gameState.lampOil === 100) {
+                log('✅ GameState 正常（灯油=100）', 'ok');
+            } else {
+                log('❌ GameState 未加载或灯油异常！当前灯油=' + (gameState?.lampOil ?? 'undefined'), 'err');
+            }
+            // 3. LampSystem
+            if (typeof LampSystem !== 'undefined' && LampSystem.burn && LampSystem.reward) {
+                log('✅ LampSystem 正常', 'ok');
+            } else {
+                log('❌ LampSystem 未加载！', 'err');
+            }
+            // 4. SaveSystem
+            if (typeof SaveSystem !== 'undefined' && SaveSystem.save && SaveSystem.load) {
+                log('✅ SaveSystem 正常', 'ok');
+            } else {
+                log('❌ SaveSystem 未加载！', 'err');
+            }
+            // 5. event-bus debug
+            if (EventBus.debug) {
+                const dbg = EventBus.debug();
+                log(`📋 当前注册的事件: ${dbg.events.join(', ') || '(无)'}`);
+                log(`   监听器总数: ${dbg.totalListeners}`);
+            }
+        }
+
+        function simPuppetPlaced() {
+            log('>>> 模拟 A emit: puppet_placed {id: "scholar", x:200, y:150}');
+            EventBus.emit('puppet_placed', { id: 'scholar', x: 200, y: 150 });
+            setTimeout(() => {
+                log(`灯油: ${gameState.lampOil}, stagedPuppets: [${gameState.stagedPuppets.join(',')}]`);
+                log(`⚠️ 注意检查 stagedPuppets 里存的是 "scholar" 还是 "undefined"`, gameState.stagedPuppets[0] === 'scholar' ? 'ok' : 'warn');
+            }, 100);
+        }
+
+        function simPuppetRemoved() {
+            log('>>> 模拟 A emit: puppet_removed');
+            EventBus.emit('puppet_removed', { puppetId: 'scholar' });
+            setTimeout(() => log(`灯油: ${gameState.lampOil}`), 100);
+        }
+
+        function simAskMaster() {
+            log('>>> 模拟 A emit: ask_master_clicked');
+            EventBus.emit('ask_master_clicked', { question: '你说的三根线是什么意思？' });
+            setTimeout(() => log(`灯油: ${gameState.lampOil}（扣了8油）`), 100);
+        }
+
+        function simJudgeGood() {
+            log('>>> 模拟 C emit: judge_result （高分）');
+            EventBus.emit('judge_result', { score: 80, correct: true, creativity: 30, comment: '很好。' });
+            setTimeout(() => {
+                log(`灯油: ${gameState.lampOil}（加了 creative_bonus）`);
+                log(`忠实度: ${gameState.endingStats.faithfulness}, 创造力: ${gameState.endingStats.creativity}`);
+            }, 100);
+        }
+
+        function simJudgeBad() {
+            log('>>> 模拟 C emit: judge_result （低分）');
+            EventBus.emit('judge_result', { score: 20, correct: false, creativity: 5, comment: '不对。' });
+            setTimeout(() => {
+                log(`灯油: ${gameState.lampOil}`);
+                log(`忠实度: ${gameState.endingStats.faithfulness}, 创造力: ${gameState.endingStats.creativity}`);
+            }, 100);
+        }
+
+        function simSave() {
+            const ok = SaveSystem.save();
+            log(ok ? '✅ 存档成功' : '❌ 存档失败', ok ? 'ok' : 'err');
+        }
+
+        function simLoad() {
+            const ok = SaveSystem.load();
+            log(ok ? '✅ 读档成功，当前灯油=' + gameState.lampOil : '❌ 没有存档数据', ok ? 'ok' : 'warn');
+        }
+
+        function simClear() {
+            SaveSystem.clear();
+            log('存档已清除');
+        }
+
+        function simEnding() {
+            const ending = determineEnding(gameState);
+            const names = {
+                shadow_master: '影子师傅（隐藏结局）',
+                light_passed: '传灯（完美结局）',
+                light_kept: '守灯',
+                shadow_remains: '残影',
+                light_out: '灯灭（最差结局）'
+            };
+            log(`🎭 当前结局判定: ${names[ending] || ending}`, 'ok');
+            log(`   灯油=${gameState.lampOil}, 忠实度=${gameState.endingStats.faithfulness}, 创造力=${gameState.endingStats.creativity}`);
+        }
+
+        // 页面加载完自动检查
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(checkInit, 200);
+        });
+    </script>
+</body>
+</html>
