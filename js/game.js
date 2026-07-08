@@ -41,7 +41,18 @@ class GameState {
 
     // 序列化为存档字符串
     toJSON() {
-        return JSON.stringify(this);
+        return JSON.stringify({
+            currentAct: this.currentAct,
+            currentScene: this.currentScene,
+            isGameOver: this.isGameOver,
+            lampOil: this.lampOil,
+            totalOilBurned: this.totalOilBurned,
+            ownedPuppets: this.ownedPuppets,
+            stagedPuppets: this.stagedPuppets,
+            usedPuppets: this.usedPuppets,
+            endingStats: this.endingStats,
+            aiQuality: this.aiQuality
+        });
     }
 
     // 从存档恢复实例

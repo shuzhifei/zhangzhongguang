@@ -66,7 +66,20 @@ class GameState {
         else if (this.lampOil >= 20) this.aiQuality = "low";
         else this.aiQuality = "critical";
     }
-    toJSON() { return JSON.stringify(this); }
+    toJSON() {
+        return JSON.stringify({
+            currentAct: this.currentAct,
+            currentScene: this.currentScene,
+            isGameOver: this.isGameOver,
+            lampOil: this.lampOil,
+            totalOilBurned: this.totalOilBurned,
+            ownedPuppets: this.ownedPuppets,
+            stagedPuppets: this.stagedPuppets,
+            usedPuppets: this.usedPuppets,
+            endingStats: this.endingStats,
+            aiQuality: this.aiQuality
+        });
+    }
     static fromJSON(s) {
         const state = new GameState();
         Object.assign(state, JSON.parse(s));
@@ -135,16 +148,9 @@ const SaveSystem = {
     KEY: "zzg_save",
     _mem: {},
 
-    _ok() {
-        try { var t="x"; localStorage.setItem(t,t); localStorage.removeItem(t); return true; }
-        catch(e) { return false; }
-    },
-
     save() {
         try {
-            var json = gameState.toJSON();
-            if (this._ok()) { localStorage.setItem(this.KEY, json); }
-            else { this._mem[this.KEY] = json; }
+            this._mem[this.KEY] = gameState.toJSON();
             return true;
         } catch(e) {
             console.error("save error", e);
@@ -154,9 +160,7 @@ const SaveSystem = {
 
     load() {
         try {
-            var json;
-            if (this._ok()) { json = localStorage.getItem(this.KEY); }
-            else { json = this._mem[this.KEY] || null; }
+            var json = this._mem[this.KEY] || null;
             if (!json) return false;
             Object.assign(gameState, GameState.fromJSON(json));
             EventBus.emit("save_loaded", { state: gameState });
@@ -168,10 +172,7 @@ const SaveSystem = {
     },
 
     clear() {
-        try {
-            if (this._ok()) { localStorage.removeItem(this.KEY); }
-            else { delete this._mem[this.KEY]; }
-        } catch(e) {}
+        delete this._mem[this.KEY];
     }
 };
 window.SaveSystem = SaveSystem;
