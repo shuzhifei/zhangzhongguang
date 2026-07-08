@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>掌中光 · 第一幕开场白测试</title>
+    <style>
+        :root { --bg:#1a0f08; --panel:#2a1a0a; --text:#e8d5b7; --accent:#FF8C00; --purple:#a064c8; --border:#4a3020; --green:#4CAF50; --red:#f44336; }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:var(--bg);color:var(--text);font-family:'Noto Serif SC','SimSun',serif;min-height:100vh;display:flex;justify-content:center;padding:30px 16px}
+        .container{max-width:780px;width:100%}
+        .header{text-align:center;margin-bottom:24px}
+        .header h1{font-size:28px;color:var(--accent);letter-spacing:6px}
+        .header p{font-size:13px;color:#8a7560;margin-top:4px}
+        .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:16px}
+        .card h2{font-size:15px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px;color:var(--accent)}
+        label{font-size:12px;color:#a09080;display:block;margin-bottom:3px}
+        input,select,textarea{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:4px;font-family:inherit;font-size:13px;outline:none;width:100%}
+        input:focus,textarea:focus{border-color:var(--accent)}
+        .row{display:flex;gap:10px;flex-wrap:wrap}
+        .row>*{flex:1;min-width:140px}
+        button{padding:8px 18px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;border-radius:4px;cursor:pointer;transition:all .2s;letter-spacing:1px;white-space:nowrap}
+        button:hover{background:var(--accent);color:var(--bg)}
+        button:disabled{opacity:.4;cursor:not-allowed}
+        button.primary{background:var(--accent);color:var(--bg);font-weight:bold}
+        button.preview-btn{border-color:var(--purple);color:var(--purple)}
+        button.preview-btn:hover{background:var(--purple);color:var(--bg)}
+        .output-area{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:20px 24px;min-height:120px;font-size:18px;line-height:2.2;white-space:pre-wrap;letter-spacing:1px}
+        .output-area .placeholder{color:#555}
+        .output-area.streaming::after{content:'▎';animation:blink .8s infinite;color:var(--accent)}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+        .status{display:flex;align-items:center;gap:6px;font-size:12px;color:#8a7560;margin-top:6px}
+        .dot{width:7px;height:7px;border-radius:50%;background:#555}.dot.loading{background:var(--accent);animation:blink .6s infinite}.dot.success{background:var(--green)}.dot.error{background:var(--red)}
+        .prompt-preview{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:12px;font-size:12px;line-height:1.7;white-space:pre-wrap;color:#6a5040;max-height:200px;overflow-y:auto;font-family:Consolas,'Courier New',monospace}
+        .params{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:11px;color:#a09080;margin-top:8px}
+        .params div{background:var(--bg);padding:6px;border-radius:4px;text-align:center}
+        .params strong{color:var(--accent);display:block;font-size:14px}
+        .warn{font-size:12px;color:#e67e22;background:rgba(230,126,34,.06);padding:10px;border-radius:4px;border-left:3px solid #e67e22;margin-top:8px}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>掌 中 光</h1><p>第一幕开场白 · AI说戏测试</p></div>
+
+    <!-- API配置 -->
+    <div class="card">
+        <h2>🔑 API 配置</h2>
+        <div class="row">
+            <div style="flex:2"><label>API Key</label><input type="password" id="apiKey" placeholder="sk-xxxxxxxx"></div>
+            <div style="flex:1"><label>模型</label><select id="model"><option value="qwen-turbo">qwen-turbo</option><option value="qwen-plus">qwen-plus</option><option value="qwen-max" selected>qwen-max（推荐）</option></select></div>
+            <div><button onclick="saveConfig()" style="align-self:flex-end">💾 保存</button></div>
+        </div>
+        <div id="liveServerWarn" class="warn" style="display:none">
+            ⚠️ 检测到你是用 <code>file://</code> 协议打开的。API调用可能被浏览器拦截。<br>
+            请使用 <b>Live Server</b> 或 <b>http-server</b> 打开此页面。
+        </div>
+    </div>
+
+    <!-- System Prompt 预览 -->
+    <div class="card">
+        <h2>📋 System Prompt <span style="font-size:11px;color:#6a5040">（发送给AI的完整指令，先预览再调用）</span></h2>
+        <div class="prompt-preview" id="promptPreview">点击下方按钮预览或测试……</div>
+    </div>
+
+    <!-- 按钮区 -->
+    <div class="card">
+        <h2>🎭 测试控制</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="preview-btn" id="previewBtn" onclick="previewPrompt()">👁 仅预览Prompt</button>
+            <button class="primary" id="testBtn" onclick="testOpening()">🔮 路师傅，请开场</button>
+        </div>
+        <div class="status"><span class="dot" id="dot"></span><span id="statusText">就绪 — 先预览Prompt，再测试AI说戏</span></div>
+    </div>
+
+    <!-- 输出 -->
+    <div class="card">
+        <h2>📜 路师傅说：</h2>
+        <div class="output-area" id="output"><span class="placeholder">等待路师傅开口……</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#6a5040;margin-top:4px"><span id="info1"></span><span id="info2"></span></div>
+    </div>
+</div>
+
+<!-- ===== 加载游戏模块（fetch+eval，绕过Content-Type限制） ===== -->
+<script>
+// 用fetch加载JS数据文件（即使服务器以application/json返回也能执行）
+async function loadScript(url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('加载失败: ' + url + ' (' + r.status + ')');
+    const code = await r.text();
+    // 间接eval → 变量进入全局作用域
+    (0, eval)(code);
+    console.log('[加载] ' + url + ' ✅');
+}
+
+// 依赖模块就绪标志
+let _modulesReady = false;
+async function initModules() {
+    try {
+        await loadScript('data/prompts.json');
+        await loadScript('data/acts.json');
+        await loadScript('js/prompt-builder.js');
+
+        // 验证
+        if (typeof PROMPTS_DATA === 'undefined') throw new Error('PROMPTS_DATA 未定义');
+        if (typeof ACTS_DATA === 'undefined') throw new Error('ACTS_DATA 未定义');
+        if (typeof promptBuilder === 'undefined') throw new Error('promptBuilder 未定义');
+
+        _modulesReady = true;
+        console.log('🎭 所有游戏模块加载完毕');
+        document.getElementById('statusText').textContent = '就绪 — 先预览Prompt，再测试AI说戏';
+    } catch (e) {
+        console.error('模块加载失败:', e.message);
+        document.getElementById('statusText').textContent = '⚠️ 模块加载失败 — ' + e.message;
+        document.getElementById('output').innerHTML = '<span style="color:var(--red)">❌ ' + e.message + '<br>请确认文件路径正确或使用 Live Server。</span>';
+        throw e;
+    }
+}
+
+// 页面初始化（顶层await不可用，用.then）
+initModules().catch(() => {});
+</script>
+
+<script>
+    const SK = 'zhongzhongguang_act1_test';
+
+    // ---- 检测运行环境 ----
+    (function checkEnv() {
+        if (location.protocol === 'file:') {
+            document.getElementById('liveServerWarn').style.display = 'block';
+        }
+    })();
+
+    // ---- 组装开场System Prompt ----
+    function buildPrompt(oilPct) {
+        const gameState = {
+            lampOil: oilPct,
+            currentAct: 1,
+            currentScene: 0,
+            aiQuality: oilPct >= 80 ? 'high' : oilPct >= 50 ? 'medium' : oilPct >= 20 ? 'low' : 'critical',
+            triggeredClues: []
+        };
+        return promptBuilder.buildOpeningPrompt(gameState);
+    }
+
+    // ---- 配置持久化 ----
+    function saveConfig() {
+        let d = { key: document.getElementById('apiKey').value, model: document.getElementById('model').value };
+        localStorage.setItem(SK, JSON.stringify(d));
+    }
+    function loadConfig() {
+        try { let d = JSON.parse(localStorage.getItem(SK)); if (d) { document.getElementById('apiKey').value = d.key || ''; document.getElementById('model').value = d.model || 'qwen-max'; } } catch (e) { }
+    }
+
+    // ---- 模块就绪检查 ----
+    function ensureReady() {
+        if (!_modulesReady) {
+            document.getElementById('output').innerHTML = '<span style="color:var(--red)">❌ 游戏模块尚未加载完毕，请稍等片刻再试。</span>';
+            Sd('error', '模块未就绪');
+            return false;
+        }
+        return true;
+    }
+
+    // ---- 仅预览Prompt（不调用API） ----
+    function previewPrompt() {
+        if (!ensureReady()) return;
+        let oil = 100;
+        let { systemPrompt, userMessage } = buildPrompt(oil);
+
+        // 显示完整Prompt（System + User）
+        let preview = '══════ System Prompt ══════\n' + systemPrompt +
+            '\n\n══════ User Message ══════\n' + userMessage;
+        document.getElementById('promptPreview').textContent = preview;
+
+        document.getElementById('output').innerHTML = '<span class="placeholder">已生成Prompt预览（未调用API）。点击「路师傅，请开场」开始说戏。</span>';
+        Sd('success', 'Prompt已生成 → 共 ' + systemPrompt.length + ' + ' + userMessage.length + ' 字');
+    }
+
+    // ---- 流式调用 ----
+    async function callAPIStream(sys, msg, onChunk, delayMs) {
+        let key = document.getElementById('apiKey').value.trim();
+        if (!key || !key.startsWith('sk-')) throw new Error('请先填入API Key（以sk-开头）');
+
+        let r = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+            body: JSON.stringify({
+                model: document.getElementById('model').value,
+                messages: [{ role: 'system', content: sys }, { role: 'user', content: msg }],
+                max_tokens: 500,
+                temperature: 0.8,
+                stream: true
+            })
+        });
+
+        if (!r.ok) {
+            let e = await r.text().catch(() => '无响应');
+            if (r.status === 401) throw new Error('API Key 无效（401 Unauthorized），请检查Key是否正确');
+            if (r.status === 429) throw new Error('请求太频繁（429），请稍后再试');
+            throw new Error('HTTP ' + r.status + ': ' + e.substring(0, 200));
+        }
+
+        let reader = r.body.getReader(), decoder = new TextDecoder(), buffer = '', fullText = '';
+        let queue = [], doneReading = false;
+
+        // 消费者：按 delayMs 节奏吐出
+        let consumer = (async () => {
+            while (true) {
+                if (queue.length > 0) {
+                    let item = queue.shift();
+                    onChunk(item.content, item.full);
+                    await new Promise(rs => setTimeout(rs, delayMs));
+                } else if (doneReading) { break; }
+                else { await new Promise(rs => setTimeout(rs, 5)); }
+            }
+        })();
+
+        while (true) {
+            let { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let lines = buffer.split('\n'); buffer = lines.pop() || '';
+            for (let line of lines) {
+                let t = line.trim(); if (!t || !t.startsWith('data:')) continue;
+                let data = t.slice(5).trim(); if (data === '[DONE]') continue;
+                try {
+                    let json = JSON.parse(data), content = json.choices?.[0]?.delta?.content;
+                    if (content) {
+                        fullText += content;
+                        if (delayMs > 0) { queue.push({ content, full: fullText }); }
+                        else { onChunk(content, fullText); }
+                    }
+                } catch (e) { /* 跳过解析失败的行 */ }
+            }
+        }
+        doneReading = true;
+        if (delayMs > 0) await consumer;
+        return fullText;
+    }
+
+    function Sd(s, t) { document.getElementById('dot').className = 'dot ' + s; document.getElementById('statusText').textContent = t; }
+    function E(t) { let d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
+
+    // ---- 测试开场白 ----
+    async function testOpening() {
+        if (!ensureReady()) return;
+        let btn = document.getElementById('testBtn'), oil = 100;
+        btn.disabled = true; btn.textContent = '⏳ 路师傅在清嗓子……';
+        let out = document.getElementById('output');
+        out.innerHTML = '';
+        out.classList.add('streaming');
+        document.getElementById('info1').textContent = ''; document.getElementById('info2').textContent = '';
+        Sd('loading', '正在连接通义千问...');
+        let st = Date.now();
+
+        try {
+            let { systemPrompt, userMessage } = buildPrompt(oil);
+
+            // 显示Prompt预览
+            document.getElementById('promptPreview').textContent = systemPrompt;
+
+            console.log('[开场白] System Prompt(' + systemPrompt.length + '字) + User Message(' + userMessage.length + '字)');
+
+            // 流式输出：老人从容节奏 ~220ms/块
+            let fullText = await callAPIStream(systemPrompt, userMessage, function (chunk, full) {
+                out.textContent = full;
+                // 自动滚动
+                document.querySelector('.card:last-child').scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 220);
+
+            out.classList.remove('streaming');
+            out.innerHTML = E(fullText);
+            let el = ((Date.now() - st) / 1000).toFixed(1);
+            document.getElementById('info1').textContent = '⏱ ' + el + 's';
+            document.getElementById('info2').textContent = '📝 ' + fullText.length + '字';
+            Sd('success', '开场白完成 (' + el + 's, ' + fullText.length + '字)');
+
+        } catch (e) {
+            out.classList.remove('streaming');
+            out.innerHTML = '<span style="color:var(--red)">❌ ' + E(e.message) + '</span>';
+            Sd('error', '调用失败');
+            console.error('[开场白] 错误:', e);
+        }
+        btn.disabled = false; btn.textContent = '🔮 路师傅，请开场';
+    }
+
+    // ---- 初始化 ----
+    loadConfig();
+    document.getElementById('model').value = 'qwen-max';
+
+    console.log('🎭 掌中光 · 第一幕开场白测试');
+    console.log('   剧目：琉璃厂·书生与鹤');
+    console.log('   灯油：100%（灯光明亮）');
+    console.log('   语速：220ms/块（老人从容节奏）');
+</script>
+</body>
+</html>

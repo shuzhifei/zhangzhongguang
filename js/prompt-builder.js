@@ -159,13 +159,96 @@ class PromptBuilder {
                 break;
         }
 
-        // 3. 当前幕的设定
+        // 3. 当前幕的设定（含丰富氛围）
         const actInfo = ACTS_DATA?.acts?.[currentAct - 1];
         if (actInfo) {
             prompt += `\n\n【当前剧目】第${currentAct}幕：${actInfo.name}\n`;
             prompt += `这幕的背景：${actInfo.intro}\n`;
             if (actInfo.embedded_play) {
                 prompt += `戏中戏：你要在叙事中嵌入《${actInfo.embedded_play}》的改编元素。`;
+            }
+            if (actInfo.master_backstory) {
+                prompt += `\n【师傅的往事——你可以自然融入戏词】\n${actInfo.master_backstory}`;
+            }
+
+            // 第一幕专属：暗语嵌入指令
+            if (currentAct === 1) {
+                prompt += `\n\n【第一幕暗语规则——这是路师傅最大的秘密】
+        你不是在讲一个简单的戏——你是在用戏词传递你藏了六十年的真相。
+        以下暗语必须自然地、不被察觉地嵌入你的说戏中。学徒听不听得出来——看缘分。
+
+        核心暗语：
+        · "鹤" → 你失踪的大师兄贺云亭。提到鹤飞走、鹤不见——是在说大师兄。
+        · "三根线" → 师父的三个徒弟。线断了=人不在了。只剩一根线=只剩你。
+        · "信" → 师父留下的戏谱。那封'永远不会寄到的信'——就是未传下去的戏谱。
+        · "琉璃厂东街" → 你学艺的地方。东街第三个旧书摊后面的院子=皮影作坊。
+        · "金蟾碎了" → 师门散了。戏里的金蟾碎了=戏外的传承断了。
+        · "槐树" → 师父种在作坊门口的老槐树。树下可能埋着东西。
+
+        使用规则：
+        - 每次回复最多嵌入1-2个暗语，不要贪多
+        - 暗语必须自然融入戏词——像在讲故事，不是在打暗号
+        - 不要解释暗语的含义，说了就过去，让学徒自己琢磨
+        - 学徒如果追问（'师傅你说的鹤是什么意思？'），你要么沉默，要么岔开
+        - 只有在学徒连续两场戏都摆对了皮影，才多给一点暗示
+        - 第一次见到学徒时——先观察。暗语从第二段戏词开始慢慢放。`;
+            }
+
+            // 幕专属氛围指令
+            const atmosphere = PROMPTS_DATA?.actAtmosphere?.[String(currentAct)];
+            if (atmosphere) {
+                prompt += `\n\n【本幕氛围】${atmosphere.mood}\n${atmosphere.detail}`;
+                if (atmosphere.periodDetail) {
+                    prompt += `\n【时代细节】${atmosphere.periodDetail}`;
+                }
+                if (atmosphere.masterMindset) {
+                    prompt += `\n【师傅心态】${atmosphere.masterMindset}`;
+                }
+                if (atmosphere.narrativeTone) {
+                    prompt += `\n【叙事语气】${atmosphere.narrativeTone}`;
+                }
+                if (atmosphere.embeddedPlayDetail && actInfo.embedded_play) {
+                    prompt += `\n【戏中戏背景】${atmosphere.embeddedPlayDetail}`;
+                }
+            }
+        }
+
+        // 4. 当前场景的暗语触发提示
+        if (currentAct === 1) {
+            const sceneInfo = actInfo?.scenes?.[gameState.currentScene];
+            if (sceneInfo?.cipher_triggers) {
+                prompt += `\n\n【本场戏可用暗语】${sceneInfo.cipher_triggers.join('、')}`;
+                if (sceneInfo.cipher_guidance) {
+                    prompt += `\n【暗语引导】${sceneInfo.cipher_guidance}`;
+                }
+            }
+
+            // 5. 隐藏线索注入——根据玩家已触发的线索动态调整
+            const triggeredClues = gameState.triggeredClues || [];
+            const allClues = actInfo.hidden_clues || [];
+            const currentSceneClues = allClues.filter(c => c.scene_id === sceneInfo?.id);
+
+            if (currentSceneClues.length > 0) {
+                prompt += `\n\n【隐藏线索——本轮可揭示的秘密】`;
+                prompt += `\n以下是你在本场戏中可以透露的隐藏线索。根据学徒的表现分层释放：`;
+
+                for (const clue of currentSceneClues) {
+                    const alreadyTriggered = triggeredClues.includes(clue.id);
+                    const layerLabel = clue.layer === 1 ? '表层（容易触发）' : clue.layer === 2 ? '中层（需要学徒已经触发了至少一条暗语）' : '深层（学徒必须在前两场触发了暗语才会出现）';
+
+                    prompt += `\n\n▸ ${clue.name} [layer-${clue.layer} ${layerLabel}]`;
+                    prompt += `\n  触发条件：${clue.trigger}`;
+                    prompt += `\n  触发皮影：${(clue.trigger_puppets || []).join('、')}`;
+                    prompt += `\n  揭示内容：${clue.reveal_content}`;
+                    prompt += `\n  关联暗语：${(clue.cipher_link || []).join('、')}`;
+                    prompt += `\n  游戏影响：${clue.game_impact}`;
+                    if (alreadyTriggered) {
+                        prompt += `\n  ⚠️ 这条线索已经被学徒发现过了——不要再重复。`;
+                    }
+                    if (clue.difficulty === 'hard') {
+                        prompt += `\n  ⚠️ 这是困难线索——不要主动说出，只在学徒追问他才松口。`;
+                    }
+                }
             }
         }
 
@@ -204,7 +287,17 @@ class PromptBuilder {
 
             case 'ask_master':
                 message = `学徒问了你一个问题：\n"${shadowDescription}"\n`;
-                message += `请以路师傅的口吻简短回答。`;
+                // 检测是否在追问暗语
+                const cipherKeywords = ['鹤', '信', '线', '三根', '金蟾', '槐树', '东街', '琉璃厂', '师父', '师兄', '戏谱', '传承'];
+                const askedAboutCipher = cipherKeywords.some(kw => (shadowDescription || '').includes(kw));
+                if (askedAboutCipher && gameState.currentAct === 1) {
+                    message += `\n⚠️ 学徒可能在试探暗语。根据学徒此前的表现：
+        如果学徒前面影面摆得好（正确率≥2次）→ 可以多说一点，但仍然是暗示，不说破。
+        如果学徒是新来的或影面摆得一般 → 岔开话题，用'先把手上的戏演好'之类的师傅口吻挡回去。
+        绝对不要直接解释暗语的含义——暗语的真意要在第三幕才揭晓。`;
+                } else {
+                    message += `\n请以路师傅的口吻简短回答。`;
+                }
                 break;
         }
 
@@ -213,6 +306,7 @@ class PromptBuilder {
 
     // ============================================================
     // 组装评判User Message（AI评判影面用 —— 非流式，需返回JSON）
+    // 统一三维度评判体系，适用于第一、二、三幕
     // ============================================================
     /**
      * @param {object} scene           — 当前场景数据
@@ -224,59 +318,103 @@ class PromptBuilder {
         let systemPrompt, userMessage;
 
         if (isImprov) {
-            // 第三幕即兴创作 —— 没有标准答案，只评判创造力
-            systemPrompt = `你是北京皮影戏的守护之灵。你不是在"评判对错"，而是在"感受这个学徒的理解"。
-
-学徒正在即兴创作一出失传的皮影戏。没有标准答案——只有"传神"和"走样"的区别。
-
-请用JSON格式返回你的感受：
-{
-  "score": 0-100,        // 整体评分（60以上=传神，40-60=尚可，40以下=走样）
-  "correct": true,       // 即兴模式下始终为true（没有对错）
-  "creativity": 0-50,    // 创造力评分（是否摆了不寻常但合理的组合）
-  "emotional_hit": "真正打动你的一个点（1句话）",
-  "guiding_hint": "给学徒的下一步引导（1句话，像老师傅的口吻）"
-}
-只输出JSON，不要输出任何其他内容。`;
+            // 第三幕即兴创作 —— 五维度评判，叙事逻辑自洽>传神度>角色匹配
+            systemPrompt = PROMPTS_DATA?.improvJudgeSystemPrompt ||
+                this._defaultImprovJudgePrompt();
 
             userMessage = `学徒在即兴创作中摆了以下皮影：
 ${shadowDescription}
 
 三个关键词是：${scene?.keywords?.join('、') || '寒江、断线、一个人的戏台'}
 
-请感受这个影面，返回你的评判。`;
+请从五个维度感受这个影面：
+1. 角色匹配——这些皮影在一起有没有内在理由？
+2. 空间方位——位置关系有没有在说话？高低、疏密、朝向？
+3. 叙事逻辑自洽——这面影能不能自圆其说？看完你能讲出什么故事？
+4. 传神度与情感——这面影有没有"魂"？有没有触动你？
+5. 打动点——哪个细节最打动你？
+
+返回你的评判JSON。`;
 
         } else {
-            // 普通评判模式 —— 有标准场景要求
-            systemPrompt = `你是严格的皮影戏技艺评判者。你坐在幕后，看着学徒在白布上摆皮影。
+            // 普通评判模式（第一、二幕）—— 五维度评判
+            systemPrompt = PROMPTS_DATA?.judgeSystemPrompt ||
+                this._defaultJudgePrompt();
 
-你的职责：判断学徒摆的影面是否"对路"——是否符合当前场景的需要，有没有灵气。
+            userMessage = `【当前场景】
+${scene?.description || ''}
 
-【评判标准】
-- 准确性（0-50分）：是否包含了场景必需的皮影角色
-- 构图感（0-30分）：皮影的位置摆放是否有皮影戏的构图讲究
-- 灵气（0-20分）：是否摆了AI没提但很妙的皮影
-
-请用JSON格式返回评判结果：
-{
-  "score": 0-100,
-  "correct": true/false,
-  "creativity": 0-50,
-  "comment": "简短评语（路师傅的口吻，1-2句，可以夸可以批）"
-}
-只输出JSON，不要输出任何其他内容。`;
-
-            userMessage = `当前场景标准：${scene?.description || ''}
+【场景要求】
 期望出现的关键皮影：${(scene?.standard_puppets || []).join('、') || '无特定要求'}
 可以接受的额外皮影：${(scene?.acceptable_extras || []).join('、') || '无'}
+${scene?.hidden_clue ? '暗线线索（不要在评判中直接提及学徒）：' + scene.hidden_clue : ''}
 
-学徒在白布上摆了以下皮影：
+【学徒的影面】
 ${shadowDescription}
 
-请评判这个影面。`;
+请从五个维度评判这个影面：
+1. 角色匹配——选角是否对路？缺了谁？多了谁？
+2. 空间方位——摆放是否有讲究？主次、高低、疏密、朝向？
+3. 剧情细节还原——影面是否抓住了戏词里的关键细节？
+4. 传神度与情感——这面影有没有魂？有没有触动你？
+5. 下一步引导——给学徒一个具体的改进建议
+
+返回你的评判JSON。`;
         }
 
         return { systemPrompt, userMessage };
+    }
+
+    // ============================================================
+    // 内置默认评判Prompt（当prompts.json加载失败时使用）
+    // ============================================================
+    _defaultJudgePrompt() {
+        return `你是严格的皮影戏技艺评判者。你坐在幕后，看着学徒在白布上摆皮影。
+
+你的职责：从五个维度评判学徒的影面——角色匹配、空间方位、剧情细节还原、传神度与情感。
+
+【五维评判体系】
+维度一 · 角色匹配（0-30分）—— 皮影选择是否对路，缺了谁、多了谁
+维度二 · 空间方位（0-25分）—— 主次、高低、疏密、朝向是否讲究
+维度三 · 剧情细节还原（0-25分）—— 是否抓住了戏词里的关键细节
+维度四 · 传神度与情感（0-20分）—— 这面影有没有魂，有没有触动你
+
+【硬性要求】只输出JSON：
+{
+  "score": 0-100,
+  "correct": true/false,
+  "character_match": { "score": 0-30, "comment": "选角评语" },
+  "spatial": { "score": 0-25, "comment": "方位评语" },
+  "plot_detail": { "score": 0-25, "comment": "剧情还原评语" },
+  "authenticity": { "score": 0-20, "comment": "传神度评语" },
+  "comment": "整体评语（路师傅口吻，2-3句）",
+  "guiding_hint": "具体建议（1句话）"
+}`;
+    }
+
+    _defaultImprovJudgePrompt() {
+        return `你是北京皮影戏的守护之灵。你不是在"评判对错"，而是在"感受这个学徒的理解"。
+
+学徒正在即兴创作一出失传的皮影戏。没有标准答案——只有"传神"和"走样"的区别。
+
+【即兴五维评判】
+维度一 · 角色匹配（0-20分）—— 皮影选择是否有内在理由
+维度二 · 空间方位（0-20分）—— 位置关系有没有在说话
+维度三 · 叙事逻辑自洽（0-30分）—— 影面能不能自圆其说（第三幕专属核心维度）
+维度四 · 传神度与情感（0-30分）—— 这面影有没有魂，有没有触动你
+
+【硬性要求】只输出JSON：
+{
+  "score": 0-100,
+  "correct": true,
+  "character_match": { "score": 0-20, "comment": "角色匹配评语" },
+  "spatial": { "score": 0-20, "comment": "空间方位评语" },
+  "narrative_logic": { "score": 0-30, "comment": "叙事逻辑自洽评语" },
+  "authenticity": { "score": 0-30, "comment": "传神度与情感评语" },
+  "emotional_hit": "最打动你的细节",
+  "comment": "整体评语（2-3句话，守护之灵口吻）",
+  "guiding_hint": "具体建议（1句话）"
+}`;
     }
 
     // ============================================================
@@ -331,6 +469,66 @@ ${shadowDescription}
     }
 
     // ============================================================
+    // 隐藏线索匹配：根据学徒摆放的皮影判断哪些线索被触发
+    // ============================================================
+    /**
+     * @param {Array}  stagedPuppets — 白布上的皮影 [{puppetId, name, x, y}, ...]
+     * @param {string} currentSceneId — 当前场景ID
+     * @param {Array}  alreadyTriggered — 已经触发过的线索ID列表
+     * @returns {Array} 本轮新触发的线索对象列表
+     */
+    getTriggeredClues(stagedPuppets, currentSceneId, alreadyTriggered = []) {
+        const actInfo = ACTS_DATA?.acts?.[0]; // 第一幕
+        if (!actInfo?.hidden_clues) return [];
+
+        const placedIds = (stagedPuppets || []).map(p => p.puppetId);
+        const sceneClues = actInfo.hidden_clues.filter(c =>
+            c.scene_id === currentSceneId && !alreadyTriggered.includes(c.id)
+        );
+
+        const newlyTriggered = [];
+        for (const clue of sceneClues) {
+            const required = clue.trigger_puppets || [];
+            // 所有trigger_puppets都被摆放了=线索触发
+            const allPresent = required.every(id => placedIds.includes(id));
+            if (allPresent && required.length > 0) {
+                newlyTriggered.push(clue);
+            }
+        }
+
+        return newlyTriggered;
+    }
+
+    // ============================================================
+    // 检查第一幕隐藏线索链的完成度
+    // ============================================================
+    /**
+     * @param {Array} triggeredClueIds — 已触发线索ID列表
+     * @returns {{ total: number, found: number, layers: {1: number, 2: number, 3: number}, allFound: boolean, bonusOil: number }}
+     */
+    getHiddenClueProgress(triggeredClueIds = []) {
+        const actInfo = ACTS_DATA?.acts?.[0];
+        if (!actInfo?.hidden_clues) return { total: 0, found: 0, layers: {1:0, 2:0, 3:0}, allFound: false, bonusOil: 0 };
+
+        const all = actInfo.hidden_clues;
+        const found = all.filter(c => triggeredClueIds.includes(c.id));
+        const layers = { 1: 0, 2: 0, 3: 0 };
+        found.forEach(c => { if (layers[c.layer] !== undefined) layers[c.layer]++; });
+
+        const allFound = found.length === all.length;
+        const bonusOil = allFound ? 10 : 0; // 六条全发现 = +10%灯油
+
+        return {
+            total: all.length,
+            found: found.length,
+            layers,
+            allFound,
+            bonusOil,
+            nextUnfound: all.find(c => !triggeredClueIds.includes(c.id))?.name || null
+        };
+    }
+
+    // ============================================================
     // 组装终幕Prompt（游戏结尾，自由对话）
     // ============================================================
     /**
@@ -379,7 +577,7 @@ ${shadowDescription}
      */
     getSpeechSpeed(gameState) {
         return AI.speedForQuality(gameState.aiQuality);
-    },
+    }
 
     // ============================================================
     // 根据灯油状态返回 API 调用参数
@@ -402,7 +600,7 @@ ${shadowDescription}
             default:
                 return { maxTokens: 400, temperature: 0.75, speed: 220 };
         }
-    },
+    }
 
     // ============================================================
     // 组装开场白Prompt（游戏开始，师傅的第一段话）

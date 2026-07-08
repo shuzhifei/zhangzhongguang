@@ -15,7 +15,7 @@ const ShadowJudge = {
      * @param {Array}  stagedPuppets  — 白布上当前的皮影列表 [{puppetId, name, x, y}, ...]
      * @param {string} currentSceneId — 当前场景ID
      * @param {boolean} isImprov      — 是否是第三幕即兴创作模式
-     * @returns {Promise<object>} { score, correct, creativity, comment, emotional_hit?, guiding_hint? }
+     * @returns {Promise<object>} { score, correct, puppet_choice, composition, creativity, comment, emotional_hit?, guiding_hint? }
      */
     async judge(stagedPuppets, currentSceneId, isImprov = false) {
         // 1. 获取场景数据
@@ -34,7 +34,10 @@ const ShadowJudge = {
             const emptyResult = {
                 score: 0,
                 correct: false,
-                creativity: 0,
+                character_match: { score: 0, comment: '白布上什么都没有。' },
+                spatial: { score: 0, comment: '没有影面，无从评判方位。' },
+                plot_detail: { score: 0, comment: '没有皮影，剧情无处落脚。' },
+                authenticity: { score: 0, comment: '空白的白布——也许学徒在想别的。' },
                 comment: '白布上什么都没有。学徒在犹豫？'
             };
             EventBus.emit('judge_result', emptyResult);
@@ -61,7 +64,11 @@ const ShadowJudge = {
         EventBus.emit('judge_result', {
             score: result.score,
             correct: result.correct,
-            creativity: result.creativity,
+            character_match: result.character_match,
+            spatial: result.spatial,
+            plot_detail: result.plot_detail,
+            narrative_logic: result.narrative_logic,
+            authenticity: result.authenticity,
             comment: result.comment,
             emotional_hit: result.emotional_hit,
             guiding_hint: result.guiding_hint
@@ -138,26 +145,33 @@ const ShadowJudge = {
     quickJudge(stagedPuppets, currentSceneId) {
         const scene = this._getSceneData(currentSceneId);
         if (!scene || !scene.standard_puppets) {
-            return { score: 50, correct: true, creativity: 0, comment: '……（灯太暗了，看不清影面）' };
+            return {
+                score: 50, correct: true,
+                character_match: { score: 15, comment: '灯太暗了……' },
+                spatial: { score: 10, comment: '看不清位置……' },
+                plot_detail: { score: 10, comment: '灯将灭，戏词模糊……' },
+                authenticity: { score: 15, comment: '……（灯太暗了，看不清影面）' },
+                comment: '……（灯太暗了，看不清影面）'
+            };
         }
 
         const placedIds = stagedPuppets.map(p => p.puppetId);
         const required = scene.standard_puppets || [];
         const extras = scene.acceptable_extras || [];
 
-        // 计算必需皮影的覆盖率
         const covered = required.filter(id => placedIds.includes(id));
         const coverage = required.length > 0 ? covered.length / required.length : 1;
 
-        // 检查是否有"不该出现"的皮影
         const allowed = [...required, ...extras];
         const unexpected = placedIds.filter(id => !allowed.includes(id));
 
-        let score = Math.round(coverage * 70);
-        let creativity = unexpected.length > 0 ? Math.min(unexpected.length * 10, 50) : 0;
+        let charScore = Math.round(coverage * 30);
+        let spatialScore = Math.round(coverage * 25 * 0.6); // 本地无法分析方位，打折
+        let plotScore = Math.round(coverage * 25 * 0.6);
+        let authScore = coverage >= 0.8 ? 16 : coverage >= 0.5 ? 12 : 6;
+        let score = charScore + spatialScore + plotScore + authScore;
         let correct = coverage >= 0.6;
 
-        // 扣分：缺了关键皮影
         if (coverage < 0.5) score -= 20;
 
         const comment = coverage >= 0.8
@@ -166,7 +180,15 @@ const ShadowJudge = {
                 ? '还差一些。'
                 : '不太对。';
 
-        return { score: Math.max(0, score), correct, creativity, comment };
+        return {
+            score: Math.max(0, score),
+            correct,
+            character_match: { score: charScore, comment: covered.length ? `选了${covered.join('、')}` : '缺了关键角色' },
+            spatial: { score: spatialScore, comment: '（本地评判，无法精确分析方位）' },
+            plot_detail: { score: plotScore, comment: '（本地评判，无法分析剧情还原）' },
+            authenticity: { score: authScore, comment: unexpected.length ? `额外选了${unexpected.join('、')}` : '中规中矩' },
+            comment
+        };
     },
 
     // ============================================================
@@ -207,15 +229,28 @@ const ShadowJudge = {
 
     /** 默认评判结果（解析失败时使用） */
     _defaultResult(isImprov = false) {
+        if (isImprov) {
+            return {
+                score: 50,
+                correct: true,
+                character_match: { score: 10, comment: '角色选择……（解析异常，无法详评）' },
+                spatial: { score: 10, comment: '方位有待细看……' },
+                narrative_logic: { score: 15, comment: '叙事逻辑……说不清。' },
+                authenticity: { score: 15, comment: '有些东西在影面里——说不清。' },
+                emotional_hit: '这个影面里有些东西……说不清。',
+                comment: '守护之灵沉默了一会儿。这个影面里有些东西——说不清。',
+                guiding_hint: '继续。你觉得对，就继续。'
+            };
+        }
         return {
             score: 50,
             correct: true,
-            creativity: 10,
+            character_match: { score: 15, comment: '选角尚可……（解析异常，无法详评）' },
+            spatial: { score: 12, comment: '方位有待细看……' },
+            plot_detail: { score: 12, comment: '剧情还原……说不清。' },
+            authenticity: { score: 11, comment: '有些东西——说不清。' },
             comment: '师傅沉默了一会儿，微微点了点头。',
-            ...(isImprov ? {
-                emotional_hit: '这个影面里有些东西……说不清。',
-                guiding_hint: '继续。你觉得对，就继续。'
-            } : {})
+            guiding_hint: '再想想。'
         };
     }
 };
