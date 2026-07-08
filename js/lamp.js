@@ -13,6 +13,17 @@ const INTERMISSION_OIL = 80;
 let countdownTimer = null;
 let secondsLeft = 10;
 
+// ===== 刷新灯油 UI =====
+function updateOilUI() {
+  const oil = gameState.lampOil;
+  // 更新数字文字
+  const oilText = document.getElementById('oilText');
+  if (oilText) oilText.textContent = oil + ' / 100';
+  // 更新进度条宽度
+  const oilBar = document.getElementById('oilBar');
+  if (oilBar) oilBar.style.width = oil + '%';
+}
+
 // 灯油系统封装
 const LampSystem = {
   // 扣灯油
@@ -21,6 +32,7 @@ const LampSystem = {
     gameState.lampOil = Math.max(0, gameState.lampOil - cost);
     gameState.totalOilBurned += cost;
     gameState.updateAIQuality();
+    updateOilUI();
     Bus.emit("oil_changed", { oil: gameState.lampOil });
     if (gameState.lampOil === 0) {
       Bus.emit("oil_depleted", { state: gameState });
@@ -31,6 +43,7 @@ const LampSystem = {
   reward(reason, amount) {
     gameState.lampOil = Math.min(100, gameState.lampOil + amount);
     gameState.updateAIQuality();
+    updateOilUI();
     Bus.emit("oil_changed", { oil: gameState.lampOil });
   },
 
@@ -38,6 +51,7 @@ const LampSystem = {
   intermissionRecover() {
     gameState.lampOil = INTERMISSION_OIL;
     gameState.updateAIQuality();
+    updateOilUI();
     Bus.emit("oil_changed", { oil: gameState.lampOil });
   },
 
@@ -60,7 +74,7 @@ const LampSystem = {
 // 监听前端A的所有操作事件
 Bus.on("puppet_placed", (data) => {
   LampSystem.burn("puppet_placed");
-  gameState.stagedPuppets.push(data.puppetId);
+  gameState.stagedPuppets.push(data.id);
 });
 Bus.on("puppet_removed", () => LampSystem.burn("puppet_removed"));
 Bus.on("ask_master_clicked", () => LampSystem.burn("ask_master"));

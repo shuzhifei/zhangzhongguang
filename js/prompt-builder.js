@@ -379,7 +379,7 @@ ${shadowDescription}
      */
     getSpeechSpeed(gameState) {
         return AI.speedForQuality(gameState.aiQuality);
-    },
+    }
 
     // ============================================================
     // 根据灯油状态返回 API 调用参数
@@ -402,7 +402,7 @@ ${shadowDescription}
             default:
                 return { maxTokens: 400, temperature: 0.75, speed: 220 };
         }
-    },
+    }
 
     // ============================================================
     // 组装开场白Prompt（游戏开始，师傅的第一段话）

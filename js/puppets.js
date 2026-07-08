@@ -23,8 +23,10 @@
         // 创建跟随鼠标的副本
         dragClone = document.createElement('div');
         dragClone.className = 'puppet-drag-clone';
-        dragClone.innerHTML = card.innerHTML;
+        dragClone.innerHTML = card.querySelector('.puppet-icon').innerHTML;
         dragClone.dataset.puppet = dragPuppetId;
+        dragClone.style.width  = '80px';
+        dragClone.style.height = '110px';
 
         // 定位到鼠标位置
         const rect = card.getBoundingClientRect();
@@ -78,15 +80,16 @@
         pup.className = 'stage-puppet';
         pup.dataset.puppet = dragPuppetId;
 
-        // 用 emoji 当图标（临时方案）
-        const originalCard = stage.querySelector('.stage-hint');
+        // 复制皮影 SVG 到舞台上
         const cardEl = document.querySelector(`.puppet-card[data-puppet="${dragPuppetId}"]`);
-        const icon = cardEl ? cardEl.querySelector('.puppet-icon').textContent : '🎭';
-        pup.innerHTML = `<span style="font-size:40px;">${icon}</span>`;
+        const svgHtml = cardEl ? cardEl.querySelector('.puppet-icon').innerHTML : '';
+        pup.innerHTML = svgHtml;
+        pup.style.width  = '80px';
+        pup.style.height = '110px';
 
-        // 定位（相对于舞台）
-        pup.style.left = (x - stageRect.left - 20) + 'px';
-        pup.style.top  = (y - stageRect.top  - 20) + 'px';
+        // 定位（相对于舞台，居中放置）
+        pup.style.left = (x - stageRect.left - 40) + 'px';
+        pup.style.top  = (y - stageRect.top  - 55) + 'px';
 
         stage.appendChild(pup);
 
