@@ -11,12 +11,12 @@ const PuppetImageMap = {
     // 第一幕 —— 琉璃厂·书生与鹤
     scholar:  'assets/images/scholar.png',   // 书生
     elder:    'assets/images/elder.png',     // 老者
-    tree:     null,                           // 槐树
+    tree:     'assets/images/tree.png',       // 槐树（已处理：去水印+去背景+透明PNG）
     moon:     'assets/images/moon.png',      // 月亮（已润色：去水印+去背景+透明PNG）
     letter:   null,                           // 信
     frog:     'assets/images/frog.png',       // 金蟾
     lamp:     null,                           // 灯
-    master:   null,                           // 师傅
+    master:   'assets/images/master.png',       // 师傅（已处理：去背景+透明PNG）
 
     // 第二幕 —— 大栅栏·灯灭之前
     demon:    null,                           // 白骨精
