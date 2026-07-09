@@ -17,6 +17,8 @@ const PuppetImageMap = {
     frog:     'assets/images/frog.png',       // 金蟾
     lamp:     null,                           // 灯
     master:   'assets/images/master.png',       // 师傅（已处理：去背景+透明PNG）
+    crane:    'assets/images/crane.png',       // 鹤（已处理：去背景+透明PNG）
+    dragon:   'assets/images/dragon.png',        // 龙（已处理：去背景+透明PNG）
 
     // 第二幕 —— 大栅栏·灯灭之前
     demon:    null,                           // 白骨精
@@ -30,7 +32,8 @@ const PuppetImageMap = {
 const PUPPET_EMOJI = {
     scholar: '📜', elder: '👴', tree: '🌳', moon: '🌙',
     letter: '✉️', frog: '🐸', demon: '👹', monkey: '🐵',
-    lamp: '💡', master: '👨‍🏫', bamboo: '🎋'
+    lamp: '💡', master: '👨‍🏫', bamboo: '🎋',
+    crane: '🕊️', dragon: '🐲'
 };
 
 const PuppetImageRenderer = {
@@ -47,6 +50,10 @@ const PuppetImageRenderer = {
     // 渲染为 HTML 字符串（img 标签 或 emoji span）
     // opts: { width, height } —— 可选，控制图片尺寸
     render(id, opts = {}) {
+        // 兼容旧调用风格 render(id, 80) 和新风格 render(id, {width:80})
+        if (typeof opts === 'number') {
+            opts = { width: opts };
+        }
         const path = this.getPath(id);
         const w = opts.width || 120;
         const h = opts.height || 'auto';

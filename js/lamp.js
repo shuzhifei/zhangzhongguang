@@ -22,6 +22,7 @@ const LampSystem = {
     COSTS: {
         puppet_placed: 3,
         puppet_removed: 1,
+        puppet_moved: 1,
         ask_master: 8,
         wrong_puppet: 5,
         time_penalty: 2
@@ -30,6 +31,7 @@ const LampSystem = {
     REWARDS: {
         correct_judge: 2,
         creativity_bonus: 3,
+        partial_correct: 1,
         perfect_scene: 10
     },
     // 幕间恢复油量
@@ -88,23 +90,3 @@ const LampSystem = {
 
 // 全局导出
 window.LampSystem = LampSystem;
-
-// 自动监听前端A触发的事件，自动扣油
-EventBus.on("puppet_placed", (data) => {
-    LampSystem.burn("puppet_placed");
-    gameState.stagedPuppets.push(data.id || data.puppetId);
-});
-EventBus.on("puppet_removed", () => LampSystem.burn("puppet_removed"));
-EventBus.on("ask_master", () => LampSystem.burn("ask_master"));
-
-// 监听幕间切换事件，自动回油
-EventBus.on("act_intermission", () => LampSystem.intermissionRecover());
-
-// 监听C工程师AI评判结果，更新打分指标
-EventBus.on("judge_result", (res) => {
-    gameState.endingStats.faithfulness += res.score;
-    gameState.endingStats.creativity += res.creativity;
-    if (res.correct) LampSystem.reward("correct_judge");
-    if (res.creativity > 20) LampSystem.reward("creativity_bonus");
-    SaveSystem.save();
-});

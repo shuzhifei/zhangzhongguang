@@ -1,348 +1,61 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>掌中光 - 皮影戏AI互动游戏</title>
-    <link rel="stylesheet" href="css/theater.css">
-    <link rel="stylesheet" href="css/puppets.css">
-    <link rel="stylesheet" href="css/lamp.css">
-    <link rel="stylesheet" href="css/ui.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>掌中光 · 第一幕 — 琉璃厂·书生与鹤</title>
+<link rel="stylesheet" href="css/act1.css">
 </head>
 <body>
 
-    <!-- ===== 顶部标题栏 ===== -->
-    <div class="header">掌 中 光 · 皮 影 戏</div>
+<div class="header">掌 中 光 · 第 一 幕 — 琉璃厂·书生与鹤</div>
 
-    <!-- ===== 主游戏区域 ===== -->
-    <div class="main-area">
+<div class="main-area">
+    <!-- 左侧：皮影箱 -->
+    <div class="puppet-box scroll" id="puppetBox">
+        <h3>皮 影 箱</h3>
+        <div class="scene-info" id="sceneInfo">第1场 · 月夜等人</div>
+    </div>
 
-        <!-- 左侧：皮影箱 -->
-        <div class="puppet-box">
-            <h3>皮 影 箱</h3>
-
-            <!-- 书生 -->
-            <div class="puppet-card" data-puppet="scholar">
-                <div class="puppet-icon"><svg viewBox="0 0 100 140">
-<defs>
-  <linearGradient id="scholarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#5a8a6a"/><stop offset="100%" stop-color="#2d4a35"/></linearGradient>
-</defs>
-<!-- 长袍 -->
-<path d="M35,52 L28,135 Q26,139 32,140 L68,140 Q74,139 72,135 L65,52 Z" fill="url(#scholarGrad)" stroke="#1a2a1f" stroke-width="1.5"/>
-<!-- 袍纹镂空 -->
-<circle cx="50" cy="90" r="7" fill="#a0d4a8" opacity="0.3" stroke="#2d4a35" stroke-width="0.6"/>
-<path d="M38,75 Q50,70 62,75" fill="none" stroke="#a0d4a8" stroke-width="0.6" opacity="0.4"/>
-<path d="M38,105 Q50,100 62,105" fill="none" stroke="#a0d4a8" stroke-width="0.6" opacity="0.3"/>
-<!-- 腰带 -->
-<rect x="28" y="82" width="44" height="5" rx="1" fill="#c48a3e" opacity="0.5" stroke="#8b6914" stroke-width="0.6"/>
-<!-- 袖口 -->
-<path d="M28,52 Q18,56 16,64 Q15,70 20,72 Q26,71 32,64 Z" fill="#3d5a44" stroke="#1a2a1f" stroke-width="1.2"/>
-<path d="M72,52 Q82,56 84,64 Q85,70 80,72 Q74,71 68,64 Z" fill="#3d5a44" stroke="#1a2a1f" stroke-width="1.2"/>
-<!-- 右手持信 -->
-<rect x="76" y="60" width="10" height="14" rx="1" fill="#e8d5a0" stroke="#8b6914" stroke-width="1" transform="rotate(15 81 67)"/>
-<line x1="78" y1="64" x2="86" y2="62" stroke="#8b6914" stroke-width="0.5" transform="rotate(15 81 67)"/>
-<line x1="78" y1="67" x2="86" y2="65" stroke="#8b6914" stroke-width="0.5" transform="rotate(15 81 67)"/>
-<!-- 头部 -->
-<ellipse cx="50" cy="36" rx="15" ry="17" fill="#d4a878" stroke="#3a2010" stroke-width="1.5"/>
-<!-- 方巾（书生帽） -->
-<path d="M35,24 L33,16 Q50,10 67,16 L65,24 Z" fill="#3a2010" stroke="#1a0a02" stroke-width="1"/>
-<rect x="33" y="22" width="34" height="4" fill="#3a2010"/>
-<!-- 帽带 -->
-<line x1="35" y1="26" x2="33" y2="32" stroke="#3a2010" stroke-width="1.5"/>
-<line x1="65" y1="26" x2="67" y2="32" stroke="#3a2010" stroke-width="1.5"/>
-<!-- 眼睛 -->
-<ellipse cx="45" cy="35" rx="2" ry="1.5" fill="#1a0a02"/>
-<ellipse cx="55" cy="35" rx="2" ry="1.5" fill="#1a0a02"/>
-<!-- 嘴 -->
-<path d="M46,43 Q50,45 54,43" fill="none" stroke="#3a2010" stroke-width="1"/>
-<!-- 眉 -->
-<path d="M42,31 Q45,29 48,31" fill="none" stroke="#3a2010" stroke-width="1"/>
-<path d="M52,31 Q55,29 58,31" fill="none" stroke="#3a2010" stroke-width="1"/>
-<!-- 脚 -->
-<path d="M36,136 L32,140 L44,140 Z" fill="#2d4a35" stroke="#1a2a1f" stroke-width="0.8"/>
-<path d="M56,136 L52,140 L64,140 Z" fill="#2d4a35" stroke="#1a2a1f" stroke-width="0.8"/>
-                </svg></div>
-                <div class="puppet-name">书 生</div>
-            </div>
-
-            <!-- 槐树 -->
-            <div class="puppet-card" data-puppet="tree">
-                <div class="puppet-icon"><svg viewBox="0 0 100 140">
-<defs>
-  <linearGradient id="treeGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6b8a40"/><stop offset="100%" stop-color="#3a4a20"/></linearGradient>
-  <linearGradient id="trunkGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#5a3a1a"/><stop offset="50%" stop-color="#7a5028"/><stop offset="100%" stop-color="#5a3a1a"/></linearGradient>
-</defs>
-<!-- 树冠 -->
-<ellipse cx="50" cy="40" rx="38" ry="32" fill="url(#treeGrad)" stroke="#2a3a15" stroke-width="1.5"/>
-<!-- 镂空叶纹 -->
-<circle cx="35" cy="30" r="8" fill="#a8c878" opacity="0.25" stroke="#3a4a20" stroke-width="0.6"/>
-<circle cx="55" cy="25" r="10" fill="#a8c878" opacity="0.2" stroke="#3a4a20" stroke-width="0.6"/>
-<circle cx="65" cy="45" r="7" fill="#a8c878" opacity="0.25" stroke="#3a4a20" stroke-width="0.6"/>
-<circle cx="42" cy="50" r="6" fill="#a8c878" opacity="0.2" stroke="#3a4a20" stroke-width="0.6"/>
-<circle cx="28" cy="48" r="5" fill="#a8c878" opacity="0.15" stroke="#3a4a20" stroke-width="0.5"/>
-<!-- 叶脉 -->
-<path d="M20,35 Q35,25 50,30 Q65,25 80,35" fill="none" stroke="#2a3a15" stroke-width="0.8" opacity="0.4"/>
-<path d="M25,50 Q40,42 55,48 Q70,42 78,50" fill="none" stroke="#2a3a15" stroke-width="0.6" opacity="0.3"/>
-<!-- 树干 -->
-<path d="M42,68 Q40,90 38,115 Q37,128 40,138 L60,138 Q63,128 62,115 Q60,90 58,68 Z" fill="url(#trunkGrad)" stroke="#3a2010" stroke-width="1.5"/>
-<!-- 树干纹路 -->
-<path d="M44,75 Q46,90 44,105" fill="none" stroke="#3a2010" stroke-width="0.8" opacity="0.5"/>
-<path d="M54,80 Q52,95 54,110" fill="none" stroke="#3a2010" stroke-width="0.8" opacity="0.4"/>
-<path d="M48,90 Q50,105 48,120" fill="none" stroke="#3a2010" stroke-width="0.6" opacity="0.3"/>
-<!-- 树根 -->
-<path d="M38,135 Q30,138 25,136" fill="none" stroke="#3a2010" stroke-width="2.5" stroke-linecap="round"/>
-<path d="M62,135 Q70,138 75,136" fill="none" stroke="#3a2010" stroke-width="2.5" stroke-linecap="round"/>
-<!-- 枝桠 -->
-<path d="M45,70 Q35,60 28,55" fill="none" stroke="#5a3a1a" stroke-width="2" stroke-linecap="round"/>
-<path d="M55,70 Q65,60 72,55" fill="none" stroke="#5a3a1a" stroke-width="2" stroke-linecap="round"/>
-<!-- 槐花点缀 -->
-<circle cx="30" cy="55" r="1.5" fill="#e8d5a0" opacity="0.6"/>
-<circle cx="70" cy="55" r="1.5" fill="#e8d5a0" opacity="0.6"/>
-<circle cx="25" cy="42" r="1" fill="#e8d5a0" opacity="0.5"/>
-<circle cx="75" cy="42" r="1" fill="#e8d5a0" opacity="0.5"/>
-                </svg></div>
-                <div class="puppet-name">槐 树</div>
-            </div>
-
-            <!-- 月亮 -->
-            <div class="puppet-card" data-puppet="moon">
-                <div class="puppet-icon"><svg viewBox="0 0 100 100">
-<defs>
-  <radialGradient id="moonGrad" cx="40%" cy="40%"><stop offset="0%" stop-color="#fff8e0"/><stop offset="60%" stop-color="#e8d098"/><stop offset="100%" stop-color="#c4a050"/></radialGradient>
-  <filter id="moonGlow"><feGaussianBlur stdDeviation="2"/></filter>
-</defs>
-<!-- 外层光晕 -->
-<circle cx="50" cy="50" r="38" fill="#f0d890" opacity="0.12" filter="url(#moonGlow)"/>
-<circle cx="50" cy="50" r="32" fill="#f0d890" opacity="0.2" filter="url(#moonGlow)"/>
-<!-- 月亮主体（弯月） -->
-<path d="M62,20 Q35,25 30,50 Q35,75 62,80 Q48,70 46,50 Q48,30 62,20 Z" fill="url(#moonGrad)" stroke="#8b6914" stroke-width="1.5"/>
-<!-- 月面纹理 -->
-<circle cx="52" cy="40" r="3" fill="#c4a050" opacity="0.3"/>
-<circle cx="55" cy="55" r="2" fill="#c4a050" opacity="0.25"/>
-<circle cx="50" cy="65" r="2.5" fill="#c4a050" opacity="0.2"/>
-<!-- 云纹 -->
-<path d="M15,35 Q22,30 30,33 Q28,38 22,38 Q18,38 15,35 Z" fill="#d4b070" opacity="0.3" stroke="#8b6914" stroke-width="0.6"/>
-<path d="M70,70 Q78,65 86,68 Q84,73 78,73 Q74,73 70,70 Z" fill="#d4b070" opacity="0.25" stroke="#8b6914" stroke-width="0.6"/>
-<path d="M75,25 Q82,22 88,25 Q86,29 82,29 Q78,29 75,25 Z" fill="#d4b070" opacity="0.2" stroke="#8b6914" stroke-width="0.5"/>
-<!-- 星点 -->
-<circle cx="18" cy="60" r="1" fill="#fff8e0" opacity="0.6"/>
-<circle cx="85" cy="45" r="0.8" fill="#fff8e0" opacity="0.5"/>
-<circle cx="12" cy="48" r="0.6" fill="#fff8e0" opacity="0.4"/>
-                </svg></div>
-                <div class="puppet-name">月 亮</div>
-            </div>
-
-            <!-- 老者 -->
-            <div class="puppet-card" data-puppet="elder">
-                <div class="puppet-icon"><svg viewBox="0 0 100 140">
-<defs>
-  <linearGradient id="elderGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8a7a5a"/><stop offset="100%" stop-color="#4a3a20"/></linearGradient>
-</defs>
-<!-- 袍身 -->
-<path d="M34,55 Q26,75 24,100 Q22,125 28,138 L72,138 Q78,125 76,100 Q74,75 66,55 Z" fill="url(#elderGrad)" stroke="#2a1f10" stroke-width="1.5"/>
-<!-- 补子 -->
-<rect x="36" y="75" width="28" height="24" rx="2" fill="#6a5a3a" opacity="0.5" stroke="#2a1f10" stroke-width="0.8"/>
-<circle cx="50" cy="87" r="5" fill="#c4a050" opacity="0.3" stroke="#8b6914" stroke-width="0.6"/>
-<!-- 腰带 -->
-<rect x="25" y="100" width="50" height="5" rx="1" fill="#5a4a30" stroke="#2a1f10" stroke-width="0.6"/>
-<!-- 袖口 -->
-<path d="M24,55 L16,68 Q14,74 18,77 Q24,76 28,70 Z" fill="#5a4a30" stroke="#2a1f10" stroke-width="1.2"/>
-<path d="M76,55 L84,68 Q86,74 82,77 Q76,76 72,70 Z" fill="#5a4a30" stroke="#2a1f10" stroke-width="1.2"/>
-<!-- 右手持操纵杆 -->
-<line x1="82" y1="72" x2="92" y2="105" stroke="#5a3a1a" stroke-width="2.5" stroke-linecap="round"/>
-<line x1="92" y1="105" x2="88" y2="130" stroke="#5a3a1a" stroke-width="1.5" stroke-linecap="round"/>
-<line x1="92" y1="105" x2="96" y2="125" stroke="#5a3a1a" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
-<!-- 头部 -->
-<ellipse cx="50" cy="38" rx="16" ry="18" fill="#c4a878" stroke="#3a2010" stroke-width="1.5"/>
-<!-- 额头皱纹 -->
-<path d="M38,28 Q50,24 62,28" fill="none" stroke="#8b6914" stroke-width="0.8" opacity="0.5"/>
-<path d="M40,31 Q50,28 60,31" fill="none" stroke="#8b6914" stroke-width="0.6" opacity="0.4"/>
-<!-- 眼睛（微闭） -->
-<path d="M42,36 Q45,35 48,36" fill="none" stroke="#3a2010" stroke-width="1.5" stroke-linecap="round"/>
-<path d="M52,36 Q55,35 58,36" fill="none" stroke="#3a2010" stroke-width="1.5" stroke-linecap="round"/>
-<!-- 白眉 -->
-<path d="M40,33 Q44,30 49,33" fill="none" stroke="#e8d5a0" stroke-width="1.5"/>
-<path d="M51,33 Q56,30 60,33" fill="none" stroke="#e8d5a0" stroke-width="1.5"/>
-<!-- 长须 -->
-<path d="M40,46 Q37,58 34,72" fill="none" stroke="#e8d5a0" stroke-width="1.5" opacity="0.8"/>
-<path d="M44,48 Q42,60 40,74" fill="none" stroke="#e8d5a0" stroke-width="1.5" opacity="0.8"/>
-<path d="M48,49 Q48,62 46,76" fill="none" stroke="#e8d5a0" stroke-width="1.5" opacity="0.8"/>
-<path d="M52,49 Q52,62 54,76" fill="none" stroke="#e8d5a0" stroke-width="1.5" opacity="0.8"/>
-<path d="M56,48 Q58,60 60,74" fill="none" stroke="#e8d5a0" stroke-width="1.5" opacity="0.8"/>
-<path d="M60,46 Q63,58 66,72" fill="none" stroke="#e8d5a0" stroke-width="1.3" opacity="0.7"/>
-<!-- 头巾 -->
-<path d="M34,22 Q50,14 66,22 L64,28 Q50,24 36,28 Z" fill="#4a3a20" stroke="#2a1f10" stroke-width="1"/>
-<!-- 嘴 -->
-<path d="M45,44 Q50,46 55,44" fill="none" stroke="#3a2010" stroke-width="1"/>
-<!-- 脚 -->
-<path d="M30,134 L26,138 L38,138 Z" fill="#4a3a20" stroke="#2a1f10" stroke-width="0.8"/>
-<path d="M62,134 L58,138 L70,138 Z" fill="#4a3a20" stroke="#2a1f10" stroke-width="0.8"/>
-                </svg></div>
-                <div class="puppet-name">老 者</div>
-            </div>
-
-            <!-- 信 -->
-            <div class="puppet-card" data-puppet="letter">
-                <div class="puppet-icon"><svg viewBox="0 0 100 100">
-<defs>
-  <linearGradient id="letterGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f5e6c0"/><stop offset="100%" stop-color="#d4b888"/></linearGradient>
-</defs>
-<!-- 信封背面 -->
-<rect x="18" y="22" width="64" height="60" rx="2" fill="url(#letterGrad)" stroke="#8b6914" stroke-width="1.5"/>
-<!-- 信封折痕（V形） -->
-<path d="M18,22 L50,50 L82,22" fill="none" stroke="#8b6914" stroke-width="1.2"/>
-<path d="M18,22 L50,50 L82,22 L82,82 L18,82 Z" fill="none" stroke="#8b6914" stroke-width="0.8" opacity="0.5"/>
-<!-- 信封正面（下半部分） -->
-<path d="M18,50 L50,50 L82,50 L82,82 L18,82 Z" fill="#e8d5a0" stroke="#8b6914" stroke-width="1"/>
-<!-- 封口火漆 -->
-<circle cx="50" cy="62" r="7" fill="#c43030" stroke="#8b1a1a" stroke-width="1"/>
-<circle cx="50" cy="62" r="4" fill="#a02020" opacity="0.6"/>
-<path d="M47,59 L50,62 L53,59 M50,59 L50,65" stroke="#8b1a1a" stroke-width="0.8"/>
-<!-- 信封边纹 -->
-<path d="M22,28 L26,28 M22,32 L28,32" stroke="#c4a050" stroke-width="0.6" opacity="0.4"/>
-<path d="M74,28 L78,28 M72,32 L78,32" stroke="#c4a050" stroke-width="0.6" opacity="0.4"/>
-<!-- 地址竖排（仿古） -->
-<line x1="30" y1="56" x2="30" y2="74" stroke="#8b6914" stroke-width="0.5" opacity="0.3"/>
-<line x1="70" y1="56" x2="70" y2="74" stroke="#8b6914" stroke-width="0.5" opacity="0.3"/>
-<!-- 阴影 -->
-<rect x="22" y="26" width="56" height="52" rx="1" fill="none" stroke="#c4a050" stroke-width="0.4" opacity="0.2"/>
-                </svg></div>
-                <div class="puppet-name">信</div>
-            </div>
-
-            <!-- 金蟾 -->
-            <div class="puppet-card" data-puppet="frog">
-                <div class="puppet-icon"><svg viewBox="0 0 120 90">
-<defs>
-  <radialGradient id="frogGrad" cx="50%" cy="40%"><stop offset="0%" stop-color="#e8c840"/><stop offset="50%" stop-color="#c4a020"/><stop offset="100%" stop-color="#8b6914"/></radialGradient>
-</defs>
-<!-- 身体 -->
-<ellipse cx="55" cy="48" rx="35" ry="22" fill="url(#frogGrad)" stroke="#5a4010" stroke-width="1.5"/>
-<!-- 腹部 -->
-<ellipse cx="55" cy="55" rx="25" ry="14" fill="#f0e0a0" opacity="0.4" stroke="#8b6914" stroke-width="0.6"/>
-<!-- 背部疙瘩（镂空） -->
-<circle cx="40" cy="38" r="4" fill="#8b6914" opacity="0.25" stroke="#5a4010" stroke-width="0.6"/>
-<circle cx="55" cy="35" r="5" fill="#8b6914" opacity="0.2" stroke="#5a4010" stroke-width="0.6"/>
-<circle cx="70" cy="38" r="4" fill="#8b6914" opacity="0.25" stroke="#5a4010" stroke-width="0.6"/>
-<circle cx="48" cy="45" r="3" fill="#8b6914" opacity="0.15" stroke="#5a4010" stroke-width="0.5"/>
-<circle cx="62" cy="45" r="3" fill="#8b6914" opacity="0.15" stroke="#5a4010" stroke-width="0.5"/>
-<!-- 头部 -->
-<path d="M25,42 Q15,35 12,28 Q10,20 18,18 Q28,18 32,28 Q34,38 30,44 Z" fill="url(#frogGrad)" stroke="#5a4010" stroke-width="1.5"/>
-<!-- 眼睛凸起 -->
-<circle cx="20" cy="24" r="6" fill="#e8c840" stroke="#5a4010" stroke-width="1.2"/>
-<circle cx="20" cy="24" r="4" fill="#fff8e0" stroke="#5a4010" stroke-width="0.8"/>
-<circle cx="20" cy="25" r="2.5" fill="#1a0a02"/>
-<circle cx="20.5" cy="24" r="1" fill="#fff8e0"/>
-<!-- 嘴 -->
-<path d="M14,32 Q20,36 28,33" fill="none" stroke="#5a4010" stroke-width="1.2"/>
-<!-- 三条腿（金蟾特有三足） -->
-<!-- 前腿 -->
-<path d="M35,62 Q30,68 28,75 Q27,78 30,79 Q33,78 35,74 Z" fill="#c4a020" stroke="#5a4010" stroke-width="1"/>
-<path d="M75,62 Q80,68 82,75 Q83,78 80,79 Q77,78 75,74 Z" fill="#c4a020" stroke="#5a4010" stroke-width="1"/>
-<!-- 后腿（只有一条，三足金蟾） -->
-<path d="M55,65 Q53,75 50,82 Q49,85 53,85 Q56,83 57,78 Z" fill="#c4a020" stroke="#5a4010" stroke-width="1.2"/>
-<!-- 蹼 -->
-<path d="M27,77 L24,79 L27,80" fill="#c4a020" stroke="#5a4010" stroke-width="0.6"/>
-<path d="M83,77 L86,79 L83,80" fill="#c4a020" stroke="#5a4010" stroke-width="0.6"/>
-<!-- 铜钱（金蟾含钱） -->
-<circle cx="16" cy="36" r="5" fill="#e8a020" stroke="#8b6914" stroke-width="1" opacity="0.8"/>
-<rect x="14" y="34" width="4" height="4" fill="#5a4010" opacity="0.6"/>
-<!-- 尾部纹 -->
-<path d="M85,48 Q92,46 95,42" fill="none" stroke="#5a4010" stroke-width="1" opacity="0.5"/>
-                </svg></div>
-                <div class="puppet-name">金 蟾</div>
-            </div>
-
-            <!-- 灯 -->
-            <div class="puppet-card" data-puppet="lamp">
-                <div class="puppet-icon"><svg viewBox="0 0 80 140">
-<defs>
-  <linearGradient id="lampBaseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6b4020"/><stop offset="100%" stop-color="#3a2010"/></linearGradient>
-  <radialGradient id="flameGrad" cx="50%" cy="70%"><stop offset="0%" stop-color="#fff8d0"/><stop offset="30%" stop-color="#f0c850"/><stop offset="60%" stop-color="#e08820"/><stop offset="100%" stop-color="#c04010"/></radialGradient>
-</defs>
-<!-- 火焰 -->
-<path d="M40,12 Q35,18 36,28 Q38,35 40,38 Q42,35 44,28 Q45,18 40,12 Z" fill="url(#flameGrad)" stroke="#8b4513" stroke-width="0.8"/>
-<ellipse cx="40" cy="30" rx="3" ry="6" fill="#fff8d0" opacity="0.6"/>
-<!-- 灯芯 -->
-<line x1="40" y1="38" x2="40" y2="45" stroke="#3a2010" stroke-width="1.5"/>
-<!-- 灯口 -->
-<ellipse cx="40" cy="45" rx="12" ry="3" fill="#5a3a1a" stroke="#3a2010" stroke-width="1"/>
-<!-- 灯碗（油碗） -->
-<path d="M28,45 Q26,55 30,62 L50,62 Q54,55 52,45 Z" fill="url(#lampBaseGrad)" stroke="#3a2010" stroke-width="1.5"/>
-<!-- 油面 -->
-<ellipse cx="40" cy="47" rx="10" ry="2" fill="#e8a020" opacity="0.5"/>
-<!-- 灯柱 -->
-<rect x="36" y="62" width="8" height="50" rx="1" fill="url(#lampBaseGrad)" stroke="#3a2010" stroke-width="1.2"/>
-<!-- 灯柱纹路 -->
-<line x1="38" y1="70" x2="38" y2="105" stroke="#3a2010" stroke-width="0.5" opacity="0.4"/>
-<line x1="42" y1="70" x2="42" y2="105" stroke="#3a2010" stroke-width="0.5" opacity="0.4"/>
-<rect x="35" y="80" width="10" height="3" fill="#5a3a1a" opacity="0.5"/>
-<rect x="35" y="95" width="10" height="3" fill="#5a3a1a" opacity="0.5"/>
-<!-- 底座 -->
-<path d="M24,112 L56,112 L58,125 L22,125 Z" fill="url(#lampBaseGrad)" stroke="#3a2010" stroke-width="1.5"/>
-<rect x="20" y="125" width="40" height="8" rx="2" fill="#3a2010" stroke="#1a0a02" stroke-width="1"/>
-<!-- 底座纹 -->
-<circle cx="40" cy="118" r="3" fill="#c4a050" opacity="0.3" stroke="#8b6914" stroke-width="0.5"/>
-<!-- 光晕 -->
-<circle cx="40" cy="25" r="20" fill="#f0c850" opacity="0.06"/>
-<circle cx="40" cy="25" r="15" fill="#f0c850" opacity="0.1"/>
-                </svg></div>
-                <div class="puppet-name">灯</div>
-            </div>
-        </div>
-
-        <!-- 中间：白布舞台 -->
-        <div class="stage-wrapper">
-            <div class="stage" id="stage">
-                <div class="stage-hint">将皮影拖入幕布</div>
-            </div>
-        </div>
-
-        <!-- 右侧：信息面板 -->
-        <div class="info-panel">
-            <div class="lamp-section">
-                <div class="lamp-label">灯 油</div>
-                <div class="flame-container">
-                    <div class="flame" id="flame"></div>
-                </div>
-                <div class="oil-bar-outer">
-                    <div class="oil-bar-inner" id="oilBar"></div>
-                </div>
-                <div class="oil-text" id="oilText">100 / 100</div>
-            </div>
+    <!-- 中间：白布舞台 -->
+    <div class="stage-wrapper">
+        <div class="stage" id="stage">
+            <div class="stage-hint">将皮影拖入幕布</div>
         </div>
     </div>
 
-    <!-- ===== 底部：对话框 ===== -->
-    <div class="dialogue-area">
-        <div class="dialogue-speaker" id="speaker">路师傅</div>
-        <div class="dialogue-text" id="dialogueText">
-            各位好，我是路春福，北京皮影戏传承人。<br>
-            今天，我带你们看看皮影戏里的老北京。
-        </div>
-        <div class="btn-row">
-            <button class="btn" id="btnConfirm">确认摆影</button>
-            <button class="btn" id="btnAsk">追问师父</button>
-        </div>
+    <!-- 右侧：灯油 + 状态 -->
+    <div class="info-panel">
+        <div class="lamp-label">灯 油</div>
+        <div class="flame-container"><div class="flame" id="flame"></div></div>
+        <div class="oil-bar-outer"><div class="oil-bar-inner" id="oilBar"></div></div>
+        <div class="oil-text" id="oilText">100 / 100</div>
+        <div class="ending-preview">当前倾向结局：<br><span id="endingHint">——</span></div>
     </div>
+</div>
 
-    <!-- ===== JavaScript 模块 ===== -->
-    <script src="js/event-bus.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/config.example.js"></script>
+<!-- 底部：对话框 -->
+<div class="dialogue-area">
+    <div class="dialogue-speaker" id="speaker">路师傅</div>
+    <div class="dialogue-text scroll" id="dialogueText">
+        民国十七年秋，琉璃厂旧书街。<br><br>
+        一个书生在等人——但他等的不是人，是一封永远不会寄到的信。
+    </div>
+    <div class="btn-row">
+        <button class="btn" id="btnConfirm">确认摆影</button>
+        <button class="btn" id="btnAsk">追问师父</button>
+        <button class="btn" id="btnNext" style="display:none;">下一场</button>
+    </div>
+</div>
 
-    <!-- 数据文件（必须在 prompt-builder / shadow-judge 之前加载） -->
-    <script src="data/acts.json"></script>
-    <script src="data/prompts.json"></script>
-
-    <script src="js/lamp.js"></script>
-    <script src="js/ai-api.js"></script>
-    <script src="js/prompt-builder.js"></script>
-    <script src="js/shadow-judge.js"></script>
-    <script src="js/save.js"></script>
-    <script src="js/puppet-images.js"></script>
-    <script src="js/puppets.js"></script>
-    <script src="js/theater.js"></script>
-    <script src="js/main.js"></script>
+<!-- 外部脚本：按依赖顺序加载 -->
+<script src="js/event-bus.js"></script>
+<script src="js/game.js"></script>
+<script src="js/lamp.js"></script>
+<script src="js/save.js"></script>
+<script src="js/puppet-images.js"></script>
+<script src="js/act1-scenes.js"></script>
+<script src="js/act1-core.js"></script>
 
 </body>
 </html>

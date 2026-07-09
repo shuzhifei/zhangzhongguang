@@ -4,7 +4,7 @@
 // ========================================
 
 const SaveSystem = {
-    KEY: "zhangzhongguang_save",
+    KEY: "zzg_act1",
     _memoryStore: {},  // 当 localStorage 不可用时用内存存储
 
     // 检测浏览器是否支持 localStorage
