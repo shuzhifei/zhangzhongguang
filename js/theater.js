@@ -144,6 +144,10 @@
                 result.comment = buildOfflineComment(stagedPuppets, sceneId, result);
                 result.guiding_hint = buildOfflineHint(stagedPuppets, sceneId);
                 displayJudgeResult(result);
+
+                // 通知流程控制器
+                emitSceneJudged(stagedPuppets, sceneId, result);
+
                 btnConfirm.disabled = false;
                 btnAsk.disabled = false;
             }, 800);
@@ -153,6 +157,7 @@
                 ShadowJudge.judge(stagedPuppets, sceneId, isImprov)
                     .then(function(result) {
                         displayJudgeResult(result);
+                        emitSceneJudged(stagedPuppets, sceneId, result);
                     })
                     .catch(function(err) {
                         console.error('[theater] AI评判失败', err);
@@ -160,6 +165,7 @@
                         const result = ShadowJudge.quickJudge(stagedPuppets, sceneId);
                         result.comment = '（灯影恍惚，师傅没看清……）\n\n' + buildOfflineComment(stagedPuppets, sceneId, result);
                         displayJudgeResult(result);
+                        emitSceneJudged(stagedPuppets, sceneId, result);
                     })
                     .finally(function() {
                         btnConfirm.disabled = false;
@@ -349,6 +355,27 @@
 
     function getCurrentSceneId() {
         return 'act' + gameState.currentAct + '_scene' + (gameState.currentScene + 1);
+    }
+
+    // ===== 辅助：计算皮影覆盖率 =====
+    function computeCoverage(stagedPuppets, sceneId) {
+        const scene = ShadowJudge._getSceneData(sceneId);
+        if (!scene || !scene.standard_puppets || scene.standard_puppets.length === 0) return 1;
+        const placedIds = stagedPuppets.map(function(p) { return p.puppetId; });
+        const required = scene.standard_puppets || [];
+        const covered = required.filter(function(id) { return placedIds.indexOf(id) !== -1; });
+        return covered.length / required.length;
+    }
+
+    // ===== 辅助：发送场景评判完成事件 =====
+    function emitSceneJudged(stagedPuppets, sceneId, result) {
+        EventBus.emit('scene_judged', {
+            score: result.score || 0,
+            correct: result.correct,
+            coverage: computeCoverage(stagedPuppets, sceneId),
+            puppets: stagedPuppets,
+            sceneId: sceneId
+        });
     }
 
     // ============================================================

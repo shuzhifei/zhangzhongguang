@@ -15,9 +15,10 @@ class GameState {
         this.totalOilBurned = 0;
 
         // 皮影管理
-        this.ownedPuppets = ["scholar", "tree", "moon", "elder", "frog"];
-        this.stagedPuppets = []; // 当前白布皮影
-        this.usedPuppets = []; // 本幕已使用皮影
+        this.ownedPuppets = ["scholar", "tree", "moon", "elder", "frog", "letter", "lamp"];
+        this.stagedPuppets = [];   // 当前白布皮影
+        this.usedPuppets = [];     // 本幕已使用皮影
+        this.triggeredClues = [];  // 已触发的隐藏线索ID列表
 
         // 结局打分指标
         this.endingStats = {
@@ -50,6 +51,7 @@ class GameState {
             ownedPuppets: this.ownedPuppets,
             stagedPuppets: this.stagedPuppets,
             usedPuppets: this.usedPuppets,
+            triggeredClues: this.triggeredClues,
             endingStats: this.endingStats,
             aiQuality: this.aiQuality
         });
