@@ -169,9 +169,15 @@ const PuppetImageMap = {
     scholar:'assets/images/scholar.png',
     elder:  'assets/images/elder.png',
     frog:   'assets/images/frog.png',
-    tree:null, moon:'assets/images/moon.png', letter:null, lamp:null, master:null
+    tree:'assets/images/tree.png', moon:'assets/images/moon.png', letter:null, lamp:null, master:'assets/images/master.png'
 };
 const PUPPET_EMOJI = { scholar:'📜', elder:'👴', tree:'🌳', moon:'🌙', letter:'✉️', frog:'🐸', lamp:'💡', master:'👨‍🏫' };
+// 舞台上渲染尺寸（宽×高，用于居中放置）
+const PUPPET_RENDER = {
+    scholar:{w:100,h:140}, elder:{w:100,h:140}, frog:{w:100,h:140},
+    tree:{w:100,h:252}, moon:{w:100,h:100},
+    letter:{w:80,h:80}, lamp:{w:80,h:80}, master:{w:100,h:140}
+};
 const PuppetImageRenderer = {
     getPath(id){ return PuppetImageMap[id]||null; },
     hasImage(id){ return !!PuppetImageMap[id]; },
@@ -215,7 +221,7 @@ function determineEnding(state){
 
 // ==================== 5. LampSystem ====================
 var LampSystem = {
-    COSTS:{puppet_placed:3,puppet_removed:1,ask_master:8,countdown_tick:2},
+    COSTS:{puppet_placed:3,puppet_removed:1,puppet_moved:1,ask_master:8,countdown_tick:2},
     REWARDS:{correct_judge:2,creativity_bonus:3,partial_correct:1},
     burn:function(reason){ var cost=this.COSTS[reason]||0; gameState.lampOil=Math.max(0,gameState.lampOil-cost); gameState.totalOilBurned+=cost; gameState.updateAIQuality(); EventBus.emit('oil_changed',{oil:gameState.lampOil,reason:reason}); if(gameState.lampOil<=0){ EventBus.emit('oil_depleted',{}); return true; } return false; },
     reward:function(reason){ var gain=this.REWARDS[reason]||0; gameState.lampOil=Math.min(100,gameState.lampOil+gain); gameState.updateAIQuality(); EventBus.emit('oil_changed',{oil:gameState.lampOil,reason:reason}); }
@@ -302,6 +308,7 @@ EventBus.on('oil_changed',function(data){
 // ==================== 10. 拖拽系统 ====================
 var stage=document.getElementById('stage');
 var dragClone=null, dragPuppetId=null, offsetX=0, offsetY=0;
+var dragSource=null, dragPuppetEl=null; // 'card'从皮影箱拖, 'stage'从舞台拖
 
 function buildPuppetBox(){
     var box=document.getElementById('puppetBox');
@@ -324,6 +331,7 @@ function buildPuppetBox(){
 }
 
 function onCardDown(e){
+    dragSource='card';
     var card=e.currentTarget;
     dragPuppetId=card.dataset.puppet;
     dragClone=document.createElement('div');
@@ -335,6 +343,28 @@ function onCardDown(e){
     dragClone.style.top=(e.clientY-offsetY)+'px';
     document.body.appendChild(dragClone);
     card.classList.add('dragging');
+}
+
+// 舞台上的皮影被拖动（二次移动）
+function onStagePuppetDown(e){
+    if(dragClone) return;
+    e.stopPropagation();
+    e.preventDefault();
+    dragSource='stage';
+    dragPuppetEl=e.currentTarget;
+    dragPuppetId=dragPuppetEl.dataset.puppet;
+    var rect=dragPuppetEl.getBoundingClientRect();
+    offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top;
+    dragClone=document.createElement('div');
+    dragClone.className='puppet-drag-clone';
+    // clone 和原元素大小一致
+    var cloneW=rect.width;
+    dragClone.style.width=cloneW+'px';
+    dragClone.innerHTML=PuppetImageRenderer.render(dragPuppetId,cloneW);
+    dragClone.style.left=(e.clientX-offsetX)+'px';
+    dragClone.style.top=(e.clientY-offsetY)+'px';
+    document.body.appendChild(dragClone);
+    dragPuppetEl.style.opacity='0.25';  // 原位置虚化
 }
 
 document.addEventListener('mousemove',function(e){
@@ -350,8 +380,25 @@ document.addEventListener('mouseup',function(e){
     dragClone.remove();
     var sr=stage.getBoundingClientRect();
     var onStage=e.clientX>=sr.left&&e.clientX<=sr.right&&e.clientY>=sr.top&&e.clientY<=sr.bottom;
-    if(onStage)placePuppet(e.clientX,e.clientY);
-    dragClone=null; dragPuppetId=null;
+
+    if(dragSource==='card'){
+        // 从皮影箱新放入舞台
+        if(onStage) placePuppet(e.clientX,e.clientY);
+    } else if(dragSource==='stage'){
+        // 舞台上已有皮影，移动位置：保持鼠标与元素偏移
+        if(onStage){
+            dragPuppetEl.style.left=(e.clientX-offsetX-sr.left)+'px';
+            dragPuppetEl.style.top=(e.clientY-offsetY-sr.top)+'px';
+            dragPuppetEl.style.opacity='1';
+            LampSystem.burn('puppet_moved');
+            EventBus.emit('puppet_moved',{id:dragPuppetId,x:parseInt(dragPuppetEl.style.left),y:parseInt(dragPuppetEl.style.top)});
+        } else {
+            // 拖出舞台外 → 回到原位
+            dragPuppetEl.style.opacity='1';
+        }
+    }
+
+    dragClone=null; dragPuppetId=null; dragSource=null; dragPuppetEl=null;
 });
 
 function placePuppet(x,y){
@@ -359,9 +406,12 @@ function placePuppet(x,y){
     var pup=document.createElement('div');
     pup.className='stage-puppet';
     pup.dataset.puppet=dragPuppetId;
-    pup.innerHTML=PuppetImageRenderer.render(dragPuppetId, 100);
-    pup.style.left=(x-sr.left-50)+'px';
-    pup.style.top=(y-sr.top-55)+'px';
+    var sz=PUPPET_RENDER[dragPuppetId]||{w:100,h:140};
+    pup.dataset.renderWidth=sz.w;
+    pup.innerHTML=PuppetImageRenderer.render(dragPuppetId,sz.w);
+    pup.style.left=(x-sr.left-sz.w/2)+'px';
+    pup.style.top=(y-sr.top-sz.h/2)+'px';
+    pup.addEventListener('mousedown',onStagePuppetDown);  // 支持二次拖动
     stage.appendChild(pup);
     EventBus.emit('puppet_placed',{id:dragPuppetId,x:parseInt(pup.style.left),y:parseInt(pup.style.top)});
     var hint=stage.querySelector('.stage-hint');
@@ -371,6 +421,11 @@ function placePuppet(x,y){
 EventBus.on('puppet_placed',function(data){
     LampSystem.burn('puppet_placed');
     gameState.stagedPuppets.push(data.id);
+});
+
+EventBus.on('puppet_moved',function(data){
+    // 移动皮影：油耗已在 mouseup 中扣除，不重复入列
+    console.log('🎭 皮影移动: '+data.id+' → ('+data.x+','+data.y+')');
 });
 
 // ==================== 11. 确认按钮 ====================
