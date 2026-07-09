@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>掌中光 · 第一幕 — 琉璃厂·书生与鹤</title>
+<style>
+/* ========== 全局 ========== */
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    background:#080402; font-family:'STKaiti','KaiTi','楷体','Microsoft YaHei',serif;
+    height:100vh; overflow:hidden; color:#c4a46c;
+}
+/* ========== 顶部标题栏 ========== */
+.header {
+    height:54px;
+    background:linear-gradient(180deg, #4a1f0a 0%, #2d1105 50%, #1a0802 100%);
+    display:flex; align-items:center; justify-content:center;
+    color:#e8c97a; font-size:24px; font-weight:bold; letter-spacing:8px;
+    border-bottom:3px solid #6b3a1f;
+    text-shadow:0 0 18px rgba(232,180,90,0.5),0 2px 4px rgba(0,0,0,0.8);
+    box-shadow:0 2px 12px rgba(0,0,0,0.6);
+}
+/* ========== 主区域：三栏 ========== */
+.main-area {
+    display:flex; height:calc(100vh - 54px - 180px);
+    background:#0a0502;
+}
+/* ---- 皮影箱 ---- */
+.puppet-box {
+    width:230px;
+    background:linear-gradient(90deg,#140904,#1f0f07 30%,#2a140a 100%);
+    border-right:4px solid #4a2512; padding:12px 10px;
+    color:#c4a46c; overflow-y:auto;
+    box-shadow:inset -4px 0 12px rgba(0,0,0,0.5);
+}
+.puppet-box h3 { color:#e8c97a; font-size:16px; text-align:center; margin-bottom:12px; letter-spacing:5px; border-bottom:2px solid #6b3a1f; padding-bottom:8px; }
+.puppet-box .scene-info { font-size:11px; color:#8b6914; text-align:center; margin:-4px 0 10px; letter-spacing:1px; opacity:0.7; }
+.puppet-card {
+    background:linear-gradient(135deg,rgba(100,50,20,0.5),rgba(60,25,10,0.6));
+    border:2px solid #5a2d15; border-radius:2px;
+    padding:8px 6px 4px; margin-bottom:8px; cursor:grab;
+    text-align:center; transition:all 0.25s;
+}
+.puppet-card:hover { border-color:#c48a3e; box-shadow:0 0 18px rgba(200,130,50,0.25); transform:translateY(-1px); }
+.puppet-card:active { cursor:grabbing; transform:scale(0.97); }
+.puppet-card.dragging { opacity:0.25; transform:scale(0.95); }
+.puppet-card .puppet-icon { display:block; width:100%; height:90px; margin-bottom:3px; }
+.puppet-card .puppet-icon img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.puppet-card .puppet-icon span { font-size:36px; user-select:none; display:flex; align-items:center; justify-content:center; height:100%; }
+.puppet-name { font-size:13px; color:#e8c97a; letter-spacing:2px; }
+/* ---- 舞台 ---- */
+.stage-wrapper { flex:1; display:flex; align-items:center; justify-content:center; padding:20px; }
+.stage {
+    width:100%; height:100%; position:relative;
+    background:radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,220,150,0.35) 0%, rgba(240,200,130,0.15) 40%, transparent 70%),
+               linear-gradient(180deg, #f5e6c8 0%, #eedbb5 20%, #e8d0a0 50%, #f0ddb8 80%, #f5e6c8 100%);
+    border-radius:3px;
+    box-shadow:inset 0 0 80px rgba(180,120,50,0.2), 0 0 0 10px #3d1c08, 0 0 0 13px #2a1005, 0 0 0 15px #1a0802, 0 4px 30px rgba(0,0,0,0.7);
+    overflow:hidden;
+}
+.stage-hint { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#8B6914; font-size:16px; opacity:0.3; letter-spacing:6px; pointer-events:none; z-index:2; }
+.stage-puppet { position:absolute; cursor:grab; user-select:none; z-index:3; filter:drop-shadow(3px 4px 6px rgba(0,0,0,0.5)); }
+.stage-puppet:hover { filter:drop-shadow(3px 4px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 6px rgba(220,160,60,0.4)); }
+.stage-puppet:active { cursor:grabbing; }
+.stage-puppet img { width:100%; height:auto; display:block; pointer-events:none; }
+.stage-puppet svg { width:100%; height:100%; display:block; }
+.puppet-drag-clone { position:fixed; pointer-events:none; z-index:9999; opacity:0.85; filter:drop-shadow(4px 6px 12px rgba(0,0,0,0.6)); }
+/* ---- 右侧面板 ---- */
+.info-panel { width:180px; background:linear-gradient(270deg,#140904,#1f0f07 30%,#2a140a 100%); border-left:4px solid #4a2512; padding:20px 12px; color:#c4a46c; display:flex; flex-direction:column; align-items:center; box-shadow:inset 4px 0 12px rgba(0,0,0,0.5); }
+.lamp-label { color:#e8c97a; font-size:14px; letter-spacing:3px; margin-bottom:10px; }
+.flame-container { width:50px; height:60px; margin:0 auto 10px; position:relative; }
+.flame { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:24px; height:44px; background:radial-gradient(ellipse at 50% 80%, #ffe8a0 0%, #f0b830 25%, #e08820 50%, #c04010 80%, transparent 100%); border-radius:60% 60% 30% 30%; animation:flicker 0.12s infinite alternate; filter:blur(0.5px); }
+@keyframes flicker { 0%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:0.9} 33%{transform:translateX(-50%) scaleX(0.85) scaleY(1.06);opacity:1} 66%{transform:translateX(-50%) scaleX(1.08) scaleY(0.94);opacity:0.85} 100%{transform:translateX(-50%) scaleX(0.92) scaleY(1.03);opacity:0.95} }
+.oil-bar-outer { width:100px; height:10px; background:#1a0802; border:1px solid #5a2d15; border-radius:5px; overflow:hidden; margin:0 auto; }
+.oil-bar-inner { height:100%; width:100%; background:linear-gradient(90deg,#c48a3e,#e8b850,#f0c860); border-radius:5px; transition:width 0.6s; }
+.oil-text { color:#e8c97a; font-size:12px; margin-top:6px; letter-spacing:1px; }
+.ending-preview { margin-top:16px; font-size:11px; color:#8b6914; text-align:center; opacity:0.7; }
+.ending-preview span { color:#e8c97a; }
+/* ========== 底部对话框 ========== */
+.dialogue-area { height:180px; background:linear-gradient(0deg,#0a0401,#140904 50%,#1f0f07 100%); border-top:3px solid #4a2512; padding:14px 20px; display:flex; flex-direction:column; color:#c4a46c; box-shadow:0 -2px 12px rgba(0,0,0,0.5); }
+.dialogue-speaker { color:#e8c97a; font-size:14px; font-weight:bold; margin-bottom:6px; letter-spacing:2px; }
+.dialogue-text { flex:1; font-size:15px; line-height:1.9; padding:10px 14px; background:rgba(0,0,0,0.35); border-radius:3px; border:1px solid rgba(90,45,21,0.4); overflow-y:auto; letter-spacing:0.5px; }
+.btn-row { display:flex; gap:12px; margin-top:10px; justify-content:center; }
+.btn { padding:9px 24px; border:1px solid #8b6914; background:linear-gradient(180deg,rgba(200,140,60,0.15),rgba(140,80,30,0.1)); color:#e8c97a; font-size:15px; cursor:pointer; border-radius:2px; transition:all 0.2s; font-family:'STKaiti','KaiTi','楷体','Microsoft YaHei',serif; letter-spacing:3px; }
+.btn:hover { background:linear-gradient(180deg,rgba(220,160,70,0.25),rgba(180,100,40,0.15)); border-color:#c48a3e; box-shadow:0 0 14px rgba(200,130,50,0.2); }
+.btn:active { transform:scale(0.96); }
+.btn:disabled { opacity:0.25; cursor:not-allowed; }
+.scroll::-webkit-scrollbar { width:5px; }
+.scroll::-webkit-scrollbar-track { background:#0a0502; }
+.scroll::-webkit-scrollbar-thumb { background:#4a2512; border-radius:3px; }
+</style>
+</head>
+<body>
+
+<div class="header">掌 中 光 · 第 一 幕 — 琉璃厂·书生与鹤</div>
+
+<div class="main-area">
+    <!-- 左侧：皮影箱 -->
+    <div class="puppet-box scroll" id="puppetBox">
+        <h3>皮 影 箱</h3>
+        <div class="scene-info" id="sceneInfo">第1场 · 月夜等人</div>
+    </div>
+
+    <!-- 中间：白布舞台 -->
+    <div class="stage-wrapper">
+        <div class="stage" id="stage">
+            <div class="stage-hint">将皮影拖入幕布</div>
+        </div>
+    </div>
+
+    <!-- 右侧：灯油 + 状态 -->
+    <div class="info-panel">
+        <div class="lamp-label">灯 油</div>
+        <div class="flame-container"><div class="flame" id="flame"></div></div>
+        <div class="oil-bar-outer"><div class="oil-bar-inner" id="oilBar"></div></div>
+        <div class="oil-text" id="oilText">100 / 100</div>
+        <div class="ending-preview">当前倾向结局：<br><span id="endingHint">——</span></div>
+    </div>
+</div>
+
+<!-- 底部：对话框 -->
+<div class="dialogue-area">
+    <div class="dialogue-speaker" id="speaker">路师傅</div>
+    <div class="dialogue-text scroll" id="dialogueText">
+        民国十七年秋，琉璃厂旧书街。<br><br>
+        一个书生在等人——但他等的不是人，是一封永远不会寄到的信。
+    </div>
+    <div class="btn-row">
+        <button class="btn" id="btnConfirm">确认摆影</button>
+        <button class="btn" id="btnAsk">追问师父</button>
+        <button class="btn" id="btnNext" style="display:none;">下一场</button>
+    </div>
+</div>
+
+<script>
+// ==================== 1. 第一幕剧本数据 ====================
+const ACT1 = {
+    id:1, name:'琉璃厂·书生与鹤',
+    scenes:[
+        {
+            id:'act1_scene1', name:'月夜等人',
+            desc:'月夜，槐树下，一个书生在等。他穿青衫，手里攥着一封信。槐花落了满地。',
+            masterLine:'路师傅清了清嗓子：「各位看好——这出戏叫《刘海戏金蟾》。但今天先不急——先看人。」',
+            standard:['scholar','tree','moon'], extras:['letter','lamp'],
+            hint:'需要：书生 + 槐树 + 月亮（信和灯可选）',
+            judgeHint:'书生手持信，在槐树下望着月亮——这是琉璃厂东街寻常一夜。'
+        },
+        {
+            id:'act1_scene2', name:'信中之秘',
+            desc:'书生拆开了信。信上说——琉璃厂东街有位老者，能同时控制三根线。书生决定去找他。',
+            masterLine:'「那封信——写了三年。不是情话，是比命还重的东西。」路师傅顿了一下：「我师父——也写颜体。」',
+            standard:['scholar','elder','letter'], extras:['tree','lamp'],
+            hint:'需要：书生 + 老者 + 信（槐树和灯可选）',
+            judgeHint:'老者接过信，三根线在灯下微微颤动。'
+        },
+        {
+            id:'act1_scene3', name:'刘海的秘密',
+            desc:'戏中戏上演。但金蟾突然碎了——原版不是这样的。老者手上只有两根线，第三根断了。',
+            masterLine:'路师傅声音变了：「金蟾碎了。戏里是这么写的——但戏外——也碎了。」他低头看着自己的手。',
+            standard:['frog','elder','scholar'], extras:['moon','lamp','master'],
+            hint:'需要：金蟾 + 老者 + 书生（月亮/灯/师傅可选）',
+            judgeHint:'金蟾碎了。老者手中只剩两根线——戏台上的灯暗了下去。'
+        }
+    ]
+};
+
+// ==================== 2. 皮影图片映射 ====================
+const PuppetImageMap = {
+    scholar:'assets/images/scholar.png',
+    elder:  'assets/images/elder.png',
+    frog:   'assets/images/frog.png',
+    tree:null, moon:'assets/images/moon.png', letter:null, lamp:null, master:null
+};
+const PUPPET_EMOJI = { scholar:'📜', elder:'👴', tree:'🌳', moon:'🌙', letter:'✉️', frog:'🐸', lamp:'💡', master:'👨‍🏫' };
+const PuppetImageRenderer = {
+    getPath(id){ return PuppetImageMap[id]||null; },
+    hasImage(id){ return !!PuppetImageMap[id]; },
+    render(id, w){ w=w||100; var p=this.getPath(id); return p
+        ? '<img src="'+p+'" alt="'+id+'" style="width:'+w+'px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));" draggable="false">'
+        : '<span style="font-size:36px;user-select:none;">'+(PUPPET_EMOJI[id]||'🎭')+'</span>'; }
+};
+
+// ==================== 3. EventBus ====================
+const EventBus = { listeners:{},
+    on(name,cb){ if(!this.listeners[name])this.listeners[name]=[]; this.listeners[name].push(cb); },
+    emit(name,data){ var arr=this.listeners[name]; if(!arr)return; for(var i=0;i<arr.length;i++){ try{arr[i](data);}catch(e){console.error(e);} } },
+    off(name,cb){ var arr=this.listeners[name]; if(!arr)return; var idx=arr.indexOf(cb); if(idx>=0)arr.splice(idx,1); }
+};
+
+// ==================== 4. GameState ====================
+var gameState = new (function(){
+    this.lampOil=100; this.totalOilBurned=0; this.currentAct=1; this.currentScene=1;
+    this.ownedPuppets=['scholar','elder','tree','moon','letter','frog','lamp','master'];
+    this.stagedPuppets=[]; this.usedPuppets=[];
+    this.endingStats={faithfulness:0,creativity:0,oilConservation:0,questionsAsked:0};
+    this.aiQuality='high';
+    this.updateAIQuality=function(){
+        var o=this.lampOil;
+        if(o>=60)this.aiQuality='high'; else if(o>=30)this.aiQuality='medium'; else if(o>0)this.aiQuality='low'; else this.aiQuality='critical';
+    };
+    this.toJSON=function(){
+        return JSON.stringify({lampOil:this.lampOil,totalOilBurned:this.totalOilBurned,currentAct:this.currentAct,currentScene:this.currentScene,stagedPuppets:this.stagedPuppets,usedPuppets:this.usedPuppets,endingStats:this.endingStats,aiQuality:this.aiQuality});
+    };
+    GameState={fromJSON:function(json){var d=JSON.parse(json);var g=new gameState.constructor();Object.assign(g,d);return g;}};
+})();
+
+function determineEnding(state){
+    var s=state.endingStats;
+    if(s.creativity>=80)return {name:'影子师傅',desc:'你走了自己的路——成为了非传统的传承人。'};
+    if(state.lampOil>=30&&s.faithfulness>=70&&s.creativity>=50)return {name:'传灯',desc:'你成为新的说戏人。'};
+    if(state.lampOil>=15&&s.faithfulness>=60)return {name:'守灯',desc:'灯一直在闪，但没有灭。'};
+    if(s.faithfulness>=40)return {name:'残影',desc:'灯灭了。但白布上还有影子。'};
+    return {name:'灯灭',desc:'全黑。师傅最后一句：「没事。灯灭过很多次。每次都会有人再点起来。」'};
+}
+
+// ==================== 5. LampSystem ====================
+var LampSystem = {
+    COSTS:{puppet_placed:3,puppet_removed:1,ask_master:8,countdown_tick:2},
+    REWARDS:{correct_judge:2,creativity_bonus:3,partial_correct:1},
+    burn:function(reason){ var cost=this.COSTS[reason]||0; gameState.lampOil=Math.max(0,gameState.lampOil-cost); gameState.totalOilBurned+=cost; gameState.updateAIQuality(); EventBus.emit('oil_changed',{oil:gameState.lampOil,reason:reason}); if(gameState.lampOil<=0){ EventBus.emit('oil_depleted',{}); return true; } return false; },
+    reward:function(reason){ var gain=this.REWARDS[reason]||0; gameState.lampOil=Math.min(100,gameState.lampOil+gain); gameState.updateAIQuality(); EventBus.emit('oil_changed',{oil:gameState.lampOil,reason:reason}); }
+};
+
+// ==================== 6. SaveSystem ====================
+var SaveSystem = { KEY:'zzg_act1', _mem:{},
+    _ok:function(){ try{var t='x';localStorage.setItem(t,t);localStorage.removeItem(t);return true;}catch(e){return false;} },
+    save:function(){ try{var json=gameState.toJSON(); if(this._ok())localStorage.setItem(this.KEY,json); else this._mem[this.KEY]=json; return true; }catch(e){return false;} },
+    load:function(){ try{var json=this._ok()?localStorage.getItem(this.KEY):(this._mem[this.KEY]||null); if(!json)return false; var r=GameState.fromJSON(json); Object.assign(gameState,r); EventBus.emit('save_loaded',{}); return true; }catch(e){return false;} },
+    clear:function(){ if(this._ok())localStorage.removeItem(this.KEY); else delete this._mem[this.KEY]; }
+};
+
+// ==================== 7. 本地评判器（不依赖AI） ====================
+function localJudge(sceneId){
+    var scene=ACT1.scenes[gameState.currentScene-1];
+    var placedIds=gameState.stagedPuppets;
+    var required=scene.standard, extras=scene.extras;
+    var covered=required.filter(function(id){return placedIds.indexOf(id)>=0;});
+    var coverage=required.length>0?covered.length/required.length:1;
+    var extraCount=placedIds.filter(function(id){return extras.indexOf(id)>=0;}).length;
+    var wrongCount=placedIds.filter(function(id){return required.indexOf(id)<0&&extras.indexOf(id)<0;}).length;
+    var score=Math.round(coverage*70)+extraCount*5-wrongCount*10;
+    score=Math.max(0,Math.min(100,score));
+    var correct=coverage>=0.6;
+    var creativity=extraCount>0?Math.min(30,extraCount*10+5):0;
+    var cmt;
+    if(coverage>=1&&wrongCount===0)cmt='影面对了——路师傅微微点头：「不错。有点影感。」';
+    else if(coverage>=0.6)cmt='大致对路。师傅看了看：「还差一点——再想想。」';
+    else cmt='不太对。路师傅沉默了一会儿：「你摆的——不是戏里要的。」';
+    gameState.endingStats.faithfulness+=score;
+    gameState.endingStats.creativity+=creativity;
+    if(correct)LampSystem.reward('correct_judge');
+    if(creativity>20)LampSystem.reward('creativity_bonus');
+    else if(creativity>10)LampSystem.reward('partial_correct');
+    SaveSystem.save();
+    return {score:score,correct:correct,creativity:creativity,comment:cmt,covered:covered};
+}
+
+// ==================== 8. 场景控制器 ====================
+var currentSceneIdx=0;
+var sceneNames=ACT1.scenes.map(function(s){return s.name;});
+
+function loadScene(idx){
+    currentSceneIdx=idx;
+    gameState.currentScene=idx+1;
+    var scene=ACT1.scenes[idx];
+    // 更新场景名
+    document.getElementById('sceneInfo').textContent='第'+(idx+1)+'场 · '+scene.name;
+    // 更新对话框
+    document.getElementById('speaker').textContent='路师傅';
+    document.getElementById('dialogueText').innerHTML=
+        '<b>'+scene.name+'</b><br><br>'+scene.desc+'<br><br><i style="color:#8b6914;">'+scene.masterLine+'</i><br><br><span style="color:#c48a3e;">💡 '+scene.hint+'</span>';
+    // 清舞台
+    clearStage();
+    // 按钮状态
+    document.getElementById('btnNext').style.display='none';
+    document.getElementById('btnConfirm').disabled=false;
+    document.getElementById('btnAsk').disabled=false;
+}
+
+function clearStage(){
+    var stage=document.getElementById('stage');
+    var pups=stage.querySelectorAll('.stage-puppet');
+    pups.forEach(function(p){p.remove();});
+    var hint=stage.querySelector('.stage-hint');
+    if(hint)hint.style.display='block';
+    gameState.stagedPuppets=[];
+}
+
+// ==================== 9. Oil Changed 更新UI ====================
+EventBus.on('oil_changed',function(data){
+    document.getElementById('oilBar').style.width=data.oil+'%';
+    document.getElementById('oilText').textContent=data.oil+' / 100';
+    // 火焰亮度
+    var flame=document.getElementById('flame');
+    if(data.oil<=10)flame.style.opacity='0.3';
+    else if(data.oil<=30)flame.style.opacity='0.6';
+    else flame.style.opacity='1';
+    // 结局预览
+    document.getElementById('endingHint').textContent=determineEnding(gameState).name;
+});
+
+// ==================== 10. 拖拽系统 ====================
+var stage=document.getElementById('stage');
+var dragClone=null, dragPuppetId=null, offsetX=0, offsetY=0;
+
+function buildPuppetBox(){
+    var box=document.getElementById('puppetBox');
+    var ids=gameState.ownedPuppets;
+    ids.forEach(function(id){
+        var card=document.createElement('div');
+        card.className='puppet-card';
+        card.dataset.puppet=id;
+        var icon=document.createElement('div');
+        icon.className='puppet-icon';
+        icon.innerHTML=PuppetImageRenderer.render(id, 80);
+        var name=document.createElement('div');
+        name.className='puppet-name';
+        name.textContent={scholar:'书生',elder:'老者',tree:'槐树',moon:'月亮',letter:'信',frog:'金蟾',lamp:'灯',master:'师傅'}[id]||id;
+        card.appendChild(icon);
+        card.appendChild(name);
+        card.addEventListener('mousedown',onCardDown);
+        box.appendChild(card);
+    });
+}
+
+function onCardDown(e){
+    var card=e.currentTarget;
+    dragPuppetId=card.dataset.puppet;
+    dragClone=document.createElement('div');
+    dragClone.className='puppet-drag-clone';
+    dragClone.innerHTML=PuppetImageRenderer.render(dragPuppetId, 70);
+    var rect=card.getBoundingClientRect();
+    offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top;
+    dragClone.style.left=(e.clientX-offsetX)+'px';
+    dragClone.style.top=(e.clientY-offsetY)+'px';
+    document.body.appendChild(dragClone);
+    card.classList.add('dragging');
+}
+
+document.addEventListener('mousemove',function(e){
+    if(!dragClone)return;
+    dragClone.style.left=(e.clientX-offsetX)+'px';
+    dragClone.style.top=(e.clientY-offsetY)+'px';
+});
+
+document.addEventListener('mouseup',function(e){
+    if(!dragClone)return;
+    var cards=document.querySelectorAll('.puppet-card');
+    cards.forEach(function(c){c.classList.remove('dragging');});
+    dragClone.remove();
+    var sr=stage.getBoundingClientRect();
+    var onStage=e.clientX>=sr.left&&e.clientX<=sr.right&&e.clientY>=sr.top&&e.clientY<=sr.bottom;
+    if(onStage)placePuppet(e.clientX,e.clientY);
+    dragClone=null; dragPuppetId=null;
+});
+
+function placePuppet(x,y){
+    var sr=stage.getBoundingClientRect();
+    var pup=document.createElement('div');
+    pup.className='stage-puppet';
+    pup.dataset.puppet=dragPuppetId;
+    pup.innerHTML=PuppetImageRenderer.render(dragPuppetId, 100);
+    pup.style.left=(x-sr.left-50)+'px';
+    pup.style.top=(y-sr.top-55)+'px';
+    stage.appendChild(pup);
+    EventBus.emit('puppet_placed',{id:dragPuppetId,x:parseInt(pup.style.left),y:parseInt(pup.style.top)});
+    var hint=stage.querySelector('.stage-hint');
+    if(hint)hint.style.display='none';
+}
+
+EventBus.on('puppet_placed',function(data){
+    LampSystem.burn('puppet_placed');
+    gameState.stagedPuppets.push(data.id);
+});
+
+// ==================== 11. 确认按钮 ====================
+document.getElementById('btnConfirm').addEventListener('click',function(){
+    if(gameState.stagedPuppets.length===0){
+        document.getElementById('dialogueText').innerHTML='<span style="color:#c45050;">白布上什么都没有。先把皮影放上去吧。</span>';
+        return;
+    }
+    document.getElementById('btnConfirm').disabled=true;
+    var result=localJudge(currentSceneIdx);
+    var scene=ACT1.scenes[currentSceneIdx];
+    var html='<b>📋 评判结果</b><br><br>';
+    html+='得分：<span style="color:#e8c97a;">'+result.score+'</span> / 100<br>';
+    html+='判定：'+(result.correct?'<span style="color:#6b8a40;">✓ 对路</span>':'<span style="color:#c45050;">✗ 不太对</span>')+'<br>';
+    html+='已摆皮影：'+gameState.stagedPuppets.join('、')+'<br>';
+    html+='必需皮影覆盖：'+result.covered.join('、')+'<br>';
+    html+='创造力加分：+'+result.creativity+'<br><br>';
+    html+='<i>"'+result.comment+'"</i><br><br>';
+    // 下一场按钮
+    if(currentSceneIdx<2){
+        html+='<span style="color:#c48a3e;">点击「下一场」继续。</span>';
+        document.getElementById('btnNext').style.display='inline-block';
+    } else {
+        html+='<span style="color:#e8c97a;">第一幕完成！共3场。</span>';
+        var ending=determineEnding(gameState);
+        html+='<br>当前倾向结局：<b>'+ending.name+'</b> —— '+ending.desc;
+    }
+    document.getElementById('dialogueText').innerHTML=html;
+    document.getElementById('btnConfirm').disabled=false;
+});
+
+// ==================== 12. 追问按钮 ====================
+document.getElementById('btnAsk').addEventListener('click',function(){
+    LampSystem.burn('ask_master');
+    gameState.endingStats.questionsAsked++;
+    var scene=ACT1.scenes[currentSceneIdx];
+    var replies=[
+        '路师傅看了你一眼：「问得好——但有些事，你得自己从戏里看出来。」',
+        '「你倒是有心。」路师傅捻了捻手中的操纵杆，没有正面回答。',
+        '师傅沉默了一会儿：「戏里的事——有时候比真的还真。」',
+        '路师傅摆了摆手：「先把这出戏演好。等灯油再亮些——我再告诉你。」'
+    ];
+    document.getElementById('dialogueText').innerHTML='<b>你向师父追问……</b><br><br><i>"'+replies[Math.floor(Math.random()*replies.length)]+'"</i><br><br><span style="color:#c48a3e;">灯油 -8</span>';
+});
+
+// ==================== 13. 下一场按钮 ====================
+document.getElementById('btnNext').addEventListener('click',function(){
+    if(currentSceneIdx<2){
+        loadScene(currentSceneIdx+1);
+    }
+});
+
+// ==================== 14. 油耗尽处理 ====================
+EventBus.on('oil_depleted',function(){
+    document.getElementById('flame').style.opacity='0';
+    document.getElementById('dialogueText').innerHTML='<b style="color:#c45050;">灯灭了。</b><br><br>舞台陷入黑暗。路师傅的声音从暗处传来：<br><br><i>"没事。灯灭过很多次。每次都会有人再点起来。"</i><br><br><span style="color:#8b6914;">结局：灯灭</span>';
+    document.getElementById('btnConfirm').disabled=true;
+    document.getElementById('btnAsk').disabled=true;
+    document.getElementById('btnNext').style.display='none';
+});
+
+// ==================== 15. 启动游戏 ====================
+buildPuppetBox();
+loadScene(0);
+document.getElementById('endingHint').textContent=determineEnding(gameState).name;
+
+console.log('🎭 掌中光 · 第一幕就绪！共3场戏：',sceneNames.join(' → '));
+console.log('📦 皮影箱：',gameState.ownedPuppets.join('、'));
+console.log('🖼 可用图片：scholar✓ elder✓ frog✓（其余用emoji兜底）');
+console.log('💡 拖皮影到白布 → 点「确认摆影」查看评判');
+</script>
+
+</body>
+</html>

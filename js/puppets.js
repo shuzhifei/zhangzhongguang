@@ -1,6 +1,7 @@
 // ==========================================
 // puppets.js — 皮影拖拽交互
 // A组（前端工程师）负责
+// 修改记录：2026-07-09 接入图片素材（B组添加 PuppetImageRenderer）
 // ==========================================
 
 (function() {
@@ -23,10 +24,19 @@
         // 创建跟随鼠标的副本
         dragClone = document.createElement('div');
         dragClone.className = 'puppet-drag-clone';
-        dragClone.innerHTML = card.querySelector('.puppet-icon').innerHTML;
         dragClone.dataset.puppet = dragPuppetId;
-        dragClone.style.width  = '80px';
-        dragClone.style.height = '110px';
+
+        // 拖拽副本优先用图片，无图则用卡片SVG
+        const hasImg = window.PuppetImageRenderer && PuppetImageRenderer.hasImage(dragPuppetId);
+        if (hasImg) {
+            dragClone.innerHTML = PuppetImageRenderer.render(dragPuppetId, { width: 80 });
+            dragClone.style.width  = '80px';
+            dragClone.style.height = 'auto';
+        } else {
+            dragClone.innerHTML = card.querySelector('.puppet-icon').innerHTML;
+            dragClone.style.width  = '80px';
+            dragClone.style.height = '110px';
+        }
 
         // 定位到鼠标位置
         const rect = card.getBoundingClientRect();
@@ -80,16 +90,25 @@
         pup.className = 'stage-puppet';
         pup.dataset.puppet = dragPuppetId;
 
-        // 复制皮影 SVG 到舞台上
-        const cardEl = document.querySelector(`.puppet-card[data-puppet="${dragPuppetId}"]`);
-        const svgHtml = cardEl ? cardEl.querySelector('.puppet-icon').innerHTML : '';
-        pup.innerHTML = svgHtml;
-        pup.style.width  = '80px';
-        pup.style.height = '110px';
+        // 用图片渲染（有图就显示图，没图复制卡片SVG兜底）
+        const hasImg = window.PuppetImageRenderer && PuppetImageRenderer.hasImage(dragPuppetId);
+        if (hasImg) {
+            pup.innerHTML = PuppetImageRenderer.render(dragPuppetId, { width: 100 });
+            pup.style.width  = '100px';
+            pup.style.height = 'auto';
+        } else {
+            const cardEl = document.querySelector(`.puppet-card[data-puppet="${dragPuppetId}"]`);
+            const svgHtml = cardEl ? cardEl.querySelector('.puppet-icon').innerHTML : '';
+            pup.innerHTML = svgHtml;
+            pup.style.width  = '80px';
+            pup.style.height = '110px';
+        }
 
         // 定位（相对于舞台，居中放置）
-        pup.style.left = (x - stageRect.left - 40) + 'px';
-        pup.style.top  = (y - stageRect.top  - 55) + 'px';
+        const w = parseInt(pup.style.width) || 80;
+        const h = parseInt(pup.style.height) || 110;
+        pup.style.left = (x - stageRect.left - w/2) + 'px';
+        pup.style.top  = (y - stageRect.top  - h/2) + 'px';
 
         stage.appendChild(pup);
 

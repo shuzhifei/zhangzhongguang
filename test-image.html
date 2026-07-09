@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>图片连接测试</title>
+    <style>
+        body { font-family: sans-serif; background:#1a1a2e; color:#eee; padding:20px; }
+        .test-card {
+            display:inline-block; width:140px; height:180px;
+            background:#2a2a4e; border:1px solid #444; border-radius:8px;
+            margin:10px; text-align:center; padding:10px;
+        }
+        .visual { height:120px; display:flex; align-items:center; justify-content:center; }
+        .label { font-size:14px; margin-top:8px; color:#aaa; }
+        h1 { color:#e8c97c; }
+        .ok { color:#4caf50; }
+        .pending { color:#ff9800; }
+    </style>
+</head>
+<body>
+    <h1>皮影图片连接测试面板</h1>
+    <p>绿色 = 图片已连接 | 橙色 = 还没放图片（用 emoji 兜底）</p>
+
+    <div id="gallery"></div>
+
+    <script src="js/puppet-images.js"></script>
+    <script>
+        const ids = ['scholar','elder','tree','moon','letter','frog','demon','monkey','lamp','master','bamboo'];
+        const names = {
+            scholar:'书生', elder:'老者', tree:'槐树', moon:'月亮', letter:'信',
+            frog:'金蟾', demon:'白骨精', monkey:'孙悟空', lamp:'灯', master:'师傅', bamboo:'竹子'
+        };
+        const gallery = document.getElementById('gallery');
+
+        ids.forEach(id => {
+            const hasImg = PuppetImageRenderer.hasImage(id);
+            const card = document.createElement('div');
+            card.className = 'test-card';
+            card.innerHTML = `
+                <div class="visual">${PuppetImageRenderer.render(id, {width:100})}</div>
+                <div class="label">
+                    <span class="${hasImg?'ok':'pending'}">${hasImg?'✅':'⏳'}</span>
+                    ${names[id] || id} <small>(${id})</small>
+                </div>
+            `;
+            gallery.appendChild(card);
+        });
+
+        // 预加载并报告
+        PuppetImageRenderer.preload().then(results => {
+            const ok = results.filter(r=>r.ok).map(r=>r.id);
+            console.log('[Test] 加载成功:', ok.join(', ') || '无');
+        });
+    </script>
+</body>
+</html>
