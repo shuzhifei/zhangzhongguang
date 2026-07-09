@@ -2,7 +2,7 @@
 
 /* ========== 全局 ========== */
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; }
-img { -webkit-user-drag:none; draggable:false; }
+img { -webkit-user-drag:none; }
 body {
     background:#080402; font-family:'STKaiti','KaiTi','楷体','Microsoft YaHei',serif;
     height:100vh; overflow:hidden; color:#c4a46c;

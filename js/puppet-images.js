@@ -17,8 +17,6 @@ const PuppetImageMap = {
     frog:     'assets/images/frog.png',       // 金蟾
     lamp:     null,                           // 灯
     master:   'assets/images/master.png',       // 师傅（已处理：去背景+透明PNG）
-    crane:    'assets/images/crane.png',       // 鹤（已处理：去背景+透明PNG）
-    dragon:   'assets/images/dragon.png',        // 龙（已处理：去背景+透明PNG）
 
     // 第二幕 —— 大栅栏·灯灭之前
     demon:    null,                           // 白骨精
@@ -32,8 +30,7 @@ const PuppetImageMap = {
 const PUPPET_EMOJI = {
     scholar: '📜', elder: '👴', tree: '🌳', moon: '🌙',
     letter: '✉️', frog: '🐸', demon: '👹', monkey: '🐵',
-    lamp: '💡', master: '👨‍🏫', bamboo: '🎋',
-    crane: '🕊️', dragon: '🐲'
+    lamp: '💡', master: '👨‍🏫', bamboo: '🎋'
 };
 
 const PuppetImageRenderer = {
