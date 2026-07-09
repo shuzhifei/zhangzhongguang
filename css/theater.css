@@ -101,6 +101,10 @@ body {
     transform: scale(0.97);
 }
 
+.puppet-card.hidden {
+    display: none;
+}
+
 /* 皮影卡片内的 SVG 人物 */
 .puppet-card .puppet-icon {
     display: block;

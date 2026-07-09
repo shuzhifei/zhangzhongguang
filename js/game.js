@@ -15,7 +15,7 @@ class GameState {
         this.totalOilBurned = 0;
 
         // 皮影管理
-        this.ownedPuppets = ["scholar", "tree", "moon", "elder", "frog", "letter", "lamp"];
+        this.ownedPuppets = ["scholar", "tree", "moon", "elder", "frog", "letter", "lamp", "demon", "monkey", "bamboo", "master"];
         this.stagedPuppets = [];   // 当前白布皮影
         this.usedPuppets = [];     // 本幕已使用皮影
         this.triggeredClues = [];  // 已触发的隐藏线索ID列表

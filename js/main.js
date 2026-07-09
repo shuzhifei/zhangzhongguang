@@ -27,6 +27,9 @@
         console.log('[main] 游戏流程控制器就绪');
         console.log('[main] 第' + gameState.currentAct + '幕 第' + (gameState.currentScene + 1) + '场');
 
+        // 初始加载：显示第一幕皮影
+        updatePuppetCards(gameState.currentAct);
+
         // 显示第一幕Intro
         const act1 = ACTS_DATA.acts[0];
         showActIntro(act1, function() {
@@ -196,6 +199,9 @@
         // lamp.js 监听 → 回油到80；theater.js 监听 → 清空舞台/恢复亮度
         EventBus.emit('act_intermission');
 
+        // 切换皮影箱角色
+        updatePuppetCards(gameState.currentAct);
+
         const nextAct = ACTS_DATA.acts[gameState.currentAct - 1];
 
         // 幕间过渡文本
@@ -254,6 +260,22 @@
     // ============================================================
     function getActNum(n) {
         return ['', '一', '二', '三'][n];
+    }
+
+    // ============================================================
+    // 皮影箱切换：根据当前幕号显示/隐藏对应皮影卡片
+    // ============================================================
+    function updatePuppetCards(actNum) {
+        const cards = document.querySelectorAll('.puppet-card');
+        cards.forEach(function(card) {
+            const acts = (card.dataset.act || '').split(',');
+            if (acts.indexOf(String(actNum)) >= 0) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+        console.log('[main] 皮影箱已切换至第' + getActNum(actNum) + '幕');
     }
 
     // ============================================================
