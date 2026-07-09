@@ -1,24 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>掌中光 - 皮影戏AI互动游戏</title>
-    <link rel="stylesheet" href="css/theater.css">
-    <link rel="stylesheet" href="css/puppets.css">
-    <link rel="stylesheet" href="css/lamp.css">
-    <link rel="stylesheet" href="css/ui.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>掌中光 · 第一幕 — 琉璃厂·书生与鹤</title>
+<link rel="stylesheet" href="css/act1.css">
 </head>
 <body>
 
-    <!-- ===== 顶部标题栏 ===== -->
-    <div class="header">掌 中 光 · 皮 影 戏</div>
+<div class="header">掌 中 光 · 第 一 幕 — 琉璃厂·书生与鹤</div>
 
-    <!-- ===== 主游戏区域 ===== -->
-    <div class="main-area">
-
-        <!-- 左侧：皮影箱 -->
-        <div class="puppet-box">
-            <h3>皮 影 箱</h3>
+<div class="main-area">
+    <!-- 左侧：皮影箱 -->
+    <div class="puppet-box scroll" id="puppetBox">
+        <h3>皮 影 箱</h3>
+        <div class="scene-info" id="sceneInfo">第1场 · 月夜等人</div>
 
             <!-- 书生 -->
             <div class="puppet-card" data-puppet="scholar" data-act="1">
@@ -519,40 +515,32 @@
                 </div>
                 <div class="oil-text" id="oilText">100 / 100</div>
             </div>
+            <div class="ending-preview">当前倾向结局：<br><span id="endingHint">——</span></div>
         </div>
     </div>
 
-    <!-- ===== 底部：对话框 ===== -->
-    <div class="dialogue-area">
-        <div class="dialogue-speaker" id="speaker">路师傅</div>
-        <div class="dialogue-text" id="dialogueText">
-            各位好，我是路春福，北京皮影戏传承人。<br>
-            今天，我带你们看看皮影戏里的老北京。
-        </div>
-        <div class="btn-row">
-            <button class="btn" id="btnConfirm">确认摆影</button>
-            <button class="btn" id="btnAsk">追问师父</button>
-        </div>
+<!-- 底部：对话框 -->
+<div class="dialogue-area">
+    <div class="dialogue-speaker" id="speaker">路师傅</div>
+    <div class="dialogue-text scroll" id="dialogueText">
+        民国十七年秋，琉璃厂旧书街。<br><br>
+        一个书生在等人——但他等的不是人，是一封永远不会寄到的信。
     </div>
+    <div class="btn-row">
+        <button class="btn" id="btnConfirm">确认摆影</button>
+        <button class="btn" id="btnAsk">追问师父</button>
+        <button class="btn" id="btnNext" style="display:none;">下一场</button>
+    </div>
+</div>
 
-    <!-- ===== JavaScript 模块 ===== -->
-    <script src="js/event-bus.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/config.example.js"></script>
-
-    <!-- 数据文件（必须在 prompt-builder / shadow-judge 之前加载） -->
-    <script src="data/acts.json"></script>
-    <script src="data/prompts.json"></script>
-
-    <script src="js/lamp.js"></script>
-    <script src="js/ai-api.js"></script>
-    <script src="js/prompt-builder.js"></script>
-    <script src="js/shadow-judge.js"></script>
-    <script src="js/save.js"></script>
-    <script src="js/puppet-images.js"></script>
-    <script src="js/puppets.js"></script>
-    <script src="js/theater.js"></script>
-    <script src="js/main.js"></script>
+<!-- 外部脚本：按依赖顺序加载 -->
+<script src="js/event-bus.js"></script>
+<script src="js/game.js"></script>
+<script src="js/lamp.js"></script>
+<script src="js/save.js"></script>
+<script src="js/puppet-images.js"></script>
+<script src="js/act1-scenes.js"></script>
+<script src="js/act1-core.js"></script>
 
 </body>
 </html>

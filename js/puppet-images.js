@@ -47,6 +47,10 @@ const PuppetImageRenderer = {
     // 渲染为 HTML 字符串（img 标签 或 emoji span）
     // opts: { width, height } —— 可选，控制图片尺寸
     render(id, opts = {}) {
+        // 兼容旧调用风格 render(id, 80) 和新风格 render(id, {width:80})
+        if (typeof opts === 'number') {
+            opts = { width: opts };
+        }
         const path = this.getPath(id);
         const w = opts.width || 120;
         const h = opts.height || 'auto';

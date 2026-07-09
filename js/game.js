@@ -34,9 +34,9 @@ class GameState {
 
     // 根据油量更新AI文字质量等级
     updateAIQuality() {
-        if (this.lampOil >= 80) this.aiQuality = "high";
-        else if (this.lampOil >= 50) this.aiQuality = "medium";
-        else if (this.lampOil >= 20) this.aiQuality = "low";
+        if (this.lampOil >= 60) this.aiQuality = "high";
+        else if (this.lampOil >= 30) this.aiQuality = "medium";
+        else if (this.lampOil > 0) this.aiQuality = "low";
         else this.aiQuality = "critical";
     }
 
@@ -77,14 +77,14 @@ function determineEnding(state) {
     const { faithfulness, creativity } = endingStats;
 
     // 隐藏结局：影子师傅（优先级最高）
-    if (creativity >= 80) return "shadow_master";
+    if (creativity >= 80) return { name: "影子师傅", desc: "你走了自己的路——成为了非传统的传承人。" };
     // 传灯完美结局
-    if (lampOil >= 30 && faithfulness >= 70 && creativity >= 50) return "light_passed";
+    if (lampOil >= 30 && faithfulness >= 70 && creativity >= 50) return { name: "传灯", desc: "你成为新的说戏人。" };
     // 守灯
-    if (lampOil >= 15 && faithfulness >= 60) return "light_kept";
+    if (lampOil >= 15 && faithfulness >= 60) return { name: "守灯", desc: "灯一直在闪，但没有灭。" };
     // 残影
-    if (faithfulness >= 40) return "shadow_remains";
+    if (faithfulness >= 40) return { name: "残影", desc: "灯灭了。但白布上还有影子。" };
     // 灯灭最差结局
-    return "light_out";
+    return { name: "灯灭", desc: "全黑。师傅最后一句：「没事。灯灭过很多次。每次都会有人再点起来。」" };
 }
 window.determineEnding = determineEnding;
