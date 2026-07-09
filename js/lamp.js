@@ -95,7 +95,7 @@ EventBus.on("puppet_placed", (data) => {
     gameState.stagedPuppets.push(data.id || data.puppetId);
 });
 EventBus.on("puppet_removed", () => LampSystem.burn("puppet_removed"));
-EventBus.on("ask_master_clicked", () => LampSystem.burn("ask_master"));
+EventBus.on("ask_master", () => LampSystem.burn("ask_master"));
 
 // 监听幕间切换事件，自动回油
 EventBus.on("act_intermission", () => LampSystem.intermissionRecover());
