@@ -170,7 +170,6 @@ function endDrag(e) {
             dragPuppetEl.style.left = (clientX - offsetX - sr.left) + "px";
             dragPuppetEl.style.top = (clientY - offsetY - sr.top) + "px";
             dragPuppetEl.style.opacity = "1";
-            LampSystem.burn("puppet_moved");
             EventBus.emit("puppet_moved", { id: dragPuppetId, x: parseInt(dragPuppetEl.style.left), y: parseInt(dragPuppetEl.style.top) });
         } else {
             dragPuppetEl.style.opacity = "1";
@@ -208,10 +207,11 @@ function placePuppet(x, y) {
     if (hint) hint.style.display = "none";
 }
 
-// ---- 事件监听：皮影放置 → 扣油 + 入列 ----
+// ---- 事件监听：皮影放置 → 入列（油耗由 lamp.js 统一接管） ----
 EventBus.on("puppet_placed", function (data) {
-    LampSystem.burn("puppet_placed");
-    gameState.stagedPuppets.push(data.id);
+    if (gameState.stagedPuppets.indexOf(data.id) === -1) {
+        gameState.stagedPuppets.push(data.id);
+    }
 });
 
 EventBus.on("puppet_moved", function (data) {
