@@ -489,11 +489,24 @@
         const countdownEl = document.getElementById('countdownDisplay');
         if (countdownEl) countdownEl.remove();
 
+        // 强制油耗尽：归零 + 刷新UI + 触发灭灯效果
+        gameState.lampOil = 0;
+        if (typeof updateOilUI === 'function') updateOilUI();
+        if (oilText) oilText.textContent = '0 / 100';
+        if (oilBar) oilBar.style.width = '0%';
+
+        // 灭灯视觉
+        stage.classList.add('stage-dark');
+        if (flame) flame.classList.add('flame-gone');
+
         speaker.textContent = '路师傅';
-        dialogueText.textContent = '时间到了——灯油烧完了。';
+        typewriter(dialogueText, '时间到了——灯油耗尽了。\n\n白布上一片漆黑……什么也看不见了。', 50);
 
         btnConfirm.disabled = true;
         btnAsk.disabled = true;
+
+        // 通知流程控制器：倒计时耗尽
+        EventBus.emit('oil_depleted', { reason: 'countdown' });
     });
 
     EventBus.on('act_intermission', function() {
