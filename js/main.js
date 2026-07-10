@@ -42,7 +42,7 @@
         if (header && ACTS_DATA && ACTS_DATA.acts) {
             var actData = ACTS_DATA.acts[actNum - 1];
             if (actData) {
-                header.textContent = '掌 中 光 · 第 ' + ['一','二','三'][actNum] + ' 幕 — ' + actData.name;
+                header.textContent = '掌 中 光 · 第 ' + getActNum(actNum) + ' 幕 — ' + actData.name;
             }
         }
 
@@ -200,6 +200,9 @@
             if (pass) {
                 scenePassed = true;
                 advancing = true;
+
+                // ★ 修复：通过判定时累加结局打分，否则三幕版永远判定为"灯灭"
+                accumulateEndingStats(data);
 
                 // 多次失败后给台阶
                 if (!isImprov && sceneConfirmCount >= 3 && coverage < 0.6) {
@@ -374,6 +377,57 @@
     // ============================================================
     function getActNum(n) {
         return ['', '一', '二', '三'][n];
+    }
+
+    // ============================================================
+    // 工具：根据评判数据累加结局打分（faithfulness / creativity）
+    // 参考 act1-core.js 的 localJudge 公式：
+    //   score      = round(coverage*70) + extra*5 - wrong*10  （限幅 0~100）
+    //   creativity = extra>0 ? min(30, extra*10+5) : 0
+    // 不累加则 endingStats 恒为 0，determineEnding 永远返回"灯灭"
+    // ============================================================
+    function accumulateEndingStats(data) {
+        try {
+            var act = ACTS_DATA.acts[gameState.currentAct - 1];
+            var scene = act && act.scenes ? act.scenes[gameState.currentScene] : null;
+            if (!scene) {
+                console.warn('[main] accumulateEndingStats：找不到当前场景数据，跳过');
+                return;
+            }
+
+            var required = scene.standard_puppets || [];
+            var extras   = scene.acceptable_extras || [];
+
+            // 已摆皮影的 id 列表（兼容 {puppetId} / {id} / 纯字符串）
+            var placedIds = (data.puppets || []).map(function(p) {
+                return p && (p.puppetId || p.id || p);
+            });
+
+            // 标准角色覆盖率
+            var covered = required.filter(function(id) { return placedIds.indexOf(id) !== -1; });
+            var coverage = required.length > 0 ? covered.length / required.length : 1;
+
+            // 额外创意角色数 & 错误角色数
+            var extraCount = placedIds.filter(function(id) { return extras.indexOf(id) !== -1; }).length;
+            var wrongCount = placedIds.filter(function(id) {
+                return required.indexOf(id) === -1 && extras.indexOf(id) === -1;
+            }).length;
+
+            // 还原度得分（与 act1-core 一致）
+            var score = Math.round(coverage * 70) + extraCount * 5 - wrongCount * 10;
+            score = Math.max(0, Math.min(100, score));
+
+            // 创造力得分：用了额外角色才加分
+            var creativity = extraCount > 0 ? Math.min(30, extraCount * 10 + 5) : 0;
+
+            gameState.endingStats.faithfulness += score;
+            gameState.endingStats.creativity   += creativity;
+
+            console.log('[main] 结局打分累加 → faithfulness=' + gameState.endingStats.faithfulness +
+                        ' | creativity=' + gameState.endingStats.creativity);
+        } catch(e) {
+            console.error('[main] accumulateEndingStats 崩溃:', e);
+        }
     }
 
     // 快捷显示对话（用于错误提示等）

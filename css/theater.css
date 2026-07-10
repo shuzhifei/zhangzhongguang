@@ -135,6 +135,15 @@ body {
     height: 100%;
 }
 
+/* 皮影卡片内的真实图片（与 SVG 同样限制在卡片图标框内，避免溢出） */
+.puppet-card .puppet-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+}
+
 .puppet-card .puppet-name {
     font-size: 14px;
     color: #e8c97a;
@@ -256,6 +265,12 @@ body {
     width: 100%;
     height: 100%;
     display: block;
+}
+
+/* 白布上拖入的真实图片皮影（内联 style 已设宽度，这里仅补齐布局） */
+.stage-puppet img {
+    display: block;
+    pointer-events: none;
 }
 
 /* 拖拽时跟随鼠标的克隆体 */
