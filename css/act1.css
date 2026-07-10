@@ -41,8 +41,9 @@ body {
 .puppet-card:hover { border-color:#c48a3e; box-shadow:0 0 18px rgba(200,130,50,0.25); transform:translateY(-1px); }
 .puppet-card:active { cursor:grabbing; transform:scale(0.97); }
 .puppet-card.dragging { opacity:0.25; transform:scale(0.95); }
-.puppet-card .puppet-icon { display:block; width:100%; height:90px; margin-bottom:3px; }
-.puppet-card .puppet-icon img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.puppet-card .puppet-icon { display:block; width:100%; height:90px; margin-bottom:3px; overflow:hidden; }
+.puppet-card .puppet-icon svg { width:100%; height:100%; display:block; }
+.puppet-card .puppet-icon img { width:100%; height:100%; object-fit:contain; pointer-events:none; display:block; }
 .puppet-card .puppet-icon span { font-size:36px; user-select:none; display:flex; align-items:center; justify-content:center; height:100%; }
 .puppet-name { font-size:13px; color:#e8c97a; letter-spacing:2px; }
 /* ---- 舞台 ---- */

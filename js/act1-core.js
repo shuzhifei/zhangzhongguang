@@ -288,7 +288,13 @@ document.getElementById("btnNext").addEventListener("click", function () {
 });
 
 // ---- 启动游戏 ----
-buildPuppetBox();
+// HTML 中已有皮影卡（从 act1.html 拆分而来），只需绑定拖拽事件
+(function(){
+    var cards = document.querySelectorAll(".puppet-card");
+    cards.forEach(function(card) {
+        card.addEventListener("mousedown", onCardDown);
+    });
+})();
 loadScene(0);
 document.getElementById("endingHint").textContent = determineEnding(gameState).name;
 
