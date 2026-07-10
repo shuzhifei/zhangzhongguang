@@ -82,9 +82,19 @@ const LampSystem = {
             LampSystem.burn("time_penalty");
             if (secondsLeft <= 0) {
                 clearInterval(countdownTimer);
+                countdownTimer = null;
                 EventBus.emit("countdown_expired");
             }
         }, 1000);
+    },
+
+    // 停止倒计时（场景切换时调用，防止跨幕泄漏）
+    stopCountdown() {
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+        secondsLeft = 0;
     }
 };
 
@@ -130,6 +140,11 @@ EventBus.on("judge_result", (result) => {
 // 幕间 → 回油到 80
 EventBus.on("act_intermission", () => {
     LampSystem.intermissionRecover();
+});
+
+// 流程控制器请求停止倒计时（场景切换时，防止跨幕泄漏）
+EventBus.on("countdown_stop_request", () => {
+    LampSystem.stopCountdown();
 });
 
 console.log('[lamp] 灯油事件监听已注册');
