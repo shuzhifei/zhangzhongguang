@@ -90,3 +90,46 @@ const LampSystem = {
 
 // 全局导出
 window.LampSystem = LampSystem;
+
+// ============================================================
+// 事件监听：把游戏动作接到油耗系统
+// ============================================================
+
+// 皮影放上舞台 → 扣 3 油
+EventBus.on("puppet_placed", (data) => {
+    LampSystem.burn("puppet_placed");
+    if (data && data.id) {
+        if (gameState.stagedPuppets.indexOf(data.id) === -1) {
+            gameState.stagedPuppets.push(data.id);
+        }
+    }
+});
+
+// 移除舞台皮影 → 扣 1 油
+EventBus.on("puppet_removed", (data) => {
+    LampSystem.burn("puppet_removed");
+});
+
+// 在舞台上拖动调整位置 → 扣 1 油
+EventBus.on("puppet_moved", (data) => {
+    LampSystem.burn("puppet_moved");
+});
+
+// 追问师父 → 扣 8 油
+EventBus.on("ask_master", () => {
+    LampSystem.burn("ask_master");
+});
+
+// 评判通过奖励 → 回 2 油
+EventBus.on("judge_result", (result) => {
+    if (result && result.correct) {
+        LampSystem.reward("correct_judge");
+    }
+});
+
+// 幕间 → 回油到 80
+EventBus.on("act_intermission", () => {
+    LampSystem.intermissionRecover();
+});
+
+console.log('[lamp] 灯油事件监听已注册');

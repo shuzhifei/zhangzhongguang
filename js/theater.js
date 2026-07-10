@@ -98,6 +98,9 @@
 
         if (!hasMoved) {
             removeStagePuppet(puppet);
+        } else {
+            // 在舞台上拖动调整位置 → 扣 1 油
+            EventBus.emit('puppet_moved', { id: puppet.dataset.puppet });
         }
     });
 
