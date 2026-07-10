@@ -492,6 +492,17 @@
         const countdownEl = document.getElementById('countdownDisplay');
         if (countdownEl) countdownEl.remove();
 
+        // ★ 加固：场景守卫
+        // 倒计时只在第二幕 Scene2（影速对决）启用。
+        // 若定时器泄漏到其它场景才触发本事件，必须忽略，
+        // 否则会在第三幕误判灭灯、锁死按钮。
+        const isTimeLimitedScene =
+            gameState.currentAct === 2 && gameState.currentScene === 1;
+        if (!isTimeLimitedScene) {
+            console.warn('[theater] countdown_expired 触发但不在限时场景，已忽略（疑似定时器泄漏）');
+            return;
+        }
+
         // 强制油耗尽：归零 + 刷新UI + 触发灭灯效果
         gameState.lampOil = 0;
         if (typeof updateOilUI === 'function') updateOilUI();

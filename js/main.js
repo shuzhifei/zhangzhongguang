@@ -107,6 +107,11 @@
             // ★ 关键修复：每次进入新场景都重置标志位！
             resetSceneState();
 
+            // ★ 加固：通知灯油系统停止上一场景遗留的倒计时定时器
+            //   （防止第二幕Scene2的计时器泄漏到第三幕持续扣油）
+            //   若 lamp.js 未实现该监听则静默忽略，不影响其他逻辑
+            EventBus.emit('countdown_stop_request');
+
             var act = ACTS_DATA.acts[gameState.currentAct - 1];
             var scene = act.scenes[gameState.currentScene];
 
@@ -230,6 +235,9 @@
     // ============================================================
     function advanceScene() {
         try {
+            // ★ 加固：推进场景前也尝试停止遗留的倒计时（防御性）
+            EventBus.emit('countdown_stop_request');
+
             var act = ACTS_DATA.acts[gameState.currentAct - 1];
             var totalScenes = act.scenes.length;
 
