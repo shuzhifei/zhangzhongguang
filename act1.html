@@ -2679,7 +2679,7 @@ const ShadowJudge = {
     // 确认摆影
     btnConfirm.addEventListener('click', function() {
         var staged = collectStagedPuppets();
-        if (staged.length===0) { speaker.textContent='路师傅'; typewriter(dialogueText,'白布上还空着呢——先摆几个影儿。'); return; }
+        if (staged.length===0) { speaker.textContent='路师傅'; enqueueSubtitle('路师傅','白布上还空着呢——先摆几个影儿。',45); return; }
         btnConfirm.disabled=true; btnAsk.disabled=true;
         speaker.textContent='路师傅'; dialogueText.textContent='（师傅凑近白布，眯着眼细细端详……）';
         EventBus.emit('stage_confirmed', { puppets: staged });
@@ -2712,8 +2712,8 @@ const ShadowJudge = {
     btnAsk.addEventListener('click', function() {
         EventBus.emit('ask_master', { puppets: collectStagedPuppets(), sceneId: getCurrentSceneId() });
         speaker.textContent='路师傅';
-        if (OFFLINE_MODE) { var h = buildOfflineHint(collectStagedPuppets(), getCurrentSceneId()); typewriter(dialogueText, h, 45); }
-        else { typewriter(dialogueText, '（你向师傅请教——师傅沉吟片刻……）', 40); }
+        if (OFFLINE_MODE) { var h = buildOfflineHint(collectStagedPuppets(), getCurrentSceneId()); enqueueSubtitle('路师傅', h, 45); }
+        else { enqueueSubtitle('路师傅', '（你向师傅请教——师傅沉吟片刻……）', 40); }
     });
 
     function buildOfflineComment(staged, sceneId, result) {
@@ -2815,20 +2815,78 @@ const ShadowJudge = {
         if (result.comment) text += result.comment;
         if (result.guiding_hint) text += '\n\n'+result.guiding_hint;
         if (!text) text = '……（师傅看了看，没说话。）';
-        typewriter(dialogueText, text, 55);
+        enqueueSubtitle('路师傅', text, 55);
     }
 
     var typewriterTimer = null;
-    function typewriter(el, text, speed) {
+    function typewriter(el, text, speed, onDone) {
         speed = speed||50;
         if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; }
         el.textContent=''; el.innerHTML='';
         var i=0;
         typewriterTimer = setInterval(function() {
             if (i<text.length) { var ch=text[i]; if(ch==='\n') el.innerHTML+='<br>'; else el.innerHTML+=ch; i++; }
-            else { clearInterval(typewriterTimer); typewriterTimer=null; }
+            else { clearInterval(typewriterTimer); typewriterTimer=null; if (onDone) onDone(); }
         }, speed);
     }
+
+    // ===== 分段字幕输出系统 =====
+    var subtitleQueue = [];
+    var subtitleActive = false;
+    var subtitleContinueHint = null;
+
+    function initSubtitleHint() {
+        if (subtitleContinueHint) return;
+        subtitleContinueHint = document.createElement('div');
+        subtitleContinueHint.id = 'subtitleContinueHint';
+        subtitleContinueHint.style.cssText = 'position:fixed;bottom:80px;right:20px;color:#e8c97a;font-size:13px;text-shadow:0 0 8px rgba(232,180,90,.6);animation:blink 1.2s infinite;pointer-events:none;z-index:300';
+        subtitleContinueHint.textContent = '右键继续 ▸';
+        document.body.appendChild(subtitleContinueHint);
+    }
+
+    function showContinueHint() {
+        initSubtitleHint();
+        subtitleContinueHint.style.display = 'block';
+    }
+
+    function hideContinueHint() {
+        if (subtitleContinueHint) subtitleContinueHint.style.display = 'none';
+    }
+
+    function processSubtitleQueue() {
+        if (subtitleActive) return;
+        if (subtitleQueue.length === 0) {
+            hideContinueHint();
+            return;
+        }
+        subtitleActive = true;
+        hideContinueHint();
+        var item = subtitleQueue.shift();
+        if (item.speaker) speaker.textContent = item.speaker;
+        typewriter(dialogueText, item.text, item.speed || 50, function() {
+            subtitleActive = false;
+            // auto-advance short empty segments immediately
+            if (subtitleQueue.length > 0) {
+                showContinueHint();
+            }
+        });
+    }
+
+    function enqueueSubtitle(speaker, text, speed) {
+        subtitleQueue.push({ speaker: speaker, text: text, speed: speed || 50 });
+        // 如果当前没有在打字且没有等待用户点击，立即处理
+        if (!subtitleActive && subtitleQueue.length === 1) {
+            processSubtitleQueue();
+        }
+    }
+
+    // 右键推进下一段
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        if (subtitleActive) return; // 还在打字中，忽略
+        if (subtitleQueue.length === 0) return; // 队列空了
+        processSubtitleQueue();
+    });
 
     function clearStage() {
         var puppets = stage.querySelectorAll('.stage-puppet');
@@ -2844,7 +2902,10 @@ const ShadowJudge = {
         dialogueText.textContent='灯——灭了。'; btnConfirm.disabled=true; btnAsk.disabled=true;
     });
 
-    EventBus.on('narration_chunk', function(data) { if(data.speaker)speaker.textContent=data.speaker; if(data.text)typewriter(dialogueText,data.text,data.speed||50); });
+    EventBus.on('narration_chunk', function(data) {
+        // 使用分段字幕系统：入队后逐段显示，段间右键推进
+        enqueueSubtitle(data.speaker||'', data.text||'', data.speed||50);
+    });
     EventBus.on('judge_result', function(result) { if(!btnConfirm.disabled) displayJudgeResult(result); });
 
     EventBus.on('countdown_tick', function(data) {
