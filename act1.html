@@ -553,6 +553,52 @@ body {
     opacity: 1;
 }
 
+/* ====== 场次标题卡片 ====== */
+.act-title-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 215;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.5s ease;
+}
+.act-title-overlay.visible {
+    opacity: 1;
+}
+.act-title-overlay.fade-out {
+    opacity: 0;
+}
+.act-title-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(20,12,6,0.6) 0%, rgba(8,4,2,0.9) 70%),
+        url('assets/images/stage-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    filter: blur(8px);
+}
+.act-title-text {
+    position: relative;
+    z-index: 1;
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 3rem;
+    color: #e8c860;
+    text-shadow: 0 0 40px rgba(255,200,100,0.5), 0 0 80px rgba(200,160,80,0.3);
+    letter-spacing: 0.4em;
+    white-space: nowrap;
+    transform: scale(0.9);
+    opacity: 0;
+    transition: opacity 1.2s ease 0.3s, transform 1.2s ease 0.3s;
+}
+.act-title-overlay.visible .act-title-text {
+    opacity: 1;
+    transform: scale(1);
+}
+
 .stage {
     width: 100%;
     height: 100%;
@@ -908,6 +954,12 @@ body {
 戏名叫《刘海戏金蟾》，
 可这戏里，藏着另一段故事……</div>
     <div class="story-skip-btn" id="storySkipBtn">跳 过</div>
+</div>
+
+<!-- ====== 场次标题卡片 ====== -->
+<div class="act-title-overlay" id="actTitleOverlay">
+    <div class="act-title-bg"></div>
+    <div class="act-title-text">第一场&nbsp;&nbsp;·&nbsp;&nbsp;月夜等人</div>
 </div>
 
 <div class="header">掌 中 光 · 第 一 幕 — 琉璃厂·书生与鹤</div>
@@ -1847,28 +1899,36 @@ const ShadowJudge = {
         subtitle.style.color = '#e8c860';
         subtitle.style.textShadow = '0 0 30px rgba(255,200,60,0.6)';
 
-        // 2.5 秒后黑幕淡出，黑屏字幕滚动同时出现（避免中间露出舞台）
+        // 2.5 秒后黑幕淡出，黑屏字幕滚动瞬间出现（避免中间露出舞台）
         setTimeout(function() {
-            overlay.classList.add('fade-out');
-            subtitle.style.transition = 'opacity 1s ease';
+            storyOverlay.style.transition = 'none'; // 瞬间出现，不走淡入
+            storyOverlay.classList.add('visible');
+            overlay.classList.add('hidden'); // 立即隐藏 intro overlay，不让舞台露出来
             subtitle.style.opacity = '0';
-            storyOverlay.classList.add('visible'); // 与淡出同步，覆盖舞台
         }, 2500);
 
-        // 3.5 秒后彻底隐藏 intro overlay
-        setTimeout(function() {
-            overlay.classList.add('hidden');
-        }, 3500);
-
-        // 字幕滚动结束后（22s 动画 + 余量），淡出并拉开幕布
+        // 字幕滚动结束后（22s 动画 + 余量），淡出
         setTimeout(function() {
             storyOverlay.classList.add('fade-out');
         }, 26500);
 
+        // 28s: 隐藏字幕层，显示场次标题卡片
+        var actTitleOverlay = document.getElementById('actTitleOverlay');
         setTimeout(function() {
             storyOverlay.style.display = 'none';
-            panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+            actTitleOverlay.classList.add('visible');
         }, 28000);
+
+        // 33s: 标题卡片淡出
+        setTimeout(function() {
+            actTitleOverlay.classList.add('fade-out');
+        }, 33000);
+
+        // 34.5s: 拉开幕布
+        setTimeout(function() {
+            actTitleOverlay.style.display = 'none';
+            panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+        }, 34500);
 
         // 跳过按钮
         var skipBtn = document.getElementById('storySkipBtn');
@@ -1881,8 +1941,15 @@ const ShadowJudge = {
             storyOverlay.classList.add('fade-out');
             setTimeout(function() {
                 storyOverlay.style.display = 'none';
-                panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+                actTitleOverlay.classList.add('visible');
             }, 1500);
+            setTimeout(function() {
+                actTitleOverlay.classList.add('fade-out');
+            }, 5000);
+            setTimeout(function() {
+                actTitleOverlay.style.display = 'none';
+                panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+            }, 6500);
         });
     });
 
