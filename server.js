@@ -25,9 +25,9 @@ const server = http.createServer((req, res) => {
     // 去掉 query string
     let filePath = path.join(ROOT, req.url.split('?')[0]);
 
-    // 根路径 → index.html
+    // 根路径 → act1.html（单幕版·第一幕；完整版 index.html 已移除）
     if (req.url === '/' || req.url === '') {
-        filePath = path.join(ROOT, 'index.html');
+        filePath = path.join(ROOT, 'act1.html');
     }
 
     const ext = path.extname(filePath);
