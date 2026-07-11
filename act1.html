@@ -357,30 +357,6 @@ body {
     50% { filter: brightness(0.3) saturate(0.2); }
 }
 
-/* 油灯点亮后扩散的光圈：从灯心不断变大，铺满全屏后跳到背景介绍 */
-.lamp-bloom {
-    position: fixed;
-    inset: 0;
-    z-index: 205;            /* 高于黑幕(200)，低于背景字幕层(210) */
-    pointer-events: none;
-    display: none;
-    overflow: hidden;
-}
-.lamp-bloom-circle {
-    position: absolute;
-    width: 260px;
-    height: 260px;
-    border-radius: 50%;
-    transform: scale(0.1);
-    background: radial-gradient(circle at center,
-        rgba(255,228,175,0.7) 0%,
-        rgba(255,196,118,0.5) 30%,
-        rgba(255,158,68,0.26) 55%,
-        rgba(255,128,48,0.07) 78%,
-        transparent 100%);
-    box-shadow: 0 0 70px 28px rgba(255,168,80,0.25);
-}
-
 /* ---- 右侧：木箱（皮影箱）---- */
 .intro-box {
     width: 300px;
@@ -460,29 +436,6 @@ body {
 .intro-box.lit .intro-puppet-name { color: #c4a44a; }
 
 /* ---- 底部字幕 ---- */
-.intro-opening-line {
-    position: absolute;
-    bottom: 14%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
-    font-size: 1.5rem;
-    color: #8a7a5a;
-    text-shadow: 0 0 20px rgba(255,180,80,0.3);
-    letter-spacing: 0.15em;
-    pointer-events: none;
-    z-index: 201;
-    opacity: 0;
-    transition: opacity 2s ease;
-    white-space: nowrap;
-}
-.intro-opening-line.revealed {
-    opacity: 0.7;
-}
-.intro-opening-line.fade-out {
-    opacity: 0;
-}
-
 .intro-subtitle {
     position: absolute;
     bottom: 14%;
@@ -505,141 +458,6 @@ body {
 @keyframes subtitlePulse {
     0%, 100% { opacity: 0.5; }
     50% { opacity: 0.9; }
-}
-
-/* 开始提示：页面打开即出现，提示用户可交互，避免「黑屏像打不开」 */
-.intro-start-hint {
-    position: absolute;
-    bottom: 8%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
-    font-size: 1rem;
-    color: #8a7a5a;
-    letter-spacing: 0.3em;
-    pointer-events: none;
-    z-index: 201;
-    animation: hintPulse 2s ease-in-out infinite;
-}
-@keyframes hintPulse {
-    0%, 100% { opacity: 0.3; }
-    50%      { opacity: 0.85; }
-}
-
-/* ====== 黑屏字幕滚动 ====== */
-.story-intro-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 210;
-    background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    overflow: hidden;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 1.5s ease;
-}
-.story-intro-overlay.visible {
-    opacity: 1;
-    pointer-events: auto;
-}
-.story-intro-overlay.fade-out {
-    opacity: 0;
-}
-.story-intro-text {
-    position: absolute;
-    bottom: -100%;
-    width: 70%;
-    max-width: 700px;
-    text-align: center;
-    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
-    font-size: 1.35rem;
-    line-height: 2.6;
-    color: #c4a46c;
-    text-shadow: 0 0 12px rgba(200,160,80,0.25);
-    letter-spacing: 0.12em;
-    white-space: pre-line;
-}
-.story-intro-overlay.visible .story-intro-text {
-    animation: storyScroll 22s linear forwards;
-}
-@keyframes storyScroll {
-    0%   { bottom: -100%; }
-    100% { bottom: 120%; }
-}
-
-/* 跳过按钮 */
-.story-skip-btn {
-    position: absolute;
-    bottom: 30px;
-    right: 40px;
-    padding: 8px 24px;
-    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
-    font-size: 0.95rem;
-    color: #6a5a3a;
-    background: rgba(30,20,10,0.5);
-    border: 1px solid rgba(160,130,70,0.3);
-    border-radius: 4px;
-    cursor: pointer;
-    z-index: 211;
-    opacity: 0;
-    transition: opacity 0.8s ease, color 0.3s ease, border-color 0.3s ease;
-    letter-spacing: 0.15em;
-}
-.story-intro-overlay.visible .story-skip-btn {
-    opacity: 0.6;
-}
-.story-skip-btn:hover {
-    color: #e8c860;
-    border-color: rgba(220,180,80,0.6);
-    opacity: 1;
-}
-
-/* ====== 场次标题卡片 ====== */
-.act-title-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 215;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 1.5s ease;
-}
-.act-title-overlay.visible {
-    opacity: 1;
-}
-.act-title-overlay.fade-out {
-    opacity: 0;
-}
-.act-title-bg {
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(20,12,6,0.6) 0%, rgba(8,4,2,0.9) 70%),
-        url('assets/images/stage-bg.jpg');
-    background-size: cover;
-    background-position: center;
-    filter: blur(8px);
-}
-.act-title-text {
-    position: relative;
-    z-index: 1;
-    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
-    font-size: 3rem;
-    color: #e8c860;
-    text-shadow: 0 0 40px rgba(255,200,100,0.5), 0 0 80px rgba(200,160,80,0.3);
-    letter-spacing: 0.4em;
-    white-space: nowrap;
-    transform: scale(0.9);
-    opacity: 0;
-    transition: opacity 1.2s ease 0.3s, transform 1.2s ease 0.3s;
-}
-.act-title-overlay.visible .act-title-text {
-    opacity: 1;
-    transform: scale(1);
 }
 
 .stage {
@@ -718,10 +536,6 @@ body {
     -webkit-user-drag: none;
     z-index: 3;
     filter: drop-shadow(3px 4px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 2px rgba(180,120,50,0.3));
-    transform: scaleX(1);
-}
-.stage-puppet.flipped {
-    transform: scaleX(-1);
 }
 .stage-puppet:focus { outline: none !important; }
 
@@ -742,9 +556,6 @@ body {
     z-index: 9999;
     opacity: 0.85;
     filter: drop-shadow(4px 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 0 8px rgba(220,160,60,0.3));
-}
-.puppet-drag-clone.flipped {
-    transform: scaleX(-1);
 }
 
 .puppet-drag-clone svg {
@@ -974,39 +785,8 @@ body {
             </div>
         </div>
     </div>
-    <div class="intro-opening-line" id="introOpeningLine">你来了？灯快没油了，坐近点</div>
-    <div class="intro-subtitle" id="introSubtitle">点燃油灯吧</div>
-    <div class="intro-start-hint" id="introStartHint">▷ 点击屏幕任意处开始</div>
-</div>
-
-<!-- ====== 油灯点亮后扩散的光圈 ====== -->
-<div class="lamp-bloom" id="lampBloom"><div class="lamp-bloom-circle" id="lampBloomCircle"></div></div>
-
-<!-- ====== 黑屏字幕滚动：背景介绍 ====== -->
-<div class="story-intro-overlay" id="storyIntroOverlay">
-    <div class="story-intro-text" id="storyIntroText">民国年间，琉璃厂旧书街。
-
-一间旧书铺的后院，支着一方小小的皮影戏台。
-
-台前无人，白布蒙尘，木箱里躺着五个皮影——
-书生、槐树、月亮、老者、金蟾。
-
-老师傅已等了许久。
-灯油将尽，他却不急。
-
-他在等一个人来。
-
-听一出戏，演一出戏。
-
-戏名叫《刘海戏金蟾》，
-可这戏里，藏着另一段故事……</div>
-    <div class="story-skip-btn" id="storySkipBtn">跳 过</div>
-</div>
-
-<!-- ====== 场次标题卡片 ====== -->
-<div class="act-title-overlay" id="actTitleOverlay">
-    <div class="act-title-bg"></div>
-    <div class="act-title-text">第一场&nbsp;&nbsp;·&nbsp;&nbsp;月夜等人</div>
+    <div class="intro-subtitle" id="introSubtitle">请点燃油灯吧</div>
+    <button id="introEnterBtn" class="intro-enter-btn" style="display:none">把手伸进皮影箱</button>
 </div>
 
 <div class="header">掌 中 光 · 第 一 幕 — 琉璃厂·书生与鹤</div>
@@ -1159,7 +939,7 @@ body {
 <div class="dialogue-area">
     <div class="dialogue-speaker" id="speaker">路师傅</div>
     <div class="dialogue-text scroll" id="dialogueText">
-        民国十七年秋，琉璃厂旧书街。<br><br>
+        很多年前，琉璃厂旧书街。<br><br>
         一个书生在等人——但他等的不是人，是一封永远不会寄到的信。
     </div>
     <div class="btn-row">
@@ -1199,199 +979,6 @@ window.EventBus = EventBus;
 
 <script>
 // ========================================
-// audio-manager.js — 音频管理系统
-// ========================================
-const AudioManager = {
-    // ---- 音频文件路径映射 ----
-    // 文件放入 assets/audio/ 目录，命名如下
-    SOUNDS: {
-        // BGM（背景音乐，循环播放）
-        bgm_intro:    'assets/audio/bgm-intro.mp3',     // 开场序幕 BGM
-        bgm_stage:    'assets/audio/bgm-stage.mp3',     // 舞台默认 BGM
-        bgm_night:    'assets/audio/bgm-night.mp3',     // 月夜 BGM
-        // SFX（音效，单次播放）
-        sfx_lamp_light:   'assets/audio/sfx-lamp-light.mp3',   // 点燃油灯
-        sfx_curtain:      'assets/audio/sfx-curtain.mp3',      // 幕布拉开
-        sfx_puppet_place: 'assets/audio/sfx-puppet-place.mp3', // 放置皮影
-        sfx_puppet_remove:'assets/audio/sfx-puppet-remove.mp3',// 移除皮影
-        sfx_puppet_flip:  'assets/audio/sfx-puppet-flip.mp3',  // 翻转皮影
-        sfx_puppet_drag:  'assets/audio/sfx-puppet-drag.mp3',  // 拖动皮影
-        sfx_moon:         'assets/audio/sfx-moon.mp3',         // 月夜切换
-        sfx_oil_deplete:  'assets/audio/sfx-oil-deplete.mp3',  // 油尽
-        sfx_click:        'assets/audio/sfx-click.mp3',        // 通用点击
-        // Voice（人声旁白，单次播放）
-        voice_opening:    'assets/audio/voice-opening.mp3',    // "你来了？灯快没油了，坐近点"
-        voice_bg_intro:   'assets/audio/voice-bg-intro.mp3',   // 背景介绍旁白
-        voice_act_title:  'assets/audio/voice-act-title.mp3',  // "第一场·月夜等人"
-    },
-
-    // ---- 音量控制 ----
-    volumes: { bgm: 0.4, sfx: 0.7, voice: 1.0 },
-    muted: false,
-
-    // ---- 内部状态 ----
-    _bgm: null,        // 当前 BGM 的 Audio 元素
-    _bgmKey: null,     // 当前 BGM 的 key
-    _cache: {},        // 预加载缓存
-    _audioSupported: typeof Audio !== 'undefined',
-
-    // ---- 初始化 ----
-    init() {
-        if (!this._audioSupported) { console.warn('[audio] 浏览器不支持 Audio'); return; }
-        console.log('[audio] AudioManager 已就绪，共 ' + Object.keys(this.SOUNDS).length + ' 个音频槽位');
-    },
-
-    // ---- 预加载 ----
-    preload(keys) {
-        if (!this._audioSupported) return;
-        var self = this;
-        (keys || Object.keys(this.SOUNDS)).forEach(function(key) {
-            if (self._cache[key]) return;
-            var path = self.SOUNDS[key];
-            if (!path) return;
-            var a = new Audio();
-            a.src = path;
-            a.preload = 'auto';
-            self._cache[key] = a;
-        });
-    },
-
-    // ---- 播放 BGM ----
-    playBGM(key, options) {
-        if (!this._audioSupported || this.muted) return;
-        options = options || {};
-        var path = this.SOUNDS[key];
-        if (!path) { console.warn('[audio] BGM 未找到: ' + key); return; }
-
-        // 同一首 BGM 正在播放，跳过
-        if (this._bgmKey === key && this._bgm && !this._bgm.paused) return;
-
-        // 淡出旧 BGM
-        if (this._bgm) {
-            this._fadeStop(this._bgm, options.crossfade || 800);
-        }
-
-        var bgm = this._cache[key] || new Audio(path);
-        bgm.src = path;
-        bgm.loop = options.loop !== false; // 默认循环
-        bgm.volume = 0;
-        this._bgm = bgm;
-        this._bgmKey = key;
-
-        var targetVol = this.volumes.bgm * (options.volume || 1);
-        var self = this;
-        bgm.play().then(function() {
-            self._fadeTo(bgm, targetVol, options.fadeIn || 1000);
-        }).catch(function(e) {
-            console.warn('[audio] BGM 播放失败: ' + key, e.message);
-        });
-    },
-
-    stopBGM(fadeOut) {
-        if (this._bgm) {
-            this._fadeStop(this._bgm, fadeOut || 1000);
-            this._bgmKey = null;
-        }
-    },
-
-    // ---- 播放 SFX ----
-    playSFX(key, options) {
-        if (!this._audioSupported || this.muted) return;
-        options = options || {};
-        var path = this.SOUNDS[key];
-        if (!path) { console.warn('[audio] SFX 未找到: ' + key); return; }
-
-        var sfx = new Audio(path);
-        sfx.volume = this.volumes.sfx * (options.volume || 1);
-        sfx.play().catch(function(e) {
-            console.warn('[audio] SFX 播放失败: ' + key, e.message);
-        });
-    },
-
-    // ---- 播放 Voice（返回 Audio 元素，便于同步字幕时序）----
-    playVoice(key, options) {
-        if (!this._audioSupported || this.muted) return null;
-        options = options || {};
-        var path = this.SOUNDS[key];
-        if (!path) { console.warn('[audio] Voice 未找到: ' + key); return null; }
-
-        var voice = new Audio(path);
-        voice.volume = this.volumes.voice * (options.volume || 1);
-        var p = voice.play();
-        if (p && typeof p.catch === 'function') {
-            p.catch(function(e) {
-                console.warn('[audio] Voice 播放失败: ' + key, (e && e.message) || e);
-            });
-        }
-        return voice;
-    },
-
-    // ---- 静音/取消静音 ----
-    setMuted(muted) {
-        this.muted = muted;
-        if (muted && this._bgm) { this._bgm.pause(); }
-        else if (!muted && this._bgm && this._bgmKey) { this._bgm.play().catch(function(){}); }
-    },
-
-    // ---- 设置音量 ----
-    setVolume(type, vol) {
-        if (this.volumes[type] !== undefined) {
-            this.volumes[type] = vol;
-            if (type === 'bgm' && this._bgm) {
-                this._bgm.volume = vol;
-            }
-        }
-    },
-
-    // ---- 内部工具：淡入淡出 ----
-    _fadeTo(audio, targetVol, duration) {
-        var startVol = audio.volume;
-        var startTime = performance.now();
-        var self = this;
-        function step(now) {
-            var t = Math.min((now - startTime) / duration, 1);
-            audio.volume = startVol + (targetVol - startVol) * t;
-            if (t < 1) requestAnimationFrame(step);
-        }
-        requestAnimationFrame(step);
-    },
-
-    _fadeStop(audio, duration) {
-        var startVol = audio.volume;
-        var startTime = performance.now();
-        function step(now) {
-            var t = Math.min((now - startTime) / duration, 1);
-            audio.volume = startVol * (1 - t);
-            if (t < 1) { requestAnimationFrame(step); }
-            else { audio.pause(); audio.volume = 0; }
-        }
-        requestAnimationFrame(step);
-    }
-};
-window.AudioManager = AudioManager;
-AudioManager.init();
-
-// ========================================
-// 音频事件绑定 — 与游戏流程联动
-// ========================================
-// 皮影操作音效
-EventBus.on('puppet_placed',  function() { AudioManager.playSFX('sfx_puppet_place'); });
-EventBus.on('puppet_removed', function() { AudioManager.playSFX('sfx_puppet_remove'); });
-EventBus.on('puppet_flipped', function() { AudioManager.playSFX('sfx_puppet_flip'); });
-EventBus.on('puppet_moved',   function() { AudioManager.playSFX('sfx_puppet_drag'); });
-
-// 油尽音效
-EventBus.on('oil_depleted',   function() { AudioManager.playSFX('sfx_oil_deplete'); });
-
-// 月夜切换音效
-EventBus.on('night_mode_on',  function() { AudioManager.playSFX('sfx_moon'); AudioManager.playBGM('bgm_night'); });
-EventBus.on('night_mode_off', function() { AudioManager.playBGM('bgm_stage'); });
-
-console.log('[audio] 音频事件监听已注册');
-</script>
-
-<script>
-// ========================================
 // game.js — 游戏全局状态管理
 // ========================================
 class GameState {
@@ -1405,6 +992,7 @@ class GameState {
         this.stagedPuppets = [];
         this.usedPuppets = [];
         this.triggeredClues = [];
+        this.unlockedCiphers = [];
         this.endingStats = { faithfulness: 0, creativity: 0, oilConservation: 0, questionsAsked: 0 };
         this.aiQuality = "high";
     }
@@ -1420,6 +1008,7 @@ class GameState {
             lampOil: this.lampOil, totalOilBurned: this.totalOilBurned,
             ownedPuppets: this.ownedPuppets, stagedPuppets: this.stagedPuppets,
             usedPuppets: this.usedPuppets, triggeredClues: this.triggeredClues,
+            unlockedCiphers: this.unlockedCiphers,
             endingStats: this.endingStats, aiQuality: this.aiQuality
         });
     }
@@ -1432,6 +1021,10 @@ function determineEnding(state) {
     const { lampOil, endingStats } = state;
     const { faithfulness, creativity } = endingStats;
     if (creativity >= 80) return { name: "影子师傅", desc: "你走了自己的路——成为了非传统的传承人。" };
+    var ciphers = state.unlockedCiphers || [];
+    var truthFound = ciphers.indexOf('金蟾碎了')>=0 && ciphers.indexOf('三根线')>=0;
+    if (truthFound && creativity >= 80) return { name: "影子师傅", desc: "你从碎了的金蟾里，看见了师傅没说完的话——你走了自己的路，成了非传统的传承人。" };
+    if (truthFound && lampOil >= 15 && faithfulness >= 60) return { name: "传灯", desc: "金蟾碎了的真相，你接住了。灯，交到你手里了。" };
     if (lampOil >= 30 && faithfulness >= 70 && creativity >= 50) return { name: "传灯", desc: "你成为新的说戏人。" };
     if (lampOil >= 15 && faithfulness >= 60) return { name: "守灯", desc: "灯一直在闪，但没有灭。" };
     if (faithfulness >= 40) return { name: "残影", desc: "灯灭了。但白布上还有影子。" };
@@ -1456,7 +1049,7 @@ function updateOilUI() {
 }
 
 const LampSystem = {
-    COSTS: { puppet_placed: 3, puppet_removed: 3, puppet_moved: 1, puppet_flipped: 1, ask_master: 8, wrong_puppet: 5, time_penalty: 2 },
+    COSTS: { puppet_placed: 3, puppet_removed: 3, puppet_moved: 1, ask_master: 8, wrong_puppet: 5, time_penalty: 2 },
     REWARDS: { correct_judge: 2, creativity_bonus: 3, partial_correct: 1, perfect_scene: 10 },
     RECOVERY: { intermission: 80 },
     burn(reason) {
@@ -1505,7 +1098,6 @@ EventBus.on("puppet_placed", function(data) {
     if (data && data.id && gameState.stagedPuppets.indexOf(data.id) === -1) gameState.stagedPuppets.push(data.id);
 });
 EventBus.on("puppet_removed", function() { LampSystem.burn("puppet_removed"); });
-EventBus.on("puppet_flipped", function() { LampSystem.burn("puppet_flipped"); });
 EventBus.on("puppet_moved", function() { LampSystem.burn("puppet_moved"); });
 EventBus.on("ask_master", function() { LampSystem.burn("ask_master"); });
 EventBus.on("judge_result", function(result) { if (result && result.correct) LampSystem.reward("correct_judge"); });
@@ -1602,7 +1194,7 @@ const ACTS_DATA = {
     "acts": [
         {
             "id": 1, "name": "琉璃厂·书生与鹤",
-            "intro": "民国十七年秋，琉璃厂旧书街。一个书生在等人——但他等的不是人，是一封永远不会寄到的信。而这封信里藏着的，是皮影戏最后的秘密。",
+            "intro": "很多年前，琉璃厂旧书街。一个书生在等人——但他等的不是人，是一封永远不会寄到的信。而这封信里藏着的，是皮影戏最后的秘密。",
             "setting": "月夜，槐树下，琉璃厂东街第三个旧书摊后面的巷口。煤油灯的气味混着旧书纸的霉味。",
             "embedded_play": "刘海戏金蟾",
             "mood": "初见的温和与试探——路师傅在观察这个学徒，看他/她有没有'影感'",
@@ -1612,13 +1204,13 @@ const ACTS_DATA = {
                 {"id":"clue_2","name":"信不是情书","layer":1,"scene_id":"act1_scene1","trigger":"学徒在Scene1中摆了信（letter）且书生面朝信的方向","trigger_puppets":["scholar","letter"],"reveal_content":"路师傅看着影面，轻声说：'那封信——写了三年。不是情话，是比命还重的东西。'","cipher_link":["信"],"game_impact":"解锁暗语'信'的使用权限","difficulty":"easy"},
                 {"id":"clue_3","name":"三根线的秘密","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中同时摆了老者（elder）和信（letter）","trigger_puppets":["elder","letter"],"reveal_content":"路师傅说到老者手中的操纵杆时停了下来：'这根杆——本来有三根的。我师父当年——算了。'","cipher_link":["三根线"],"game_impact":"解锁暗语'三根线'","difficulty":"medium"},
                 {"id":"clue_4","name":"两个师兄弟","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了全部必需皮影且追问了'老者是谁'","trigger_puppets":["scholar","elder","letter"],"reveal_content":"路师傅被追问后：'我有两个师兄弟。一个飞走了——那年秋天的事。另一个病在床上，临走前拉着我的手说：老三，线不能断。'","cipher_link":["鹤","三根线"],"game_impact":"大师兄贺云亭和二师兄刘玉山线索首次出现","difficulty":"hard"},
-                {"id":"clue_5","name":"金蟾为什么碎了","layer":3,"scene_id":"act1_scene3","trigger":"学徒在Scene3中摆了金蟾（frog）和老者（elder）","trigger_puppets":["frog","elder"],"reveal_content":"路师傅说到金蟾碎的那段，声音变了：'金蟾碎了。戏里是这么写的——但戏外——也碎了。'","cipher_link":["金蟾碎了"],"game_impact":"解锁暗语'金蟾碎了'；学徒第一次意识到'戏=现实'","difficulty":"medium"},
+                {"id":"clue_5","name":"金蟾为什么碎了","layer":3,"scene_id":"act1_scene3","trigger":"学徒在Scene3中摆了金蟾（frog）和老者（elder）","trigger_puppets":["frog","elder"],"reveal_content":"这是路春福师傅最后一次在琉璃厂演出时，临时改的词。他那天回来，放下操纵杆，说：\"手不听使唤了。\" 从此，再没演过。\n白布上的老者影，慢慢淡去，和台下看戏人的影子叠在了一起——戏，得有人接着演。","cipher_link":["金蟾碎了"],"game_impact":"解锁暗语'金蟾碎了'；学徒第一次意识到'戏=现实'","difficulty":"medium"},
                 {"id":"clue_6","name":"最后一根线","layer":3,"scene_id":"act1_scene3","trigger":"学徒在Scene3中摆了全部必需皮影且灯油≤50%","trigger_puppets":["frog","elder","scholar"],"reveal_content":"老者手上只有两根线——第三根断了。路师傅的声音低到几乎听不见：'线不能断。断了——戏就散了。我手上——只剩这一根了。'","cipher_link":["三根线","鹤","金蟾碎了"],"game_impact":"第一幕暗语链闭环","difficulty":"hard"}
             ],
             "scenes": [
-                {"id":"act1_scene1","name":"月夜等人","description":"月夜，槐树下，一个书生在等。他穿青衫，手里攥着一封信。月亮很大，影子把他的身形拉得很长。槐花落了满地。路师傅开始说戏——但他说的好像不只是戏。","standard_puppets":["scholar","tree","moon"],"acceptable_extras":["letter","lamp"],"hidden_clue":"琉璃厂的记忆坐标","hidden_clue_ids":["clue_1","clue_2"],"cipher_triggers":["槐树","信","琉璃厂东街"],"cipher_guidance":"学徒摆了槐树→路师傅提到'我认得一棵槐树，在东街第三个书摊后面'；学徒摆了信→路师傅说'那封信写了三年——不是我写的，是我师父'"},
-                {"id":"act1_scene2","name":"信中之秘","description":"书生拆开了信。信上说——琉璃厂东街有位老者，手中操纵杆能同时控制三根线。书生决定去找那个人。路师傅说到这里，声音轻了下去——像是在说别人的事，又像是在说自己。","standard_puppets":["scholar","elder","letter"],"acceptable_extras":["tree","lamp"],"hidden_clue":"三根操纵杆=三位传承人","hidden_clue_ids":["clue_3","clue_4"],"cipher_triggers":["三根线","信","槐树"],"cipher_guidance":"学徒摆了老者+信→触发'三根线的秘密'；学徒追问'老者是谁'→触发'两个师兄弟'"},
-                {"id":"act1_scene3","name":"刘海的秘密","description":"戏中戏《刘海戏金蟾》上演。但刘海手中的金蟾突然碎了——这不是原版戏文的剧情。台下老者的操纵杆上只有两根线，第三根断了。路师傅停了下来——他说的到底是戏，还是自己？","standard_puppets":["frog","elder","scholar"],"acceptable_extras":["moon","lamp","master"],"hidden_clue":"金蟾碎了=传承断了","hidden_clue_ids":["clue_5","clue_6"],"cipher_triggers":["金蟾碎了","三根线","鹤"],"cipher_guidance":"金蟾碎的瞬间是第一幕暗语密度最高的时刻"}
+                {"id":"act1_scene1","name":"月夜等人","description":"琉璃厂旧书铺的后院，一方白布戏台。月色斜照，槐树影静。木箱里睡着几枚皮影：书生、老者、金蟾、槐树、月亮。\n书生是读书人，他总在等人——可戏台前空着一座，他等的不是戏里的人，是台下能接住这出戏的人。","standard_puppets":["scholar","tree","moon"],"acceptable_extras":["letter","lamp"],"hidden_clue":"琉璃厂的记忆坐标","hidden_clue_ids":["clue_1","clue_2"],"cipher_triggers":["槐树","信","琉璃厂东街"],"cipher_guidance":"学徒摆了槐树→路师傅提到'我认得一棵槐树，在东街第三个书摊后面'；学徒摆了信→路师傅说'那封信写了三年——不是我写的，是我师父'"},
+                {"id":"act1_scene2","name":"信中之秘","description":"书生在箱底翻出一封旧信，边角烧焦。信上不是家书，而是一段残缺的戏词：\n老者三根线，不是吊人吊金蟾；琉璃厂里，谁人坐门前。\n这话和《刘海戏金蟾》对不上——原戏里没有琉璃厂，也没有\"老者三根线\"。像是有人，趁人不注意，把暗语塞进了戏里。","standard_puppets":["scholar","elder","letter"],"acceptable_extras":["tree","lamp"],"hidden_clue":"三根操纵杆=三位传承人","hidden_clue_ids":["clue_3","clue_4"],"cipher_triggers":["三根线","信","槐树"],"cipher_guidance":"学徒摆了老者+信→触发'三根线的秘密'；学徒追问'老者是谁'→触发'两个师兄弟'"},
+                {"id":"act1_scene3","name":"断线","description":"顺着信里的词，戏真的演了下去：\n刘海本是穷书生，那日来到琉璃厂，见一老者坐门前。老者手上三根线，不是吊人吊金蟾。刘海上前问端详，老者不答只摇头——手上一松，线断了，金蟾落地碎了。\n戏停了。原来这根本不是《刘海戏金蟾》。","standard_puppets":["frog","elder","scholar"],"acceptable_extras":["moon","lamp","master"],"hidden_clue":"金蟾碎了=传承断了","hidden_clue_ids":["clue_5","clue_6"],"cipher_triggers":["金蟾碎了","三根线","鹤"],"cipher_guidance":"金蟾碎的瞬间是第一幕暗语密度最高的时刻"}
             ]
         },
         {
@@ -1691,7 +1283,7 @@ const PROMPTS_DATA = {
 // ========================================
 const API_CONFIG = {
     API_KEY: 'sk-请在这里填入你的API Key',
-    API_URL: 'https://123.57.90.233:3000/api/llm'
+    API_URL: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
 };
 </script>
 
@@ -1701,7 +1293,7 @@ const API_CONFIG = {
 // ========================================
 const AI = {
     get API_KEY() { return (typeof API_CONFIG !== 'undefined') ? API_CONFIG.API_KEY : 'sk-未配置'; },
-    get API_URL() { return (typeof API_CONFIG !== 'undefined') ? API_CONFIG.API_URL : 'https://123.57.90.233:3000/api/llm'; },
+    get API_URL() { return (typeof API_CONFIG !== 'undefined') ? API_CONFIG.API_URL : 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'; },
     MODEL_DEFAULT: 'qwen-turbo',
     MODEL_PREMIUM: 'qwen-plus',
     MODEL_MAX: 'qwen-max',
@@ -1822,7 +1414,6 @@ const ShadowJudge = {
     var dragSource = null;   // 'card' | 'stage'
     var dragPuppetEl = null; // 舞台上的原皮影元素（从舞台拖动时用）
     var offsetX = 0, offsetY = 0;
-    var dragStartX = 0, dragStartY = 0;
     // 舞台渲染尺寸（和 placeOnStage 保持一致）
     var STAGE_W = 100;
 
@@ -1864,8 +1455,6 @@ const ShadowJudge = {
         dragSource = 'stage';
         dragPuppetEl = e.currentTarget;
         dragPuppetId = dragPuppetEl.dataset.puppet;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
         var rect = dragPuppetEl.getBoundingClientRect();
         offsetX = e.clientX - rect.left;
         offsetY = e.clientY - rect.top;
@@ -1879,9 +1468,6 @@ const ShadowJudge = {
             : dragPuppetEl.innerHTML;
         dragClone.style.left = (e.clientX - offsetX) + 'px';
         dragClone.style.top  = (e.clientY - offsetY) + 'px';
-        if (dragPuppetEl.classList.contains('flipped')) {
-            dragClone.classList.add('flipped');
-        }
         document.body.appendChild(dragClone);
 
         // 原皮影淡化，不删除
@@ -1949,24 +1535,7 @@ const ShadowJudge = {
         if (source === 'card' && onStage) {
             placeOnStage(cloneRect, puppetId);
         } else if (source === 'stage') {
-            // 判断是点击（翻转）还是拖动（移动）
-            var moved = Math.abs(e.clientX - dragStartX) > 5 || Math.abs(e.clientY - dragStartY) > 5;
-
-            if (!moved) {
-                // 单击 → 左右翻转（Web Animations API 控制动画，两个方向一致）
-                var wasFlipped = puppetEl.classList.contains('flipped');
-                puppetEl.classList.toggle('flipped');
-                var fromScale = wasFlipped ? -1 : 1;
-                var toScale   = wasFlipped ?  1 : -1;
-                puppetEl.animate([
-                    { transform: 'scaleX(' + fromScale + ')', opacity: 1 },
-                    { transform: 'scaleX(0)',                 opacity: 0.5, offset: 0.5 },
-                    { transform: 'scaleX(' + toScale   + ')', opacity: 1 }
-                ], { duration: 380, easing: 'ease-in-out' });
-                puppetEl.style.opacity = '1';
-                puppetEl.style.pointerEvents = '';
-                EventBus.emit('puppet_flipped', { id: puppetId });
-            } else if (onStage) {
+            if (onStage) {
                 // clone 左上角相对于舞台 = 放置位置
                 puppetEl.style.left = (cloneRect.left - stageRect.left) + 'px';
                 puppetEl.style.top  = (cloneRect.top  - stageRect.top)  + 'px';
@@ -2078,7 +1647,6 @@ const ShadowJudge = {
     var oilDisplay = document.getElementById('introOilDisplay');
     var introBox = document.getElementById('introBox');
     var subtitle = document.getElementById('introSubtitle');
-    var openingLine = document.getElementById('introOpeningLine');
     var gallery = document.getElementById('introBoxGallery');
     var panels = document.querySelectorAll('.curtain-panel');
 
@@ -2106,129 +1674,16 @@ const ShadowJudge = {
     });
 
     var isLit = false;
-    var storyOverlay = document.getElementById('storyIntroOverlay');
 
-    // ---- 开场序列：点击屏幕后才开始 ----
-    // 关键：页面加载后只显示「点击屏幕任意处开始」提示，用户点击后才进入开场白；
-    //       视觉（开场白 + 流程推进）不依赖音频，音频仅在首次手势后播放（浏览器自动播放策略要求）。
-    var openingStarted = false;
-    var audioPlayed = false;
-    var startHint = document.getElementById('introStartHint');
-
-    // 旁白结束（或兜底）后：开场白淡出 → 油灯、皮影箱渐显 → 提示字幕
-    function advanceAfterOpening() {
-        if (isLit) return; // 用户已提前点灯，走点灯流程，不再重复推进开场白
-        lampWrap.classList.add('revealed');
-        openingLine.classList.add('fade-out');
-        setTimeout(function() { introBox.classList.add('revealed'); }, 500);
-        setTimeout(function() {
-            subtitle.classList.add('revealed');
-            // 注：「点燃油灯吧」克隆语音已移除，仅保留原声「你来了？灯快没油了，坐近点」
-        }, 2500);
-    }
-
-    var advanced = false;
-    function tryAdvance() {
-        if (advanced) return;
-        advanced = true;
-        advanceAfterOpening();
-    }
-    var CLICK_PAUSE = 3000;  // 点击屏幕后停留 3 秒，再出现字幕
-    var SUBTITLE_HOLD = 5000; // 字幕浮现后至推进的兜底时长（不依赖音频事件）
-
-    // 音频尽力播放（首次手势后、且字幕浮现时）：被自动播放策略拦截时静默失败，不影响流程
-    function startOpeningAudio() {
-        if (audioPlayed) return;
-        audioPlayed = true;
-        AudioManager.playBGM('bgm_intro', { volume: 0.5 });
-        var voiceEl = AudioManager.playVoice('voice_opening');
-        if (voiceEl) {
-            voiceEl.addEventListener('ended', tryAdvance, { once: true });
-            voiceEl.addEventListener('loadedmetadata', function() {
-                if (voiceEl.duration && isFinite(voiceEl.duration)) {
-                    var t = voiceEl.duration * 1000 + 800;
-                    if (t < SUBTITLE_HOLD) setTimeout(tryAdvance, t);
-                }
-            }, { once: true });
-        }
-    }
-
-    // 点击屏幕后：先停留 CLICK_PAUSE 秒（黑屏），再浮现开场白字幕 + 同步旁白，随后兜底推进
-    function startStory() {
-        if (openingStarted) return;
-        openingStarted = true;
-        setTimeout(function() {
-            openingLine.classList.add('revealed'); // 3 秒后字幕出现
-            startOpeningAudio();                    // 字幕与旁白同步
-            setTimeout(tryAdvance, SUBTITLE_HOLD);  // 兜底推进，绝不成阻塞
-        }, CLICK_PAUSE);
-    }
-
-    // 首次任意手势：隐藏提示，开始剧情（含 3 秒停留）
-    function onFirstGesture() {
-        if (startHint) { startHint.style.animation = 'none'; startHint.style.opacity = '0'; }
-        startStory();
-    }
-    ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev) {
-        document.addEventListener(ev, onFirstGesture, { passive: true });
-    });
-
-    // 不再自动开始：必须等用户「点击屏幕任意处」后才进入开场白（见 onFirstGesture）
-    // 页面加载后只显示提示，点击后才开始剧情，避免误以为打不开。
-
-    // ---- 油灯光圈扩散 → 跳到背景介绍 ----
-    var BLOOM_DELAY = 800;  // 点灯后稍候再开始扩散
-    var BLOOM_DUR = 2600;   // 光圈从灯心铺满全屏的时长
-
-    // 光圈铺满全屏后：瞬间切入黑屏字幕滚动（背景介绍）
-    function goToBackgroundInfo() {
-        storyOverlay.style.transition = 'none'; // 瞬间出现，不走淡入
-        storyOverlay.classList.add('visible');
-        overlay.classList.add('hidden');         // 立即隐藏 intro overlay，不让舞台露出来
-        subtitle.style.opacity = '0';
-        AudioManager.playVoice('voice_bg_intro'); // 背景介绍旁白
-        // 光圈完成使命，淡出（此时背景介绍黑层已盖在上方）
-        var bloom = document.getElementById('lampBloom');
-        if (bloom) {
-            bloom.style.transition = 'opacity 0.8s ease';
-            bloom.style.opacity = '0';
-            setTimeout(function() { bloom.style.display = 'none'; }, 900);
-        }
-    }
-
-    // 以油灯中心为原点，让光圈不断变大直到铺满整个屏幕
-    function startLampBloom() {
-        var bloom = document.getElementById('lampBloom');
-        var circle = document.getElementById('lampBloomCircle');
-        if (!bloom || !circle) { goToBackgroundInfo(); return; }
-        var r = lampWrap.getBoundingClientRect();
-        var cx = r.left + r.width / 2;
-        var cy = r.top + r.height / 2;
-        var size = 260;
-        circle.style.left = (cx - size / 2) + 'px';
-        circle.style.top = (cy - size / 2) + 'px';
-        circle.style.transform = 'scale(0.1)';
-        bloom.style.display = 'block';
-        bloom.style.opacity = '1';
-        var anim = circle.animate(
-            [{ transform: 'scale(0.1)' }, { transform: 'scale(45)' }],
-            { duration: BLOOM_DUR, easing: 'ease-in', fill: 'forwards' }
-        );
-        var done = false;
-        function finish() { if (done) return; done = true; goToBackgroundInfo(); }
-        anim.onfinish = finish;
-        // 兜底：个别浏览器 onfinish 不触发时，用定时器保险
-        setTimeout(finish, BLOOM_DUR + 400);
-    }
+    // ---- 2 秒全黑后，油灯与皮影箱渐显 ----
+    setTimeout(function() { lampWrap.classList.add('revealed'); }, 2000);
+    setTimeout(function() { introBox.classList.add('revealed'); }, 2500);
+    setTimeout(function() { subtitle.classList.add('revealed'); }, 4500);
 
     // ---- 点击油灯 → 点亮 ----
     lampWrap.addEventListener('click', function() {
         if (isLit) return;
-        onFirstGesture(); // 确保音频上下文已解锁（首次手势）
         isLit = true;
-
-        // 若开场白尚未推进（用户直接点灯），淡出开场白，避免文字残留
-        if (openingStarted) openingLine.classList.add('fade-out');
 
         // 灯亮了
         lampWrap.classList.add('lit');
@@ -2237,10 +1692,6 @@ const ShadowJudge = {
         lampFlame.classList.add('visible');
         oilDisplay.classList.add('visible');
         introBox.classList.add('lit');
-        AudioManager.playSFX('sfx_lamp_light');
-
-        // 「油量: 100」界面显示 3 秒后淡出
-        setTimeout(function() { oilDisplay.classList.remove('visible'); }, 3000);
 
         // 字幕变化
         subtitle.textContent = '油灯已点燃';
@@ -2249,61 +1700,30 @@ const ShadowJudge = {
         subtitle.style.color = '#e8c860';
         subtitle.style.textShadow = '0 0 30px rgba(255,200,60,0.6)';
 
-        // 点灯后：稍候让灯光稳定，再以油灯为中心扩散光圈；铺满全屏后才跳到背景介绍
-        setTimeout(startLampBloom, BLOOM_DELAY);
-
-        // 字幕滚动结束后（22s 动画 + 余量），淡出
+        // 白布后传来师傅的声音（按新剧本 0-2 分钟）
+        var enterBtn = document.getElementById('introEnterBtn');
         setTimeout(function() {
-            storyOverlay.classList.add('fade-out');
-        }, 26500);
+            subtitle.textContent = '一个声音从白布后响起：「你来了？灯快没油了。坐近点。」';
+            subtitle.style.fontSize = '15px';
+            if (enterBtn) {
+                enterBtn.style.cssText = 'display:inline-block;margin-top:26px;padding:12px 30px;background:transparent;border:1px solid #e8c860;color:#e8c860;font-size:16px;letter-spacing:4px;border-radius:2px;cursor:pointer;font-family:inherit;';
+            }
+        }, 1200);
 
-        // 28s: 隐藏字幕层，显示场次标题卡片
-        var actTitleOverlay = document.getElementById('actTitleOverlay');
-        setTimeout(function() {
-            storyOverlay.style.display = 'none';
-            actTitleOverlay.classList.add('visible');
-            AudioManager.playVoice('voice_act_title'); // 场次标题旁白
-        }, 28000);
-
-        // 33s: 标题卡片淡出
-        setTimeout(function() {
-            actTitleOverlay.classList.add('fade-out');
-        }, 33000);
-
-        // 34.5s: 拉开幕布
-        setTimeout(function() {
-            actTitleOverlay.style.display = 'none';
-            panels.forEach(function(p) { p.classList.add('curtain-opening'); });
-            AudioManager.playSFX('sfx_curtain'); // 幕布声
-            AudioManager.stopBGM(1500); // 淡出开场 BGM
-            setTimeout(function() { AudioManager.playBGM('bgm_stage'); }, 2000); // 播放舞台 BGM
-        }, 34500);
-
-        // 跳过按钮
-        var skipBtn = document.getElementById('storySkipBtn');
-        var skipped = false;
-        skipBtn.addEventListener('click', function() {
-            if (skipped) return;
-            skipped = true;
-            var storyText = document.getElementById('storyIntroText');
-            storyText.style.animation = 'none'; // 停止滚动
-            storyOverlay.classList.add('fade-out');
-            setTimeout(function() {
-                storyOverlay.style.display = 'none';
-                actTitleOverlay.classList.add('visible');
-                AudioManager.playVoice('voice_act_title');
-            }, 1500);
-            setTimeout(function() {
-                actTitleOverlay.classList.add('fade-out');
-            }, 5000);
-            setTimeout(function() {
-                actTitleOverlay.style.display = 'none';
-                panels.forEach(function(p) { p.classList.add('curtain-opening'); });
-                AudioManager.playSFX('sfx_curtain');
-                AudioManager.stopBGM(1500);
-                setTimeout(function() { AudioManager.playBGM('bgm_stage'); }, 2000);
-            }, 6500);
-        });
+        // 点击「把手伸进皮影箱」才拉开帷幕、进入第一幕
+        if (enterBtn) {
+            enterBtn.addEventListener('click', function() {
+                enterBtn.disabled = true;
+                enterBtn.style.display = 'none';
+                subtitle.style.transition = 'opacity 1s ease';
+                subtitle.style.opacity = '0';
+                setTimeout(function() { overlay.classList.add('fade-out'); }, 600);
+                setTimeout(function() {
+                    overlay.classList.add('hidden');
+                    panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+                }, 2100);
+            });
+        }
     });
 
     // 幕布动画结束后彻底移除，避免遮挡交互
@@ -2438,6 +1858,40 @@ const ShadowJudge = {
 
     function getCurrentSceneId() { return 'act'+gameState.currentAct+'_scene'+(gameState.currentScene+1); }
 
+    // ---- 隐藏线索触发系统（按剧本：摆对皮影/追问 → 路师傅揭示 → 解锁暗语）----
+    function getActClues(actIndex) {
+        var act = ACTS_DATA.acts[actIndex];
+        return (act && act.hidden_clues) ? act.hidden_clues : [];
+    }
+    function checkClues(isAsk) {
+        try {
+            var sceneId = getCurrentSceneId();
+            var clues = getActClues(gameState.currentAct - 1).filter(function(c) { return c.scene_id === sceneId; });
+            var placedIds = collectStagedPuppets().map(function(p) { return p.puppetId; });
+            clues.forEach(function(clue) {
+                if (gameState.triggeredClues.indexOf(clue.id) !== -1) return;
+                var req = clue.trigger_puppets || [];
+                if (req.length === 0 || !req.every(function(id) { return placedIds.indexOf(id) !== -1; })) return;
+                if (clue.id === 'clue_6' && gameState.lampOil > 50) return; // 需灯油≤50%
+                var needsAsk = /追问/.test(clue.trigger || '');
+                if (needsAsk && !isAsk) return;
+                triggerClue(clue);
+            });
+        } catch (e) {}
+    }
+    function triggerClue(clue) {
+        try {
+            gameState.triggeredClues.push(clue.id);
+            (clue.cipher_link || []).forEach(function(c) { if (gameState.unlockedCiphers.indexOf(c) === -1) gameState.unlockedCiphers.push(c); });
+            var prefix = clue.layer === 3 ? '（师傅的声音低了下去）' : (clue.layer === 2 ? '（师傅顿了顿）' : '');
+            var text = prefix + clue.reveal_content;
+            if (clue.cipher_link && clue.cipher_link.length > 0) text += '\n\n【暗语解锁】你听懂了——' + clue.cipher_link.join('、') + '。';
+            EventBus.emit('narration_chunk', { speaker: '路师傅', text: text, speed: 46 });
+        } catch (e) {}
+    }
+    EventBus.on('puppet_placed', function() { checkClues(false); });
+    EventBus.on('ask_master', function() { setTimeout(function() { checkClues(true); }, 700); });
+
     function emitSceneJudged(staged, sceneId, result) {
         var scene = ShadowJudge._getSceneData(sceneId);
         var required = scene?scene.standard_puppets||[]:[];
@@ -2551,7 +2005,7 @@ const ShadowJudge = {
 
     function showActIntro(act, callback) {
         EventBus.emit('narration_chunk', { speaker:'路师傅', text:act.intro, speed:38 });
-        var ms = Math.max(4000, Math.ceil(act.intro.length/3*1000)+1000);
+        var ms = Math.min(10000, Math.max(4000, Math.ceil(act.intro.length/3*1000)+1000));
         if (callback) setTimeout(callback, ms);
     }
 
@@ -2566,6 +2020,24 @@ const ShadowJudge = {
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
             EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:35 });
+
+            // —— 第一幕剧本对齐：认识皮影（3-7 分钟）——
+            if (gameState.currentAct===1 && gameState.currentScene===0) {
+                setTimeout(function(){
+                    EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
+                        '（从皮影箱里，选一枚皮影，放在白布上——接住这出戏。）', speed:42 });
+                }, 5200);
+            }
+
+            // —— 第一幕剧本对齐：戏中戏《刘海戏金蟾》（8-15 分钟）——
+            if (gameState.currentAct===1 && gameState.currentScene===2) {
+                setTimeout(function(){
+                    EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
+                        '（戏词里夹着不属于这个故事的东西……你听出来了吗？）\n'+
+                        '摆出你理解的那一幕——老者、三根线、金蟾——让我看看你听懂了没有。', speed:46 });
+                }, 6000);
+            }
+
             if (scene.time_limit&&window.LampSystem) { setTimeout(function(){LampSystem.startCountdown();},5000); }
             if (scene.is_improvisation&&scene.keywords) { setTimeout(function(){EventBus.emit('narration_chunk',{speaker:'路师傅',text:'三个词——'+scene.keywords.join('、')+'。\n\n剩下的——该你了。',speed:40});},6000); }
         } catch(e) { showDialogue('路师傅','（……灯晃了一下。刚才说到哪了？——请刷新页面。）'); }
@@ -2599,8 +2071,10 @@ const ShadowJudge = {
                 EventBus.emit('narration_chunk',{speaker:'',text:'——',speed:300});
                 setTimeout(function(){startCurrentScene();},1200);
             } else {
-                if (gameState.currentAct<3) advanceToNextAct();
-                else endGame();
+                if (gameState.currentAct<3) {
+                    if (gameState.currentAct===1) showAct1Intermission();
+                    else advanceToNextAct();
+                } else endGame();
             }
         } catch(e) { resetSceneState(); }
     }
@@ -2616,7 +2090,39 @@ const ShadowJudge = {
             EventBus.emit('narration_chunk',{speaker:'',text:text,speed:36});
             var ms = Math.max(6000,Math.ceil(nextAct.intro.length/3*1000)+3000);
             setTimeout(function(){startCurrentScene();},ms);
-        } catch(e) { showDialogue('路师傅','（幕间换场时出了点岔子……请刷新页面。）'); }
+        } catch(e) {             showDialogue('路师傅','（幕间换场时出了点岔子……请刷新页面。）'); }
+    }
+
+    // 第一幕收尾：幕间休息（按新剧本 16-25 分钟）——灯油补给 + 解锁新皮影叙事 + 自动续进第二幕
+    function showAct1Intermission() {
+        try {
+            EventBus.emit('act_intermission');
+            // 灯油补给：师傅添油，恢复至 80%
+            gameState.lampOil = 80;
+            var ot=document.getElementById('oilText'); if(ot)ot.textContent='80 / 100';
+            var ob=document.getElementById('oilBar'); if(ob)ob.style.width='80%';
+            var text = ['—— 幕 间 休 息 ——','','师傅去添灯油了。',
+                '你打开皮影箱，发现多了两个皮影——一只鹤，一条船。',
+                '「鹤能带你去高处看。船能带你走水路。」',
+                '师傅望着那只鹤，轻声说：「这只鹤，是飞走的大师兄。那年秋天，他走了，再没回来。」',
+                '他顿了顿：「你方才摆的每一个影，我都认得——槐树是东街的老地方，信是师父留下的戏谱，三根线是我和两位师兄，金蟾碎了……是传承断了。」',
+                '「信的最后一笔，指向大栅栏。听说，那儿有人打着我的名号。」',
+                '','灯油已补至 80%。'].join('\n');
+            EventBus.emit('narration_chunk',{ speaker:'', text:text, speed:38 });
+            var advanced=false;
+            function goAct2(){ if(advanced)return; advanced=true; advanceToNextAct(); }
+            // 提供进入第二幕（大栅栏·主线）的入口；什刹海（支线）待后续
+            setTimeout(function(){
+                var btn=document.createElement('button');
+                btn.id='btnEnterAct2';
+                btn.textContent='前往大栅栏（主线）';
+                btn.style.cssText='position:absolute;bottom:26px;left:50%;transform:translateX(-50%);padding:12px 28px;background:transparent;border:1px solid #e8c860;color:#e8c860;font-size:15px;letter-spacing:3px;border-radius:2px;cursor:pointer;z-index:120;';
+                btn.onclick=function(){ if(btn.parentNode)btn.parentNode.removeChild(btn); goAct2(); };
+                document.body.appendChild(btn);
+            }, 7000);
+            // 用户要求：第一幕结束自动续进第二幕（第二幕内容由 B 后续完善）
+            setTimeout(goAct2, 13000);
+        } catch(e) { advanceToNextAct(); }
     }
 
     function endGame() {
