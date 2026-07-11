@@ -1014,6 +1014,10 @@ body {
     overflow-y: auto;
     letter-spacing: 0.5px;
 }
+.dlg-entry { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px dashed rgba(120,70,35,0.22); }
+.dlg-entry:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.dlg-entry .dlg-speaker { color: #e8c860; font-weight: 700; margin-right: 8px; letter-spacing: 1px; }
+.dlg-entry .dlg-body { color: #f1e3c6; }
 
 .btn-row {
     display: flex;
@@ -2681,7 +2685,7 @@ const ShadowJudge = {
         var staged = collectStagedPuppets();
         if (staged.length===0) { speaker.textContent='路师傅'; typewriter(dialogueText,'白布上还空着呢——先摆几个影儿。'); return; }
         btnConfirm.disabled=true; btnAsk.disabled=true;
-        speaker.textContent='路师傅'; dialogueText.textContent='（师傅凑近白布，眯着眼细细端详……）';
+        speaker.textContent='路师傅'; typewriter(dialogueText, '（师傅凑近白布，眯着眼细细端详……）', 30);
         EventBus.emit('stage_confirmed', { puppets: staged });
         var sceneId = getCurrentSceneId();
         var isImprov = (gameState.currentAct===3);
@@ -2819,14 +2823,34 @@ const ShadowJudge = {
     }
 
     var typewriterTimer = null;
+    var twEntry = null;   // 当前正在打字的那条字幕条目
+    var twFull = '';      // 当前条目的完整文本
+    // 字幕自动滚动 + 跟新最新话语：每条新话语追加为独立条目，自动滚到底部显示最新
     function typewriter(el, text, speed) {
+        if (el==null) return;
         speed = speed||50;
+        // 上一条若还在打字，先瞬间补全，避免半句残留
         if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; }
-        el.textContent=''; el.innerHTML='';
+        if (twEntry) { var pb=twEntry.querySelector('.dlg-body'); if(pb) pb.innerHTML = twFull.replace(/\n/g,'<br>'); twEntry=null; twFull=''; }
+        // 新建一条字幕条目
+        var entry = document.createElement('p');
+        entry.className = 'dlg-entry';
+        var sp = document.createElement('span'); sp.className='dlg-speaker';
+        sp.textContent = (speaker && speaker.textContent) ? speaker.textContent : '';
+        var body = document.createElement('span'); body.className='dlg-body';
+        entry.appendChild(sp); entry.appendChild(body);
+        el.appendChild(entry);
+        el.scrollTop = el.scrollHeight;
+        twEntry = entry; twFull = text;
+        // 即时文本（speed<=0）整段显示
+        if (speed<=0) { body.innerHTML = text.replace(/\n/g,'<br>'); twEntry=null; twFull=''; el.scrollTop = el.scrollHeight; return; }
         var i=0;
         typewriterTimer = setInterval(function() {
-            if (i<text.length) { var ch=text[i]; if(ch==='\n') el.innerHTML+='<br>'; else el.innerHTML+=ch; i++; }
-            else { clearInterval(typewriterTimer); typewriterTimer=null; }
+            if (i<text.length) {
+                var ch=text[i];
+                if(ch==='\n') body.innerHTML+='<br>'; else body.innerHTML+=ch;
+                i++; el.scrollTop = el.scrollHeight;
+            } else { clearInterval(typewriterTimer); typewriterTimer=null; twEntry=null; twFull=''; }
         }, speed);
     }
 
@@ -2841,7 +2865,7 @@ const ShadowJudge = {
         stage.classList.add('stage-dark');
         if(flame)flame.classList.add('flame-gone');
         speaker.textContent='路师傅'; if(typewriterTimer)clearInterval(typewriterTimer);
-        dialogueText.textContent='灯——灭了。'; btnConfirm.disabled=true; btnAsk.disabled=true;
+        typewriter(dialogueText, '灯——灭了。', 0); btnConfirm.disabled=true; btnAsk.disabled=true;
     });
 
     EventBus.on('narration_chunk', function(data) { if(data.speaker)speaker.textContent=data.speaker; if(data.text)typewriter(dialogueText,data.text,data.speed||50); });
@@ -2904,6 +2928,7 @@ const ShadowJudge = {
     function init() {
         try {
             if (typeof ACTS_DATA==='undefined') { showDialogue('路师傅','（数据加载失败。请刷新页面重试。）'); return; }
+            var de=document.getElementById('dialogueText'); if(de) de.innerHTML='';
             updatePuppetCards(gameState.currentAct);
             updateHeader();
             var act1 = ACTS_DATA.acts[0];
@@ -3069,7 +3094,11 @@ const ShadowJudge = {
 
     function showDialogue(speakerText, text) {
         var se=document.getElementById('speaker'),de=document.getElementById('dialogueText');
-        if(se)se.textContent=speakerText||''; if(de)de.textContent=text||'';
+        if(se)se.textContent=speakerText||'';
+        if(de){
+            if(window.TheaterSystem&&TheaterSystem.typewriter){ TheaterSystem.typewriter(de, text||'', 0); }
+            else { de.textContent=text||''; }
+        }
     }
 
     function updatePuppetCards(actNum) {
