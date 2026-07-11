@@ -80,7 +80,7 @@ const ENDPOINTS = {
     llm:        '/compatible-mode/v1/chat/completions',
     t2i:        '/api/v1/services/aigc/text2image/image-synthesis',
     i2v:        '/api/v1/services/aigc/video-generation/video-synthesis',
-    tts:        'https://dashscope.aliyuncs.com/api/v1/services/audio/tts/speech',
+    tts:        '/api/v1/services/audio/tts/speech',
 };
 
 // ================================================================
@@ -349,7 +349,7 @@ async function handleAPI(req, res, apiPath, body) {
     }
 
     try {
-        const result = await forwardToDashScope(dashscopePath, body);
+        const result = await forwardToDashScope(dashscopePath, body, extraHeaders);
 
         if (isStream && result.status === 200) {
             // SSE 流式：原样透传

@@ -260,25 +260,19 @@ const AIGallery = {
         return { url: b64 ? (b64.startsWith('data:') ? this._b64ToBlobUrl(b64.split(',')[1] || b64) : b64) : null, b64: b64 || '', taskId, raw: result };
     },
 
-    /** 异步POST（添加 X-DashScope-Async 头） */
+    /** 异步POST（X-DashScope-Async 头由后端 serve.js 自动添加，前端不需要） */
     async _postAsync(url, body, label) {
-        if (this._useAuth() && (!this._key() || !this._key().startsWith('sk-'))) throw new Error('API Key 未配置');
-        console.log('[AI ' + label + '] 异步提交...', url.substring(0, 50));
-        const st = Date.now();
-        const headers = this._headers();
-        headers['X-DashScope-Async'] = 'enable';
-        const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
-        if (!r.ok) { const t = await r.text().catch(() => '?'); throw new Error(label + ' HTTP ' + r.status + ': ' + t.substring(0, 200)); }
-        const d = await r.json();
-        console.log('[AI ' + label + '] 任务已提交', (Date.now() - st) + 'ms');
-        return d;
+        // 后端 serve.js 的 /api/t2i 路由已经自动加了 X-DashScope-Async: enable
+        // 前端不需要再发这个头，否则会触发不必要的 CORS 预检
+        return this._post(url, body, label);
     },
 
     /** 通用异步任务轮询 */
     async _pollTask(taskId, label, maxRetries = 60, intervalMs = 3000) {
         const cfg = this._config().T2I || {};
+        // 后端 serve.js 期望 GET /api/t2i/poll/{taskId} 路径格式
         const pollUrl = cfg.ENDPOINT_POLL
-            ? cfg.ENDPOINT_POLL + '?task_id=' + taskId
+            ? cfg.ENDPOINT_POLL + '/' + taskId
             : '/api/t2i/poll/' + taskId;
 
         for (let i = 0; i < maxRetries; i++) {
@@ -322,8 +316,9 @@ const AIGallery = {
     },
 
     async _pollI2VTask(taskId, maxRetries = 30, intervalMs = 2000) {
+        // 后端 serve.js 期望 GET /api/i2v/poll/{taskId} 路径格式
         const pollUrl = (this._config().I2V || {}).ENDPOINT_POLL
-            ? (this._config().I2V || {}).ENDPOINT_POLL + '?task_id=' + taskId
+            ? (this._config().I2V || {}).ENDPOINT_POLL + '/' + taskId
             : 'http://123.57.90.233:3000/api/i2v/poll/' + taskId;
         for (let i = 0; i < maxRetries; i++) {
             await this._sleep(intervalMs);

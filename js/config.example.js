@@ -53,6 +53,7 @@ const API_CONFIG = {
     // ============================================================
     T2I: {
         ENDPOINT: BASE_API + '/t2i',
+        ENDPOINT_POLL: BASE_API + '/t2i/poll',  // 轮询地址，不能省略，否则会请求到前端端口
         MODEL: 'wanx2.1-t2i-plus',
         DEFAULT_SIZE: '1664*928',
         DEFAULT_N: 1,
