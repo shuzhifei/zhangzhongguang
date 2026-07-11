@@ -79,20 +79,20 @@
         </div>
     </div>
     <!-- ===== JavaScript 模块 ===== -->
-    <!-- 加载顺序非常重要：先"听的"，再"喊的" -->
-    <!-- 基础层 -->
+    <!-- 加载顺序：配置 → 数据 → 事件总线 → 核心逻辑 → AI服务 -->
+    <script src="js/config.js"></script>
     <script src="js/event-bus.js"></script>
     <script src="js/game.js"></script>
-    <script src="js/config.example.js"></script>
     <!-- 队友模块（先加载，他们负责"听事件"） -->
     <script src="js/lamp.js"></script>
-    <script src="js/ai-api.js"></script>
     <script src="js/prompt-builder.js"></script>
     <script src="js/shadow-judge.js"></script>
     <script src="js/save.js"></script>
+    <!-- AI 服务模块 -->
+    <script src="js/ai-api-qianwen.js"></script>
+    <script src="js/ai-media.js"></script>
     <!-- A的模块（最后加载，负责"喊事件"） -->
     <script src="js/puppets.js"></script>
-    <!-- theater.js 和 audio.js 等写完再加 -->
 
 
 </body>
