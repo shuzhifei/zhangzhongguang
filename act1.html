@@ -1691,7 +1691,7 @@ const PROMPTS_DATA = {
 // ========================================
 const API_CONFIG = {
     API_KEY: 'sk-请在这里填入你的API Key',
-    API_URL: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
+    API_URL: 'https://123.57.90.233:3000/api/llm'
 };
 </script>
 
@@ -1701,7 +1701,7 @@ const API_CONFIG = {
 // ========================================
 const AI = {
     get API_KEY() { return (typeof API_CONFIG !== 'undefined') ? API_CONFIG.API_KEY : 'sk-未配置'; },
-    get API_URL() { return (typeof API_CONFIG !== 'undefined') ? API_CONFIG.API_URL : 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'; },
+    get API_URL() { return (typeof API_CONFIG !== 'undefined') ? API_CONFIG.API_URL : 'https://123.57.90.233:3000/api/llm'; },
     MODEL_DEFAULT: 'qwen-turbo',
     MODEL_PREMIUM: 'qwen-plus',
     MODEL_MAX: 'qwen-max',

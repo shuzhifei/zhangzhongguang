@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>掌中光 · 第一幕完整测试</title>
+<style>
+:root{--bg:#1a0f08;--panel:#2a1a0a;--text:#e8d5b7;--accent:#FF8C00;--purple:#a064c8;--border:#4a3020;--green:#4CAF50;--red:#f44336}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Noto Serif SC','SimSun',serif;min-height:100vh;display:flex;justify-content:center;padding:20px 16px}
+.container{max-width:900px;width:100%}
+.header{text-align:center;margin-bottom:20px}
+.header h1{font-size:26px;color:var(--accent);letter-spacing:6px}
+.header p{font-size:12px;color:#8a7560}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 18px;margin-bottom:14px}
+.card h2{font-size:14px;color:var(--accent);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:5px}
+label{font-size:11px;color:#a09080;display:block;margin-bottom:2px}
+input,select,textarea{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-family:inherit;font-size:12px;outline:none;width:100%}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:50px;font-size:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1;min-width:100px}
+button{padding:7px 14px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:12px;border-radius:4px;cursor:pointer;transition:all .2s}
+button:hover{background:var(--accent);color:var(--bg)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--accent);color:var(--bg);font-weight:bold}
+button.purple{border-color:var(--purple);color:var(--purple);background:transparent}
+button.purple:hover{background:var(--purple);color:var(--bg)}
+button.green{border-color:var(--green);color:var(--green);background:transparent}
+button.green:hover{background:var(--green);color:var(--bg)}
+.output{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:14px 18px;min-height:80px;font-size:14px;line-height:2;white-space:pre-wrap;max-height:300px;overflow-y:auto}
+.output .placeholder{color:#555}
+.status{display:flex;align-items:center;gap:6px;font-size:11px;color:#8a7560;margin-top:5px}
+.dot{width:6px;height:6px;border-radius:50%;background:#555;flex-shrink:0}
+.dot.loading{background:var(--accent);animation:blink .6s infinite}
+.dot.success{background:var(--green)}.dot.error{background:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.puppet-chips{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.puppet-chip{padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:12px;cursor:pointer;font-size:11px;user-select:none;transition:all .2s}
+.puppet-chip:hover{border-color:var(--purple)}
+.puppet-chip.sel{border-color:var(--purple);background:rgba(160,100,200,.15);color:var(--purple)}
+.step-indicator{display:flex;gap:4px;margin-bottom:10px}
+.step{padding:3px 10px;border-radius:10px;font-size:10px;background:var(--bg);color:#555;border:1px solid var(--border)}
+.step.done{background:rgba(76,175,80,.15);color:var(--green);border-color:var(--green)}
+.step.active{background:rgba(255,140,0,.15);color:var(--accent);border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header"><h1>掌 中 光</h1><p>第一幕「琉璃厂·书生与鹤」完整流程测试</p></div>
+
+<div class="card">
+<h2>🔑 配置</h2>
+<div class="row">
+<div style="flex:2"><label>API Key（走代理可留空）</label><input type="password" id="apiKey" placeholder="sk-xxx"></div>
+<div style="flex:1"><label>模型</label><select id="model"><option value="qwen-turbo">turbo</option><option value="qwen-plus">plus</option><option value="qwen-max" selected>max</option></select></div>
+<div><label>灯油</label><select id="oil"><option value="100">100%</option><option value="80">80%</option><option value="50" selected>50%</option><option value="35">35%</option><option value="15">15%</option></select></div>
+<div><button onclick="T.saveConfig()">💾</button></div>
+</div>
+</div>
+
+<div class="card">
+<h2>📋 测试流程</h2>
+<div class="step-indicator">
+<span class="step" id="step1">① 摆影</span>
+<span class="step" id="step2">② 说戏</span>
+<span class="step" id="step3">③ 评判</span>
+<span class="step" id="step4">④ 动画</span>
+</div>
+<div class="puppet-chips" id="puppetChips"></div>
+<label>影面描述</label>
+<textarea id="shadowDesc" rows="2">书生在白布中央，槐树在左侧，月亮在右上角。书生面朝槐树，手里攥着一封没有拆开的信。</textarea>
+<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+<button class="purple" onclick="T.step1_narrate()">② 师傅说戏</button>
+<button class="purple" onclick="T.step2_judge()">③ 评判影面</button>
+<button class="green" onclick="T.step3_animate()">④ 生成动画</button>
+<button class="primary" onclick="T.runAll()">▶ 全部跑一遍</button>
+</div>
+<div class="status"><span class="dot" id="dot"></span><span id="statusText">就绪</span></div>
+</div>
+
+<div class="card">
+<h2>📜 输出</h2>
+<div class="output" id="output"><span class="placeholder">等待测试……</span></div>
+</div>
+</div>
+
+<!-- ===== 直接 script 标签加载（最可靠方式） ===== -->
+<script src="js/config.example.js"></script>
+<script src="data/prompts.json"></script>
+<script src="data/acts.json"></script>
+<script src="js/prompt-builder.js"></script>
+<script src="js/ai-all.js"></script>
+<script src="data/animate-shot.json"></script>
+<script src="js/animate-request.js"></script>
+<script src="js/animate-player.js"></script>
+<script src="js/animate-fallback.js"></script>
+<script src="js/audio.js"></script>
+
+<!-- ===== 测试逻辑 ===== -->
+<script>
+var _ready = false;
+window.addEventListener('DOMContentLoaded', function() {
+  var ok = [];
+  if (typeof PROMPTS_DATA !== 'undefined') ok.push('PROMPTS_DATA');
+  if (typeof ACTS_DATA !== 'undefined') ok.push('ACTS_DATA');
+  if (typeof promptBuilder !== 'undefined') ok.push('promptBuilder');
+  if (typeof AI !== 'undefined') ok.push('AI');
+  _ready = ok.length >= 4;
+  document.getElementById('statusText').textContent = _ready ? '模块就绪 ✅ ('+ok.join(',')+')' : '模块缺失 ❌ 已加载: '+ok.join(',');
+  if (!_ready) {
+    document.getElementById('output').innerHTML = '<span style="color:var(--red)">❌ 模块加载失败<br><br>已加载: '+ok.join(', ')+'<br>缺失: PROMPTS_DATA: '+(typeof PROMPTS_DATA)+', ACTS_DATA: '+(typeof ACTS_DATA)+', promptBuilder: '+(typeof promptBuilder)+', AI: '+(typeof AI)+'<br><br>如果所有模块都显示 undefined，可能是 .json 文件被服务器以 application/json 类型返回导致浏览器拒执行。<br>请用 Live Server 打开（右键 → Open with Live Server）。</span>';
+  }
+});
+
+function Sd(s,m) { document.getElementById('dot').className='dot '+s; document.getElementById('statusText').textContent=m; }
+function E(t) { var d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
+function markStep(n) { for(var i=1;i<=4;i++){var el=document.getElementById('step'+i);el.className='step'+(i<n?' done':i===n?' active':'');} }
+
+function mockGS() {
+  var p = parseInt(document.getElementById('oil').value);
+  return { lampOil:p, currentAct:1, currentScene:0, aiQuality:(p>=80?'high':p>=50?'medium':p>=20?'low':'critical'), triggeredClues:[], afterAnimationCallback:function(){ console.log('动画播放完毕'); } };
+}
+
+var PUPPETS = [{id:'scholar',name:'书生'},{id:'tree',name:'槐树'},{id:'moon',name:'月亮'},{id:'elder',name:'老者'},{id:'frog',name:'金蟾'},{id:'boat',name:'小船'},{id:'lamp',name:'油灯'},{id:'letter',name:'信'},{id:'crane',name:'鹤'},{id:'master',name:'路师傅'},{id:'bridge',name:'石桥'},{id:'dragon',name:'龙'}];
+var _selected = ['scholar','tree','moon','letter'];
+
+(function initChips(){
+  var g = document.getElementById('puppetChips');
+  PUPPETS.forEach(function(p){
+    var c = document.createElement('span');
+    c.className = 'puppet-chip' + (_selected.indexOf(p.id)>-1?' sel':'');
+    c.textContent = p.name; c.dataset.id = p.id;
+    c.onclick = function(){ var i=_selected.indexOf(p.id); if(i>-1)_selected.splice(i,1);else _selected.push(p.id); c.classList.toggle('sel'); };
+    g.appendChild(c);
+  });
+})();
+
+function buildShadowDesc() { return document.getElementById('shadowDesc').value.trim(); }
+
+function buildLayout() {
+  return { puppets: _selected.map(function(id,i){ var p=PUPPETS.find(function(x){return x.id===id})||{name:id}; return {id:id,name:p.name,x:0.2+Math.random()*0.6,y:0.2+Math.random()*0.6,scale:1}; }), sceneName:'第一幕·月夜等人' };
+}
+
+async function streamLLM(sys, msg, onText) {
+  var key = document.getElementById('apiKey').value.trim();
+  var useProxy = (typeof API_CONFIG!=='undefined' && API_CONFIG.BASE_API);
+  var url = useProxy ? API_CONFIG.BASE_API+'/llm/stream' : 'http://123.57.90.233:3000/api/llm/stream';
+  var headers = useProxy ? {'Content-Type':'application/json'} : {'Content-Type':'application/json','Authorization':'Bearer '+key};
+  if (!useProxy && (!key||!key.startsWith('sk-'))) throw new Error('请填入API Key或走代理');
+  var r = await fetch(url,{method:'POST',headers:headers,body:JSON.stringify({model:document.getElementById('model').value,messages:[{role:'system',content:sys},{role:'user',content:msg}],max_tokens:500,temperature:0.8,stream:true})});
+  if (!r.ok) { var t=await r.text().catch(function(){return'?'}); throw new Error('HTTP '+r.status+': '+t.substring(0,150)); }
+  var reader=r.body.getReader(),dec=new TextDecoder(),buf='',full='';
+  while(true){var v=await reader.read();if(v.done)break;buf+=dec.decode(v.value,{stream:true});var ls=buf.split('\n');buf=ls.pop()||'';for(var i=0;i<ls.length;i++){var l=ls[i].trim();if(!l||!l.startsWith('data:')||l==='data:[DONE]')continue;try{var c=JSON.parse(l.slice(5)).choices?.[0]?.delta?.content;if(c){full+=c;if(onText)onText(full);}}catch(e){}}}
+  return full;
+}
+
+var T = {
+  async step1_narrate() {
+    if (!_ready) return alert('模块未就绪');
+    markStep(2); Sd('loading','师傅在说戏...');
+    var out=document.getElementById('output');out.textContent='';out.style.color='var(--text)';
+    try {
+      var gs=mockGS(); var p=promptBuilder.buildOpeningPrompt(gs);
+      var full=await streamLLM(p.systemPrompt,p.userMessage,function(t){out.textContent=t;});
+      out.innerHTML=E(full); Sd('success','说戏完成 ('+full.length+'字)');
+    } catch(e) { out.innerHTML='<span style="color:var(--red)">❌ '+E(e.message)+'</span>'; Sd('error','失败'); }
+  },
+
+  async step2_judge() {
+    if (!_ready) return alert('模块未就绪');
+    markStep(3); Sd('loading','评判中...');
+    var out=document.getElementById('output');out.textContent='评判中……';
+    try {
+      var scene=ACTS_DATA.acts[0].scenes[0];
+      var p=promptBuilder.buildJudgePrompt(scene,buildShadowDesc(),false);
+      var raw=await AI.call(p.systemPrompt,p.userMessage,{temperature:0.3,maxTokens:400});
+      var data=JSON.parse((raw.match(/\{[\s\S]*\}/)||[])[0]||raw);
+      out.innerHTML='<b>综合：</b>'+(data.score||'?')+'分<br><b>角色匹配：</b>'+(data.character_match?.score||'?')+'/30 — '+E(data.character_match?.comment||'')+'<br><b>空间方位：</b>'+(data.spatial?.score||'?')+'/25 — '+E(data.spatial?.comment||'')+'<br><b>剧情还原：</b>'+(data.plot_detail?.score||'?')+'/25 — '+E(data.plot_detail?.comment||'')+'<br><b>传神度：</b>'+(data.authenticity?.score||'?')+'/20 — '+E(data.authenticity?.comment||'')+'<br><b>总评：</b>'+E(data.comment||'');
+      Sd('success','评判完成: '+(data.score||'?')+'分');
+    } catch(e) { out.innerHTML='<span style="color:var(--red)">❌ '+E(e.message)+'</span>'; Sd('error','失败'); }
+  },
+
+  async step3_animate() {
+    if (!_ready) return alert('模块未就绪');
+    if (typeof AIGallery==='undefined') return alert('AIGallery未加载');
+    markStep(4); Sd('loading','动画管线启动...');
+    var out=document.getElementById('output'),gs=mockGS(),layout=buildLayout(),desc=buildShadowDesc();
+    out.innerHTML='<b>🎬 动画管线</b>\n皮影：'+layout.puppets.map(function(p){return p.name}).join('、')+'\n灯油：'+gs.lampOil+'%\n\n';
+
+    // A: LLM分镜
+    out.textContent += '▶ A 分镜脚本... ';
+    var shotScript=null;
+    try {
+      var scene=ACTS_DATA.acts[0].scenes[0];
+      var raw=await AI.call('你是皮影戏分镜师。根据影面设计2-3个镜头。返回JSON:{"shots":[{"shotId":"01","cameraType":"远景","dialogue":"对白","bgSound":"oil_lamp"}]}。只输出JSON。','影面：'+desc+'\n场景：'+scene.description,{temperature:0.7,maxTokens:500});
+      try{shotScript=JSON.parse(raw);}catch(e){var m=raw.match(/\{[\s\S]*\}/);if(m)shotScript=JSON.parse(m[0]);}
+      out.textContent += (shotScript&&shotScript.shots?'✅ '+shotScript.shots.length+'镜头\n':'⚠️ 使用兜底\n');
+    } catch(e) { out.textContent += '❌ '+e.message+'\n→ 兜底\n'; shotScript=(typeof ANIMATE_FALLBACK_DATA!=='undefined')?ANIMATE_FALLBACK_DATA[0]:{shots:[{shotId:'fb',dialogue:desc,bgSound:'oil_lamp'}]}; }
+
+    // B: T2I
+    out.textContent += '▶ B 文生图... ';
+    try {
+      var img=await AIGallery.textToImage(shotScript.shots[0]?.dialogue||desc);
+      out.textContent += (img.url?'✅\n':'❌ 无图片\n');
+    } catch(e) { out.textContent += '⚠️ '+e.message.substring(0,40)+'\n'; }
+
+    // C: TTS
+    out.textContent += '▶ C TTS语音... ';
+    try {
+      var tts=await AIGallery.textToSpeech(shotScript.shots[0]?.dialogue||desc);
+      out.textContent += (tts.audioUrl?'✅\n':'❌\n');
+    } catch(e) { out.textContent += '⚠️ '+e.message.substring(0,40)+'\n'; }
+
+    out.textContent += '\n━━━━━━━━\n📊 动画管线测试完成（3阶段）';
+    Sd('success','动画管线测试完成');
+  },
+
+  async runAll() { await this.step1_narrate(); await new Promise(function(r){setTimeout(r,1000)}); await this.step2_judge(); await new Promise(function(r){setTimeout(r,1000)}); await this.step3_animate(); },
+
+  saveConfig() {
+    localStorage.setItem('act1_full_test',JSON.stringify({key:document.getElementById('apiKey').value,model:document.getElementById('model').value,oil:document.getElementById('oil').value}));
+    Sd('success','已保存');
+  },
+  loadConfig() {
+    try{var d=JSON.parse(localStorage.getItem('act1_full_test'));if(d){document.getElementById('apiKey').value=d.key||'';document.getElementById('model').value=d.model||'qwen-max';document.getElementById('oil').value=d.oil||'50';}}catch(e){}
+  }
+};
+
+T.loadConfig();
+markStep(1);
+</script>
+</body>
+</html>

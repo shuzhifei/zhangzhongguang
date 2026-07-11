@@ -80,8 +80,7 @@ const ENDPOINTS = {
     llm:        '/compatible-mode/v1/chat/completions',
     t2i:        '/api/v1/services/aigc/text2image/image-synthesis',
     i2v:        '/api/v1/services/aigc/video-generation/video-synthesis',
-    tts:        '/api/v1/services/audio/tts/speech-synthesizer',
-    audio:      '/api/v1/services/audio/audio-generation/generation',
+    tts:        'https://dashscope.aliyuncs.com/api/v1/services/audio/tts/speech',
 };
 
 // ================================================================
@@ -97,9 +96,12 @@ function forwardToDashScope(dashscopePath, body, extraHeaders = {}) {
     return new Promise((resolve, reject) => {
         const payload = JSON.stringify(body);
 
+        // 支持完整URL和相对路径两种格式
+        const isFullUrl = dashscopePath.startsWith('http');
+        const targetUrl = isFullUrl ? new URL(dashscopePath) : null;
         const options = {
-            hostname: DASHSCOPE_BASE,
-            path: dashscopePath,
+            hostname: isFullUrl ? targetUrl.hostname : DASHSCOPE_BASE,
+            path: isFullUrl ? targetUrl.pathname + targetUrl.search : dashscopePath,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -272,7 +274,8 @@ async function handleAPI(req, res, apiPath, body) {
     }
 
     let dashscopePath, label;
-    let isStream = false;
+    let isStream = false, isPoll = false;
+    let extraHeaders = {};
 
     switch (apiPath) {
         // --- LLM 对话 ---
@@ -289,10 +292,20 @@ async function handleAPI(req, res, apiPath, body) {
             body.stream = true;
             break;
 
-        // --- 文生图 ---
+        // --- 文生图（异步） ---
         case '/api/t2i':
             dashscopePath = ENDPOINTS.t2i;
             label = 'T2I';
+            extraHeaders['X-DashScope-Async'] = 'enable';
+            break;
+
+        // --- T2I 任务轮询 ---
+        case '/api/t2i/poll':
+            const t2iTaskId = body.task_id || '';
+            if (!t2iTaskId) return errorResponse(res, 400, '缺少 task_id');
+            dashscopePath = '/api/v1/tasks/' + t2iTaskId;
+            label = 'T2I·Poll';
+            isPoll = true;
             break;
 
         // --- 图生视频 ---
@@ -319,17 +332,21 @@ async function handleAPI(req, res, apiPath, body) {
             label = 'TTS';
             break;
 
-        // --- 音频生成 ---
-        case '/api/audio':
-            dashscopePath = ENDPOINTS.audio;
-            label = 'Audio';
-            break;
-
         default:
             return errorResponse(res, 404, '未知 API 端点: ' + apiPath);
     }
 
     log('INFO', label + ' 转发中...', dashscopePath);
+
+    // 轮询类请求用 GET
+    if (isPoll) {
+        try {
+            const pollResult = await pollTask(dashscopePath.replace('/api/v1/tasks/', ''));
+            return jsonResponse(res, pollResult.task_status === 'SUCCEEDED' ? 200 : 202, pollResult);
+        } catch (e) {
+            return errorResponse(res, 502, '轮询失败', e.message);
+        }
+    }
 
     try {
         const result = await forwardToDashScope(dashscopePath, body);
@@ -407,9 +424,12 @@ const server = http.createServer(async (req, res) => {
         try {
             const body = method === 'POST' ? await parseBody(req) : parsed.query;
             // 将 query params 合并到 body（用于 GET 轮询等）
+            if (method === 'GET' && pathname.startsWith('/api/t2i/poll/')) {
+                body.task_id = pathname.split('/').pop();
+                return handleAPI(req, res, '/api/t2i/poll', body);
+            }
             if (method === 'GET' && pathname.startsWith('/api/i2v/poll/')) {
-                const taskId = pathname.split('/').pop();
-                body.task_id = taskId;
+                body.task_id = pathname.split('/').pop();
                 return handleAPI(req, res, '/api/i2v/poll', body);
             }
             return handleAPI(req, res, pathname, body);

@@ -17,10 +17,10 @@
 // 本地调试：指向本地 serve.js 或直连 DashScope
 // ============================================================
 
-// 本地调试地址
-// const BASE_API = 'http://127.0.0.1:3000/api';
-// 替换为你的云服务器公网IP
+// 云服务器部署
 const BASE_API = 'http://123.57.90.233:3000/api';
+// 本地调试
+// const BASE_API = 'http://127.0.0.1:3000/api';
 
 const API_CONFIG = {
     // ============================================================
@@ -53,7 +53,7 @@ const API_CONFIG = {
     // ============================================================
     T2I: {
         ENDPOINT: BASE_API + '/t2i',
-        MODEL: 'wan2.6-t2i',
+        MODEL: 'wanx2.1-t2i-plus',
         DEFAULT_SIZE: '1664*928',
         DEFAULT_N: 1,
         NEGATIVE_PROMPT: '写实照片,3D渲染,卡通,动漫,油画,水彩,现代风格,人物正面特写',
@@ -66,7 +66,7 @@ const API_CONFIG = {
     I2V: {
         ENDPOINT: BASE_API + '/i2v',
         ENDPOINT_POLL: BASE_API + '/i2v/poll',
-        MODEL: 'wan2.2-i2v-flash',
+        MODEL: 'wanx2.1-i2v-plus',
         DEFAULT_DURATION: 8,
         CAMERA_PRESETS: {
             'opening':   'slow zoom in from wide shot, gentle pan right',
@@ -82,32 +82,12 @@ const API_CONFIG = {
     // ============================================================
     TTS: {
         ENDPOINT: BASE_API + '/tts',
-        MODEL: 'cosyvoice-v1',
-        VOICE: 'laochengshuo_narrator',
-        SPEED: 0.85,
-        VOLUME: 1.0,
+        MODEL: 'cosyvoice-v3.5-plus',
+        VOICE: 'longcheng',
+        SPEED: 1.0,
+        VOLUME: 50,
         FORMAT: 'mp3',
         SAMPLE_RATE: 22050
-    },
-
-    // ============================================================
-    // 5. 音频生成（通义音频）— 环境音效 + 皮影戏曲BGM
-    // ============================================================
-    AUDIO_GEN: {
-        ENDPOINT: BASE_API + '/audio',
-        MODEL: 'qwen-audio',
-        SOUND_PRESETS: {
-            'oil_lamp':   '油灯噼啪燃烧声,火苗轻微爆裂,安静室内氛围',
-            'wind':       '民国北京胡同秋风,枯叶沙沙,远处鸽哨,轻微门窗吱呀',
-            'water':      '寒江水流声,船桨划水,水面波光粼粼氛围',
-            'erhu':       '传统二胡独奏,苍凉皮影戏曲调,慢板,散板节奏',
-            'market':     '老北京琉璃厂书摊集市人声,远处叫卖,茶碗碰撞',
-            'stage':      '皮影戏台开场锣鼓,京胡二胡合奏,戏曲过场音乐',
-            'thunder':    '远处闷雷,雨声淅沥,适合剧情转折',
-            'silence':    '极度安静,只有微弱的呼吸声,即将灯灭的氛围'
-        },
-        FORMAT: 'mp3',
-        DEFAULT_DURATION: 15
     },
 
     // ============================================================

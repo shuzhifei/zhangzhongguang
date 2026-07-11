@@ -41,7 +41,7 @@ const AI = {
         if (typeof API_CONFIG === 'undefined') return '/api/llm';
         if (API_CONFIG.BASE_API) return API_CONFIG.BASE_API + '/llm';
         if (API_CONFIG.LLM?.ENDPOINT) return API_CONFIG.LLM.ENDPOINT;
-        return 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+        return 'http://123.57.90.233:3000/api/llm';
     },
     get _useAuth() {
         return this.API_KEY && this.API_KEY.startsWith('sk-');
@@ -232,18 +232,70 @@ const AIGallery = {
         return null;
     },
 
-    // ---- ② 文生图 Wan2.6-T2I ----
+    // ---- ② 文生图 Wanx2.1-T2I-Plus（异步模式） ----
     async textToImage(shotDescription, options = {}) {
         const cfg = this._config().T2I || {};
         const { size = cfg.DEFAULT_SIZE || '1664*928', n = 1, negativePrompt = cfg.NEGATIVE_PROMPT || '' } = options;
         const prompt = (cfg.STYLE_PREFIX || '北京非遗皮影戏风格,幕布投影,暖黄灯光,') + shotDescription;
-        console.log('[T2I]', prompt.substring(0, 80) + '...');
-        const body = { model: cfg.MODEL || 'wan2.6-t2i', input: { prompt, negative_prompt: negativePrompt }, parameters: { size, n } };
-        const data = await this._post(cfg.ENDPOINT || cfg.API_URL || '/api/t2i', body, 'T2I');
-        const b64 = this._extractImageB64(data);
-        const result = { url: b64 ? (b64.startsWith('data:') ? this._b64ToBlobUrl(b64.split(',')[1] || b64) : b64) : null, b64: b64 || '', taskId: data.output?.task_id || '', raw: data };
-        console.log('[T2I]', result.url ? '✅' : '❌');
-        return result;
+        console.log('[T2I] 异步提交:', prompt.substring(0, 80) + '...');
+
+        // 1. 提交异步任务
+        const body = { model: cfg.MODEL || 'wanx2.1-t2i-plus', input: { prompt, negative_prompt: negativePrompt }, parameters: { size, n } };
+        const apiUrl = cfg.ENDPOINT || cfg.API_URL || '/api/t2i';
+        const data = await this._postAsync(apiUrl, body, 'T2I');
+
+        const taskId = data.output?.task_id || '';
+        if (!taskId) {
+            console.error('[T2I] 未获取到task_id，尝试同步解析');
+            const b64 = this._extractImageB64(data);
+            return { url: b64 ? (b64.startsWith('data:') ? this._b64ToBlobUrl(b64.split(',')[1] || b64) : b64) : null, b64: b64 || '', taskId: '', raw: data };
+        }
+
+        console.log('[T2I] 异步任务已提交 task_id=' + taskId);
+
+        // 2. 轮询等待结果
+        const result = await this._pollTask(taskId, 'T2I');
+        const b64 = this._extractImageB64(result);
+        console.log('[T2I]', b64 ? '✅' : '❌');
+        return { url: b64 ? (b64.startsWith('data:') ? this._b64ToBlobUrl(b64.split(',')[1] || b64) : b64) : null, b64: b64 || '', taskId, raw: result };
+    },
+
+    /** 异步POST（添加 X-DashScope-Async 头） */
+    async _postAsync(url, body, label) {
+        if (this._useAuth() && (!this._key() || !this._key().startsWith('sk-'))) throw new Error('API Key 未配置');
+        console.log('[AI ' + label + '] 异步提交...', url.substring(0, 50));
+        const st = Date.now();
+        const headers = this._headers();
+        headers['X-DashScope-Async'] = 'enable';
+        const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+        if (!r.ok) { const t = await r.text().catch(() => '?'); throw new Error(label + ' HTTP ' + r.status + ': ' + t.substring(0, 200)); }
+        const d = await r.json();
+        console.log('[AI ' + label + '] 任务已提交', (Date.now() - st) + 'ms');
+        return d;
+    },
+
+    /** 通用异步任务轮询 */
+    async _pollTask(taskId, label, maxRetries = 60, intervalMs = 3000) {
+        const cfg = this._config().T2I || {};
+        const pollUrl = cfg.ENDPOINT_POLL
+            ? cfg.ENDPOINT_POLL + '?task_id=' + taskId
+            : '/api/t2i/poll/' + taskId;
+
+        for (let i = 0; i < maxRetries; i++) {
+            await this._sleep(intervalMs);
+            try {
+                const headers = this._headers();
+                const r = await fetch(pollUrl, { headers });
+                if (!r.ok) continue;
+                const d = await r.json();
+                const status = d.output?.task_status;
+                console.log('  [' + label + '轮询 ' + (i + 1) + '/' + maxRetries + '] ' + status);
+                if (status === 'SUCCEEDED') return d;
+                if (status === 'FAILED') { console.error('[' + label + '] 任务失败:', d.output?.message); return d; }
+            } catch (e) { /* 网络抖动 */ }
+        }
+        console.error('[' + label + '] 轮询超时');
+        return { output: { task_status: 'UNKNOWN' } };
     },
 
     async generateStoryboard(descs = []) {
@@ -260,7 +312,7 @@ const AIGallery = {
         const cams = cfg.CAMERA_PRESETS || {};
         const prompt = (cfg.MOTION_PROMPT || '皮影摆动,灯焰闪烁,幕布透光,') + (shotDescription || '') + ', ' + (cams[cameraStyle] || cams['dialogue']);
         console.log('[I2V]', duration + 's 运镜=' + cameraStyle);
-        const body = { model: cfg.MODEL || 'wan2.2-i2v-flash', input: { prompt, img_url: imageUrl }, parameters: { duration } };
+        const body = { model: cfg.MODEL || 'wanx2.1-i2v-plus', input: { prompt, img_url: imageUrl }, parameters: { duration } };
         const data = await this._post(cfg.ENDPOINT || cfg.API_URL || '/api/i2v', body, 'I2V');
         const taskId = data.output?.task_id || '';
         let videoUrl = data.output?.video_url || data.output?.results?.[0]?.video_url || null;
@@ -272,7 +324,7 @@ const AIGallery = {
     async _pollI2VTask(taskId, maxRetries = 30, intervalMs = 2000) {
         const pollUrl = (this._config().I2V || {}).ENDPOINT_POLL
             ? (this._config().I2V || {}).ENDPOINT_POLL + '?task_id=' + taskId
-            : 'https://dashscope.aliyuncs.com/api/v1/tasks/' + taskId;
+            : 'http://123.57.90.233:3000/api/i2v/poll/' + taskId;
         for (let i = 0; i < maxRetries; i++) {
             await this._sleep(intervalMs);
             try {
@@ -298,10 +350,10 @@ const AIGallery = {
     // ---- ④ TTS 语音合成（路师傅苍老人声） ----
     async textToSpeech(text, options = {}) {
         const cfg = this._config().TTS || {};
-        const { voice = cfg.VOICE || 'laochengshuo_narrator', speed = cfg.SPEED || 0.85, volume = cfg.VOLUME || 1.0, format = cfg.FORMAT || 'mp3' } = options;
+        const { voice = cfg.VOICE || 'longcheng', rate = cfg.SPEED || 1.0, volume = cfg.VOLUME || 50, format = cfg.FORMAT || 'mp3' } = options;
         if (!text?.trim()) throw new Error('TTS: 文本为空');
         console.log('[TTS]', text.substring(0, 40) + '...');
-        const body = { model: cfg.MODEL || 'cosyvoice-v1', input: { text }, parameters: { voice, speech_rate: speed, volume, format, sample_rate: cfg.SAMPLE_RATE || 22050 } };
+        const body = { model: cfg.MODEL || 'cosyvoice-v3.5-plus', input: { text }, parameters: { voice, rate, volume, format, sample_rate: cfg.SAMPLE_RATE || 22050 } };
         const data = await this._post(cfg.ENDPOINT || cfg.API_URL || '/api/tts', body, 'TTS');
         const b64 = data.output?.audio?.data || data.output?.audio_url || data.output?.results?.[0]?.audio?.data || '';
         let audioUrl = null;
@@ -316,58 +368,33 @@ const AIGallery = {
         return r;
     },
 
-    // ---- ⑤ 音频生成（环境音效+BGM） ----
-    async generateSound(soundType = 'oil_lamp', options = {}) {
-        const cfg = this._config().AUDIO_GEN || {};
-        const { duration = cfg.DEFAULT_DURATION || 15 } = options;
-        const desc = (cfg.SOUND_PRESETS || {})[soundType] || soundType;
-        console.log('[Audio]', soundType, duration + 's');
-        const body = { model: cfg.MODEL || 'qwen-audio', input: { prompt: '北京皮影戏氛围音效,民国年间,老北京胡同,' + desc, duration }, parameters: { format: cfg.FORMAT || 'mp3' } };
-        const data = await this._post(cfg.ENDPOINT || cfg.API_URL || '/api/audio', body, 'Audio');
-        const b64 = data.output?.audio?.data || data.output?.results?.[0]?.audio?.data || '';
-        let audioUrl = null;
-        if (b64) audioUrl = this._b64ToBlobUrl(b64, 'audio/mpeg');
-        console.log('[Audio]', audioUrl ? '✅' : '❌');
-        return { audioUrl, b64, duration, soundType, raw: data };
-    },
-
-    async generateSceneAudio(sceneDesc = '') {
-        const [bgm, ambient] = await Promise.all([this.generateSound('erhu'), this.generateSound(sceneDesc)]);
-        return { bgm, ambient };
-    }
 };
 
 
 // ================================================================
-// 媒体管线 — 串联 T2I → I2V → TTS → Audio
+// 媒体管线 — 串联 T2I → I2V → TTS
 // ================================================================
 class MediaPipeline {
     constructor() { this.gallery = AIGallery; }
 
     async produceAct(actNumber, shotDescriptions = [], narrationLines = [], options = {}) {
-        const { cameraStyle = 'opening', soundTypes = [] } = options;
+        const { cameraStyle = 'opening' } = options;
         console.log('═══════════════════════════════════════════');
         console.log('  🎬 媒体管线启动 — 第' + actNumber + '幕 | 分镜=' + shotDescriptions.length + ' 旁白=' + narrationLines.length);
         console.log('═══════════════════════════════════════════');
 
-        const pipeline = { act: actNumber, storyboard: [], videos: [], narrations: [], sounds: [] };
+        const pipeline = { act: actNumber, storyboard: [], videos: [], narrations: [] };
         const st = Date.now();
 
         try {
-            console.log('\n▶ 1/4 文生图 — 皮影分镜原画');
+            console.log('\n▶ 1/3 文生图 — 皮影分镜原画');
             pipeline.storyboard = await this.gallery.generateStoryboard(shotDescriptions);
 
-            console.log('\n▶ 2/4 图生视频 — 皮影动画');
+            console.log('\n▶ 2/3 图生视频 — 皮影动画');
             pipeline.videos = await this.gallery.generateActVideos(pipeline.storyboard, cameraStyle);
 
-            console.log('\n▶ 3/4 TTS语音 — 路师傅旁白');
+            console.log('\n▶ 3/3 TTS语音 — 路师傅旁白');
             pipeline.narrations = await this.gallery.generateNarrations(narrationLines);
-
-            console.log('\n▶ 4/4 音频生成 — BGM音效');
-            for (let i = 0; i < shotDescriptions.length; i++) {
-                const st = soundTypes[i] || 'oil_lamp';
-                pipeline.sounds.push({ ...(await this.gallery.generateSound(st, { duration: 15 })), shotIndex: i });
-            }
         } catch (e) { console.error('[管线] 中断:', e.message); pipeline.error = e.message; }
 
         pipeline.elapsed = ((Date.now() - st) / 1000).toFixed(1) + 's';
@@ -375,7 +402,6 @@ class MediaPipeline {
         console.log('  分镜=' + pipeline.storyboard.filter(s => s.url).length + '/' + shotDescriptions.length);
         console.log('  动画=' + pipeline.videos.filter(v => v.videoUrl).length + '/' + shotDescriptions.length);
         console.log('  旁白=' + pipeline.narrations.filter(n => n.audioUrl).length + '/' + narrationLines.length);
-        console.log('  音效=' + pipeline.sounds.filter(s => s.audioUrl).length + '/' + soundTypes.length);
         if (pipeline.error) console.log('  ⚠️ 错误:', pipeline.error);
         console.log('═══════════════════════════════════════════\n');
         return pipeline;

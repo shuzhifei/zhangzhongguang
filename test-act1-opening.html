@@ -168,7 +168,7 @@ const App = {
     const key=document.getElementById('apiKey').value.trim();
     // API地址：优先走代理（无需前端Key），否则直连DashScope
     const useProxy = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_API);
-    const apiUrl = useProxy ? API_CONFIG.BASE_API + '/llm/stream' : 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+    const apiUrl = useProxy ? API_CONFIG.BASE_API + '/llm/stream' : 'http://123.57.90.233:3000/api/llm/stream';
     const headers = useProxy ? {'Content-Type':'application/json'} : {'Content-Type':'application/json','Authorization':'Bearer '+key};
     if (!useProxy && (!key||!key.startsWith('sk-'))) throw new Error('请先填入 API Key，或通过代理服务器访问');
 
