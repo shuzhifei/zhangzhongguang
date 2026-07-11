@@ -1563,7 +1563,7 @@ class GameState {
         this.usedPuppets = [];
         this.triggeredClues = [];
         this.unlockedCiphers = [];
-        this.endingStats = { faithfulness: 0, creativity: 0, oilConservation: 0, questionsAsked: 0 };
+        this.endingStats = { faithfulness: 0, faithfulnessPossible: 0, creativity: 0, oilConservation: 0, questionsAsked: 0 };
         this.aiQuality = "high";
     }
     updateAIQuality() {
@@ -1588,8 +1588,14 @@ const gameState = new GameState();
 window.gameState = gameState;
 
 function determineEnding(state) {
-    const { lampOil, endingStats } = state;
-    const { faithfulness, creativity } = endingStats;
+    var lampOil = state.lampOil||0;
+    // 灯油耗尽 → 强制灯灭
+    if (lampOil <= 0) return { name: "灯灭", desc: "全黑。师傅最后一句：「没事。灯灭过很多次。每次都会有人再点起来。」" };
+    var endingStats = state.endingStats||{};
+    // 还原度归一：实际得分 / 满分可能（0–100）
+    var fp = endingStats.faithfulnessPossible||0;
+    var faithfulness = fp>0 ? Math.round((endingStats.faithfulness||0)/fp*100) : 0;
+    var creativity = endingStats.creativity||0;
     if (creativity >= 80) return { name: "影子师傅", desc: "你走了自己的路——成为了非传统的传承人。" };
     var ciphers = state.unlockedCiphers || [];
     var truthFound = ciphers.indexOf('金蟾碎了')>=0 && ciphers.indexOf('三根线')>=0;
@@ -1794,9 +1800,9 @@ const ACTS_DATA = {
                 {"id":"clue_6","name":"最后一根线","layer":3,"scene_id":"act1_scene3","trigger":"学徒在Scene3中摆了全部必需皮影且灯油≤50%","trigger_puppets":["frog","elder","scholar"],"reveal_content":"老者手上只有两根线——第三根断了。路师傅的声音低到几乎听不见：'线不能断。断了——戏就散了。我手上——只剩这一根了。'","cipher_link":["三根线","鹤","金蟾碎了"],"game_impact":"第一幕暗语链闭环","difficulty":"hard"}
             ],
             "scenes": [
-                {"id":"act1_scene1","name":"月夜等人","description":"琉璃厂旧书铺的后院，一方白布戏台。月色斜照，槐树影静。木箱里睡着几枚皮影：书生、老者、金蟾、槐树、月亮。\n书生是读书人，他总在等人——可戏台前空着一座，他等的不是戏里的人，是台下能接住这出戏的人。","standard_puppets":["scholar","tree","moon"],"acceptable_extras":["letter","lamp"],"hidden_clue":"琉璃厂的记忆坐标","hidden_clue_ids":["clue_1","clue_2"],"cipher_triggers":["槐树","信","琉璃厂东街"],"cipher_guidance":"学徒摆了槐树→路师傅提到'我认得一棵槐树，在东街第三个书摊后面'；学徒摆了信→路师傅说'那封信写了三年——不是我写的，是我师父'"},
-                {"id":"act1_scene2","name":"信中之秘","description":"书生在箱底翻出一封旧信，边角烧焦。信上不是家书，而是一段残缺的戏词：\n老者三根线，不是吊人吊金蟾；琉璃厂里，谁人坐门前。\n这话和《刘海戏金蟾》对不上——原戏里没有琉璃厂，也没有\"老者三根线\"。像是有人，趁人不注意，把暗语塞进了戏里。","standard_puppets":["scholar","elder","letter"],"acceptable_extras":["tree","lamp"],"hidden_clue":"三根操纵杆=三位传承人","hidden_clue_ids":["clue_3","clue_4"],"cipher_triggers":["三根线","信","槐树"],"cipher_guidance":"学徒摆了老者+信→触发'三根线的秘密'；学徒追问'老者是谁'→触发'两个师兄弟'"},
-                {"id":"act1_scene3","name":"断线","description":"顺着信里的词，戏真的演了下去：\n刘海本是穷书生，那日来到琉璃厂，见一老者坐门前。老者手上三根线，不是吊人吊金蟾。刘海上前问端详，老者不答只摇头——手上一松，线断了，金蟾落地碎了。\n戏停了。原来这根本不是《刘海戏金蟾》。","standard_puppets":["frog","elder","scholar"],"acceptable_extras":["moon","lamp","master"],"hidden_clue":"金蟾碎了=传承断了","hidden_clue_ids":["clue_5","clue_6"],"cipher_triggers":["金蟾碎了","三根线","鹤"],"cipher_guidance":"金蟾碎的瞬间是第一幕暗语密度最高的时刻"}
+                {"id":"act1_scene1","name":"月夜等人","description":"琉璃厂旧书铺的后院，一方白布戏台。月色斜照，槐树影静。木箱里睡着几枚皮影：书生、老者、金蟾、槐树、月亮。\n书生是读书人，他总在等人——可戏台前空着一座，他等的不是戏里的人，是台下能接住这出戏的人。","standard_puppets":["scholar","tree","moon","letter"],"acceptable_extras":["lamp"],"perfect_score":40,"hidden_clue":"琉璃厂的记忆坐标","hidden_clue_ids":["clue_1","clue_2"],"cipher_triggers":["槐树","信","琉璃厂东街"],"cipher_guidance":"学徒摆了槐树→路师傅提到'我认得一棵槐树，在东街第三个书摊后面'；学徒摆了信→路师傅说'那封信写了三年——不是我写的，是我师父'"},
+                {"id":"act1_scene2","name":"信中之秘","description":"书生在箱底翻出一封旧信，边角烧焦。信上不是家书，而是一段残缺的戏词：\n老者三根线，不是吊人吊金蟾；琉璃厂里，谁人坐门前。\n这话和《刘海戏金蟾》对不上——原戏里没有琉璃厂，也没有\"老者三根线\"。像是有人，趁人不注意，把暗语塞进了戏里。","standard_puppets":["scholar","elder","letter"],"acceptable_extras":["tree","lamp"],"perfect_score":30,"hidden_clue":"三根操纵杆=三位传承人","hidden_clue_ids":["clue_3","clue_4"],"cipher_triggers":["三根线","信","槐树"],"cipher_guidance":"学徒摆了老者+信→触发'三根线的秘密'；学徒追问'老者是谁'→触发'两个师兄弟'"},
+                {"id":"act1_scene3","name":"断线","description":"顺着信里的词，戏真的演了下去：\n刘海本是穷书生，那日来到琉璃厂，见一老者坐门前。老者手上三根线，不是吊人吊金蟾。刘海上前问端详，老者不答只摇头——手上一松，线断了，金蟾落地碎了。\n戏停了。原来这根本不是《刘海戏金蟾》。","standard_puppets":["frog","elder","scholar"],"acceptable_extras":["moon","lamp","master"],"perfect_score":30,"hidden_clue":"金蟾碎了=传承断了","hidden_clue_ids":["clue_5","clue_6"],"cipher_triggers":["金蟾碎了","三根线","鹤"],"cipher_guidance":"金蟾碎的瞬间是第一幕暗语密度最高的时刻"}
             ]
         },
         {
@@ -1806,7 +1812,7 @@ const ACTS_DATA = {
             "embedded_play": "三打白骨精",
             "mood": "紧迫与愤怒中夹杂着悲伤",
             "scenes": [
-                {"id":"act2_scene1","name":"真假传人","description":"大栅栏的夜市。一个自称'路春福真传弟子'的人在演《三打白骨精》。路师傅让你仔细看——看那个人的操影手法。","standard_puppets":["demon","monkey","elder"],"acceptable_extras":["lamp"]},
+                {"id":"act2_scene1","name":"真假传人","description":"大栅栏的夜市。一个自称'路春福真传弟子'的人在演《三打白骨精》。路师傅让你仔细看——看那个人的操影手法。","standard_puppets":["demon","monkey","elder"],"acceptable_extras":["lamp"],"perfect_score":40},
                 {"id":"act2_scene2","name":"影速对决","description":"真传人和假传人同时演——AI快速描述一段剧情，学徒必须在10秒内用正确的皮影组合回应。","standard_puppets":["demon","monkey"],"acceptable_extras":["elder","bamboo"],"time_limit":10},
                 {"id":"act2_scene3","name":"揭穿之后","description":"假传人被揭穿。但他不认——他说路师傅死前没有定下传承人，谁都可以说是真传。","standard_puppets":["elder","demon"],"acceptable_extras":["lamp","monkey","master"]}
             ]
@@ -3031,10 +3037,11 @@ const ShadowJudge = {
 (function() {
     'use strict';
     var sceneConfirmCount = 0;
+    var sceneDeducted = 0;
     var scenePassed = false;
     var advancing = false;
 
-    function resetSceneState() { sceneConfirmCount=0; scenePassed=false; advancing=false; }
+    function resetSceneState() { sceneConfirmCount=0; sceneDeducted=0; scenePassed=false; advancing=false; }
 
     function updateHeader() {
         var header = document.querySelector('.header');
@@ -3100,19 +3107,31 @@ const ShadowJudge = {
         try {
             if (scenePassed||advancing) return;
             sceneConfirmCount++;
-            var coverage = data.coverage||0;
-            var score = data.score||0;
-            var extraCount = data.extraCount||0;
             var act = ACTS_DATA.acts[gameState.currentAct-1];
             var scene = act.scenes[gameState.currentScene];
             var isImprov = scene.is_improvisation===true;
-            // 通过条件：多放(extraCount>0)或严重少放(覆盖<0.8)不直接通过，需修正；仅完美(无缺无多)可过，或重试满3次放行
-            var pass = isImprov ? (sceneConfirmCount>=1) : (data.correct && extraCount===0) || (sceneConfirmCount>=3);
-            if (pass) {
+            if (isImprov) {
                 scenePassed=true; advancing=true;
                 accumulateEndingStats(data);
-                var delay = isImprov?2500:3500;
-                setTimeout(function(){advanceScene();}, delay);
+                setTimeout(function(){advanceScene();}, 2500);
+                return;
+            }
+            // 解谜场次：须精确命中（必需全摆、无非允许皮影）才通过；摆多摆少都算错
+            var exact = !!data.correct;
+            if (exact) {
+                scenePassed=true; advancing=true;
+                accumulateEndingStats(data);   // 加回本场满分（错试扣分已即时扣减）
+                setTimeout(function(){advanceScene();}, 3500);
+            } else {
+                // 错了：每次扣5还原度，最多扣两次(共10分)后不再扣，只让玩家继续操作
+                if (sceneDeducted < 10) {
+                    var d = Math.min(5, 10 - sceneDeducted);
+                    gameState.endingStats.faithfulness -= d;
+                    sceneDeducted += d;
+                    showDialogue('路师傅','（摇了摇头）不对。这出戏——不是这么摆的。\n\n还原度 −'+d+'。再想想。');
+                } else {
+                    showDialogue('路师傅','（静静看着白布）……不急。再试试。');
+                }
             }
         } catch(e) { scenePassed=false; advancing=false; }
     });
@@ -3200,16 +3219,15 @@ const ShadowJudge = {
             var act=ACTS_DATA.acts[gameState.currentAct-1];
             var scene=act&&act.scenes?act.scenes[gameState.currentScene]:null;
             if(!scene) return;
-            var required=scene.standard_puppets||[], extras=scene.acceptable_extras||[];
+            var perfect = scene.perfect_score||30;
+            // 还原度：加回本场满分（错试的扣分已即时从 faithfulness 扣减）
+            gameState.endingStats.faithfulness += perfect;
+            gameState.endingStats.faithfulnessPossible += perfect;
+            // 创意度：仅摆了"可接受额外"皮影才计
+            var extras=scene.acceptable_extras||[];
             var placedIds=(data.puppets||[]).map(function(p){return p&&(p.puppetId||p.id||p);});
-            var covered=required.filter(function(id){return placedIds.indexOf(id)!==-1;});
-            var coverage=required.length>0?covered.length/required.length:1;
             var extraCount=placedIds.filter(function(id){return extras.indexOf(id)!==-1;}).length;
-            var wrongCount=placedIds.filter(function(id){return required.indexOf(id)===-1&&extras.indexOf(id)===-1;}).length;
-            var score=Math.round(coverage*70)+extraCount*5-wrongCount*10;
-            score=Math.max(0,Math.min(100,score));
             var creativity=extraCount>0?Math.min(30,extraCount*10+5):0;
-            gameState.endingStats.faithfulness+=score;
             gameState.endingStats.creativity+=creativity;
         } catch(e) {}
     }
