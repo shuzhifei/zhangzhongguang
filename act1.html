@@ -179,15 +179,25 @@ body {
 .curtain-left  { left: 0;    width: 50%; background-position: left center;  transform-origin: center left;  }
 .curtain-right { right: 0;   width: 50%; background-position: right center; transform-origin: center right; }
 
-/* 左帘：向外（左）滑出 + 斜拉褶皱 + 收窄 */
-.curtain-l1 { z-index: 55; animation: curtainLeftOut 2.2s ease-in-out 0.5s forwards; }
-.curtain-l2 { z-index: 54; animation: curtainLeftOut 2.2s ease-in-out 0.68s forwards; }
-.curtain-l3 { z-index: 53; animation: curtainLeftOut 2.2s ease-in-out 0.86s forwards; }
+/* 左帘 z-index 层次 */
+.curtain-l1 { z-index: 55; }
+.curtain-l2 { z-index: 54; }
+.curtain-l3 { z-index: 53; }
 
-/* 右帘：向外（右）滑出 + 斜拉褶皱 + 收窄 */
-.curtain-r1 { z-index: 55; animation: curtainRightOut 2.2s ease-in-out 0.5s forwards; }
-.curtain-r2 { z-index: 54; animation: curtainRightOut 2.2s ease-in-out 0.68s forwards; }
-.curtain-r3 { z-index: 53; animation: curtainRightOut 2.2s ease-in-out 0.86s forwards; }
+/* 右帘 z-index 层次 */
+.curtain-r1 { z-index: 55; }
+.curtain-r2 { z-index: 54; }
+.curtain-r3 { z-index: 53; }
+
+/* 由 JS 触发幕布拉开 — 左帘 */
+.curtain-opening.curtain-l1 { animation: curtainLeftOut 2.2s ease-in-out 0.5s forwards; }
+.curtain-opening.curtain-l2 { animation: curtainLeftOut 2.2s ease-in-out 0.68s forwards; }
+.curtain-opening.curtain-l3 { animation: curtainLeftOut 2.2s ease-in-out 0.86s forwards; }
+
+/* 由 JS 触发幕布拉开 — 右帘 */
+.curtain-opening.curtain-r1 { animation: curtainRightOut 2.2s ease-in-out 0.5s forwards; }
+.curtain-opening.curtain-r2 { animation: curtainRightOut 2.2s ease-in-out 0.68s forwards; }
+.curtain-opening.curtain-r3 { animation: curtainRightOut 2.2s ease-in-out 0.86s forwards; }
 
 @keyframes curtainLeftOut {
     0%   { transform: translateX(0) skewY(0deg) scaleX(1); opacity: 1; }
@@ -197,6 +207,257 @@ body {
 @keyframes curtainRightOut {
     0%   { transform: translateX(0) skewY(0deg) scaleX(1); opacity: 1; }
     100% { transform: translateX(110%) skewY(8deg) scaleX(0.25); opacity: 0; }
+}
+
+/* ========================================
+   开场序幕 —— 交互式「请点燃油灯吧」
+   黑暗背景 + 左侧油灯 + 右侧木箱皮影
+   ======================================== */
+
+/* 全屏黑幕 */
+.intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: #080604;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    transition: opacity 1.5s ease, background 1.5s ease;
+}
+.intro-overlay.fade-out {
+    opacity: 0;
+}
+.intro-overlay.hidden {
+    display: none;
+}
+
+/* 主场景：左右布局 */
+.intro-scene {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 160px;
+    width: 90%;
+    max-width: 1080px;
+}
+
+/* ---- 左侧：油灯 ---- */
+.intro-lamp-wrap {
+    position: relative;
+    width: 200px;
+    height: 280px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+    -webkit-user-drag: none;
+    opacity: 0;
+    transition: opacity 2s ease;
+}
+.intro-lamp-wrap.revealed {
+    opacity: 1;
+}
+
+/* 灯图片 — 暗态默认灰暗 */
+.intro-lamp-img {
+    width: 100%;
+    height: auto;
+    filter: brightness(0.15) saturate(0.1);
+    transition: filter 1.2s ease;
+    pointer-events: none;
+}
+/* 点亮态 */
+.intro-lamp-img.lit {
+    filter: brightness(1.1) saturate(1.2) drop-shadow(0 0 30px rgba(255,180,60,0.6));
+}
+
+/* 光晕 — 点亮后可见 */
+.intro-lamp-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 280px;
+    height: 280px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at center,
+        rgba(255,180,60,0.55) 0%,
+        rgba(255,140,40,0.2) 35%,
+        rgba(255,100,20,0.05) 65%,
+        transparent 100%);
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    pointer-events: none;
+    z-index: 0;
+}
+.intro-lamp-glow.visible {
+    opacity: 1;
+}
+
+/* 火焰芯 — 点亮后可见，持续闪烁 */
+.intro-lamp-flame {
+    position: absolute;
+    top: 38%;
+    left: 50%;
+    width: 14px;
+    height: 26px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse at 50% 25%,
+        rgba(255,255,200,0.95) 0%,
+        rgba(255,200,60,0.8) 30%,
+        rgba(255,100,20,0.3) 70%,
+        transparent 100%);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    box-shadow: 0 0 20px rgba(255,180,40,0.7), 0 0 50px rgba(255,120,30,0.35);
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+.intro-lamp-flame.visible {
+    opacity: 1;
+    animation: introFlameFlicker 0.12s ease-in-out infinite alternate;
+}
+
+@keyframes introFlameFlicker {
+    0%   { transform: translate(-50%, -50%) scaleX(1) scaleY(1); }
+    25%  { transform: translate(-48%, -52%) scaleX(0.88) scaleY(1.06); }
+    50%  { transform: translate(-52%, -48%) scaleX(1.12) scaleY(0.94); }
+    75%  { transform: translate(-50%, -51%) scaleX(0.82) scaleY(1.1); }
+    100% { transform: translate(-49%, -49%) scaleX(1.06) scaleY(0.96); }
+}
+
+/* 油量显示 */
+.intro-oil-display {
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 1.3rem;
+    color: #c49a3c;
+    text-shadow: 0 0 12px rgba(255,160,40,0.5);
+    margin-top: 12px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.6s ease 0.4s, transform 0.6s ease 0.4s;
+    pointer-events: none;
+}
+.intro-oil-display.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 油灯点亮的脉冲提示（未点亮时） */
+.intro-lamp-wrap:not(.lit) .intro-lamp-img {
+    animation: lampPulseHint 2.5s ease-in-out infinite;
+}
+@keyframes lampPulseHint {
+    0%, 100% { filter: brightness(0.15) saturate(0.1); }
+    50% { filter: brightness(0.3) saturate(0.2); }
+}
+
+/* ---- 右侧：木箱（皮影箱）---- */
+.intro-box {
+    width: 300px;
+    background: linear-gradient(180deg,
+        rgba(60,30,10,0.7) 0%,
+        rgba(40,18,8,0.8) 50%,
+        rgba(25,10,5,0.9) 100%);
+    border: 3px solid rgba(100,60,25,0.5);
+    border-radius: 6px;
+    padding: 22px 16px;
+    box-shadow:
+        inset 0 2px 20px rgba(0,0,0,0.6),
+        0 0 30px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 2s ease;
+}
+.intro-box.revealed {
+    opacity: 1;
+}
+
+.intro-box-label {
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 1.2rem;
+    color: #b8945c;
+    text-align: center;
+    margin-bottom: 14px;
+    letter-spacing: 0.2em;
+    border-bottom: 1px solid rgba(140,100,50,0.3);
+    padding-bottom: 10px;
+}
+
+.intro-box-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* 木箱中每张皮影卡片 */
+.intro-puppet-card {
+    width: 72px;
+    height: 96px;
+    background: rgba(20,10,5,0.6);
+    border: 1px solid rgba(120,80,35,0.4);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px;
+    transition: all 0.3s ease;
+}
+.intro-puppet-card img {
+    width: 44px;
+    height: 56px;
+    object-fit: contain;
+    filter: brightness(0.5) sepia(0.5);
+    pointer-events: none;
+}
+.intro-puppet-name {
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 0.65rem;
+    color: #9a8040;
+    letter-spacing: 0.1em;
+}
+
+/* 灯点亮后木箱也变亮 */
+.intro-box.lit {
+    border-color: rgba(160,110,50,0.6);
+    box-shadow:
+        inset 0 2px 20px rgba(0,0,0,0.6),
+        0 0 40px rgba(255,160,40,0.15);
+}
+.intro-box.lit .intro-puppet-card { border-color: rgba(180,120,50,0.5); background: rgba(30,15,8,0.5); }
+.intro-box.lit .intro-puppet-card img { filter: brightness(0.8) sepia(0.3); }
+.intro-box.lit .intro-puppet-name { color: #c4a44a; }
+
+/* ---- 底部字幕 ---- */
+.intro-subtitle {
+    position: absolute;
+    bottom: 14%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 1.5rem;
+    color: #c4a46c;
+    text-shadow: 0 0 20px rgba(255,180,80,0.3);
+    letter-spacing: 0.15em;
+    pointer-events: none;
+    z-index: 201;
+    opacity: 0;
+    transition: opacity 2s ease;
+}
+.intro-subtitle.revealed {
+    opacity: 1;
+    animation: subtitlePulse 2.5s ease-in-out infinite;
+}
+@keyframes subtitlePulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.9; }
 }
 
 .stage {
@@ -505,6 +766,27 @@ body {
 </style>
 </head>
 <body>
+
+<!-- ====== 开场序幕：点燃油灯 ====== -->
+<div class="intro-overlay" id="introOverlay">
+    <div class="intro-scene" id="introScene">
+        <!-- 左侧：油灯 -->
+        <div class="intro-lamp-wrap" id="introLampWrap">
+            <img src="assets/images/lamp.png" alt="油灯" class="intro-lamp-img" id="introLampImg">
+            <div class="intro-lamp-glow" id="introLampGlow"></div>
+            <div class="intro-lamp-flame" id="introLampFlame"></div>
+            <div class="intro-oil-display" id="introOilDisplay">油量: 100</div>
+        </div>
+        <!-- 右侧：木箱中的皮影 -->
+        <div class="intro-box" id="introBox">
+            <div class="intro-box-label">皮 影 箱</div>
+            <div class="intro-box-gallery" id="introBoxGallery">
+                <!-- 五张皮影由 JS 动态生成 -->
+            </div>
+        </div>
+    </div>
+    <div class="intro-subtitle" id="introSubtitle">请点燃油灯吧</div>
+</div>
 
 <div class="header">掌 中 光 · 第 一 幕 — 琉璃厂·书生与鹤</div>
 
@@ -1346,10 +1628,86 @@ const ShadowJudge = {
     console.log('[puppets] 拖拽系统就绪（优化版），共', cards.length, '张皮影');
 })();
 
-// 幕布动画结束后彻底移除，避免遮挡交互
+// ========================================
+// 开场序幕：交互式「请点燃油灯吧」
+// ========================================
 (function() {
-    var count = 0;
+    var overlay = document.getElementById('introOverlay');
+    var lampWrap = document.getElementById('introLampWrap');
+    var lampImg = document.getElementById('introLampImg');
+    var lampGlow = document.getElementById('introLampGlow');
+    var lampFlame = document.getElementById('introLampFlame');
+    var oilDisplay = document.getElementById('introOilDisplay');
+    var introBox = document.getElementById('introBox');
+    var subtitle = document.getElementById('introSubtitle');
+    var gallery = document.getElementById('introBoxGallery');
     var panels = document.querySelectorAll('.curtain-panel');
+
+    // ---- 动态生成五张皮影卡片 ----
+    var boxPuppets = [
+        { id: 'scholar', name: '书生' },
+        { id: 'tree',    name: '槐树' },
+        { id: 'moon',    name: '月亮' },
+        { id: 'elder',   name: '老者' },
+        { id: 'frog',    name: '金蟾' }
+    ];
+    boxPuppets.forEach(function(p) {
+        var card = document.createElement('div');
+        card.className = 'intro-puppet-card';
+        var img = document.createElement('img');
+        img.src = PuppetImageRenderer.getPath(p.id) || '';
+        img.alt = p.name;
+        img.draggable = false;
+        var name = document.createElement('span');
+        name.className = 'intro-puppet-name';
+        name.textContent = p.name;
+        card.appendChild(img);
+        card.appendChild(name);
+        gallery.appendChild(card);
+    });
+
+    var isLit = false;
+
+    // ---- 2 秒全黑后，油灯与皮影箱渐显 ----
+    setTimeout(function() { lampWrap.classList.add('revealed'); }, 2000);
+    setTimeout(function() { introBox.classList.add('revealed'); }, 2500);
+    setTimeout(function() { subtitle.classList.add('revealed'); }, 4500);
+
+    // ---- 点击油灯 → 点亮 ----
+    lampWrap.addEventListener('click', function() {
+        if (isLit) return;
+        isLit = true;
+
+        // 灯亮了
+        lampWrap.classList.add('lit');
+        lampImg.classList.add('lit');
+        lampGlow.classList.add('visible');
+        lampFlame.classList.add('visible');
+        oilDisplay.classList.add('visible');
+        introBox.classList.add('lit');
+
+        // 字幕变化
+        subtitle.textContent = '油灯已点燃';
+        subtitle.style.animation = 'none';
+        subtitle.style.opacity = '1';
+        subtitle.style.color = '#e8c860';
+        subtitle.style.textShadow = '0 0 30px rgba(255,200,60,0.6)';
+
+        // 2.5 秒后黑幕淡出，幕布拉开
+        setTimeout(function() {
+            overlay.classList.add('fade-out');
+            subtitle.style.transition = 'opacity 1s ease';
+            subtitle.style.opacity = '0';
+        }, 2500);
+
+        setTimeout(function() {
+            overlay.classList.add('hidden');
+            panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+        }, 4000);
+    });
+
+    // 幕布动画结束后彻底移除，避免遮挡交互
+    var count = 0;
     panels.forEach(function(p) {
         p.addEventListener('animationend', function() {
             count++;
@@ -1359,6 +1717,7 @@ const ShadowJudge = {
         });
     });
 })();
+
 </script>
 
 <script>
