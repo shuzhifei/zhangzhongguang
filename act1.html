@@ -2637,6 +2637,8 @@ const ShadowJudge = {
             AudioManager.playSFX('sfx_curtain'); // 幕布声
             AudioManager.stopBGM(1500); // 淡出开场 BGM
             setTimeout(function() { AudioManager.playBGM('bgm_stage'); }, 2000); // 播放舞台 BGM
+            // 幕布拉开 → 触发游戏字幕流程（init 已注册监听 opening_complete）
+            document.dispatchEvent(new Event('opening_complete'));
         }, base + 9500));
     }
 
@@ -2722,6 +2724,8 @@ const ShadowJudge = {
                 AudioManager.playSFX('sfx_curtain');
                 AudioManager.stopBGM(1500);
                 setTimeout(function() { AudioManager.playBGM('bgm_stage'); }, 2000);
+                // 跳过路径：幕布也拉开了 → 同样触发游戏流程开始
+                document.dispatchEvent(new Event('opening_complete'));
             }, 6500);
         });
     });
@@ -3081,9 +3085,17 @@ const ShadowJudge = {
             var de=document.getElementById('dialogueText'); if(de) de.innerHTML='';
             updatePuppetCards(gameState.currentAct);
             updateHeader();
-            var act1 = ACTS_DATA.acts[0];
-            showActIntro(act1, function() { setTimeout(function(){startCurrentScene();},1000); });
+            // 不在这里启动字幕流程！等队友B的开场系统(黑屏→点灯→标题卡→幕布拉开)全部播完后再开始
+            // 幕布拉开时会触发 'opening_complete' 事件 → startGameFlow() 接管
+            document.addEventListener('opening_complete', startGameFlow);
         } catch(e) { showDialogue('系统','游戏初始化出错：'+e.message+'。请刷新页面。'); }
+    }
+
+    function startGameFlow() {
+        try {
+            var act = ACTS_DATA.acts[gameState.currentAct-1] || ACTS_DATA.acts[0];
+            showActIntro(act, function() { setTimeout(function(){startCurrentScene();},1200); });
+        } catch(e) { showDialogue('路师傅','（灯晃了一下。请刷新页面。）'); }
     }
 
     function showActIntro(act, callback) {
