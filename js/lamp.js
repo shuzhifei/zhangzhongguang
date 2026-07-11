@@ -7,11 +7,22 @@
 let countdownTimer = null;
 let secondsLeft = 10;
 
+// ===== 刷新灯油 UI =====
+function updateOilUI() {
+  const oil = gameState.lampOil;
+  const oilText = document.getElementById('oilText');
+  if (oilText) oilText.textContent = oil + ' / 100';
+  const oilBar = document.getElementById('oilBar');
+  if (oilBar) oilBar.style.width = oil + '%';
+}
+
+// 灯油系统封装
 const LampSystem = {
     // 消耗规则
     COSTS: {
         puppet_placed: 3,
         puppet_removed: 1,
+        puppet_moved: 1,
         ask_master: 8,
         wrong_puppet: 5,
         time_penalty: 2
@@ -20,6 +31,7 @@ const LampSystem = {
     REWARDS: {
         correct_judge: 2,
         creativity_bonus: 3,
+        partial_correct: 1,
         perfect_scene: 10
     },
     // 幕间恢复油量
@@ -33,7 +45,7 @@ const LampSystem = {
         gameState.lampOil = Math.max(0, gameState.lampOil - cost);
         gameState.totalOilBurned += cost;
         gameState.updateAIQuality();
-        // 推送油量更新事件，A前端更新进度条，C切换AI质量
+        updateOilUI();
         EventBus.emit("oil_changed", { oil: gameState.lampOil, reason });
 
         if (gameState.lampOil <= 0) {
@@ -48,6 +60,7 @@ const LampSystem = {
         const gain = this.REWARDS[reason] || 0;
         gameState.lampOil = Math.min(100, gameState.lampOil + gain);
         gameState.updateAIQuality();
+        updateOilUI();
         EventBus.emit("oil_changed", { oil: gameState.lampOil, reason });
     },
 
@@ -55,6 +68,7 @@ const LampSystem = {
     intermissionRecover() {
         gameState.lampOil = this.RECOVERY.intermission;
         gameState.updateAIQuality();
+        updateOilUI();
         EventBus.emit("oil_changed", { oil: gameState.lampOil, reason: "intermission" });
     },
 
@@ -68,33 +82,69 @@ const LampSystem = {
             LampSystem.burn("time_penalty");
             if (secondsLeft <= 0) {
                 clearInterval(countdownTimer);
+                countdownTimer = null;
                 EventBus.emit("countdown_expired");
             }
         }, 1000);
+    },
+
+    // 停止倒计时（场景切换时调用，防止跨幕泄漏）
+    stopCountdown() {
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+        secondsLeft = 0;
     }
 };
 
 // 全局导出
 window.LampSystem = LampSystem;
 
-// 自动监听前端A触发的事件，自动扣油
+// ============================================================
+// 事件监听：把游戏动作接到油耗系统
+// ============================================================
+
+// 皮影放上舞台 → 扣 3 油
 EventBus.on("puppet_placed", (data) => {
     LampSystem.burn("puppet_placed");
-    gameState.stagedPuppets.push(data.id || data.puppetId);
+    if (data && data.id) {
+        if (gameState.stagedPuppets.indexOf(data.id) === -1) {
+            gameState.stagedPuppets.push(data.id);
+        }
+    }
 });
-EventBus.on("puppet_removed", () => LampSystem.burn("puppet_removed"));
-EventBus.on("ask_master_clicked", () => LampSystem.burn("ask_master"));
 
-// 监听幕间切换事件，自动回油
-EventBus.on("act_intermission", () => LampSystem.intermissionRecover());
-
-// 监听C工程师AI评判结果，更新打分指标
-EventBus.on("judge_result", (res) => {
-    gameState.endingStats.faithfulness += res.score;
-    gameState.endingStats.creativity += res.creativity;
-    // 判定正确奖励油
-    if (res.correct) LampSystem.reward("correct_judge");
-    if (res.creativity > 20) LampSystem.reward("creativity_bonus");
-    // 自动存档
-    SaveSystem.save();
+// 移除舞台皮影 → 扣 1 油
+EventBus.on("puppet_removed", (data) => {
+    LampSystem.burn("puppet_removed");
 });
+
+// 在舞台上拖动调整位置 → 扣 1 油
+EventBus.on("puppet_moved", (data) => {
+    LampSystem.burn("puppet_moved");
+});
+
+// 追问师父 → 扣 8 油
+EventBus.on("ask_master", () => {
+    LampSystem.burn("ask_master");
+});
+
+// 评判通过奖励 → 回 2 油
+EventBus.on("judge_result", (result) => {
+    if (result && result.correct) {
+        LampSystem.reward("correct_judge");
+    }
+});
+
+// 幕间 → 回油到 80
+EventBus.on("act_intermission", () => {
+    LampSystem.intermissionRecover();
+});
+
+// 流程控制器请求停止倒计时（场景切换时，防止跨幕泄漏）
+EventBus.on("countdown_stop_request", () => {
+    LampSystem.stopCountdown();
+});
+
+console.log('[lamp] 灯油事件监听已注册');
