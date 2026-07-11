@@ -1295,6 +1295,200 @@ window.EventBus = EventBus;
 
 <script>
 // ========================================
+// audio-manager.js — 音频管理系统
+// ========================================
+const AudioManager = {
+    // ---- 音频文件路径映射 ----
+    // 文件放入 assets/audio/ 目录，命名如下
+    SOUNDS: {
+        // BGM（背景音乐，循环播放）
+        bgm_intro:    'assets/audio/bgm-intro.mp3',     // 开场序幕 BGM
+        bgm_stage:    'assets/audio/bgm-stage.mp3',     // 舞台默认 BGM
+        bgm_night:    'assets/audio/bgm-night.mp3',     // 月夜 BGM
+        // SFX（音效，单次播放）
+        sfx_lamp_light:   'assets/audio/sfx-lamp-light.mp3',   // 点燃油灯
+        sfx_curtain:      'assets/audio/sfx-curtain.mp3',      // 幕布拉开
+        sfx_puppet_place: 'assets/audio/sfx-puppet-place.mp3', // 放置皮影
+        sfx_puppet_remove:'assets/audio/sfx-puppet-remove.mp3',// 移除皮影
+        sfx_puppet_flip:  'assets/audio/sfx-puppet-flip.mp3',  // 翻转皮影
+        sfx_puppet_drag:  'assets/audio/sfx-puppet-drag.mp3',  // 拖动皮影
+        sfx_moon:         'assets/audio/sfx-moon.mp3',         // 月夜切换
+        sfx_oil_deplete:  'assets/audio/sfx-oil-deplete.mp3',  // 油尽
+        sfx_click:        'assets/audio/sfx-click.mp3',        // 通用点击
+        // Voice（人声旁白，单次播放）
+        voice_opening:    'assets/audio/voice-opening.mp3',    // "你来了？灯快没油了，坐近点"
+        voice_light_lamp: 'assets/audio/voice-light-lamp.mp3', // "点燃油灯吧"（MiniMax 老年男性克隆声）
+        voice_bg_intro:   'assets/audio/voice-bg-intro.mp3',   // 背景介绍旁白
+        voice_act_title:  'assets/audio/voice-act-title.mp3',  // "第一场·月夜等人"
+    },
+
+    // ---- 音量控制 ----
+    volumes: { bgm: 0.4, sfx: 0.7, voice: 1.0 },
+    muted: false,
+
+    // ---- 内部状态 ----
+    _bgm: null,        // 当前 BGM 的 Audio 元素
+    _bgmKey: null,     // 当前 BGM 的 key
+    _cache: {},        // 预加载缓存
+    _audioSupported: typeof Audio !== 'undefined',
+
+    // ---- 初始化 ----
+    init() {
+        if (!this._audioSupported) { console.warn('[audio] 浏览器不支持 Audio'); return; }
+        console.log('[audio] AudioManager 已就绪，共 ' + Object.keys(this.SOUNDS).length + ' 个音频槽位');
+    },
+
+    // ---- 预加载 ----
+    preload(keys) {
+        if (!this._audioSupported) return;
+        var self = this;
+        (keys || Object.keys(this.SOUNDS)).forEach(function(key) {
+            if (self._cache[key]) return;
+            var path = self.SOUNDS[key];
+            if (!path) return;
+            var a = new Audio();
+            a.src = path;
+            a.preload = 'auto';
+            self._cache[key] = a;
+        });
+    },
+
+    // ---- 播放 BGM ----
+    playBGM(key, options) {
+        if (!this._audioSupported || this.muted) return;
+        options = options || {};
+        var path = this.SOUNDS[key];
+        if (!path) { console.warn('[audio] BGM 未找到: ' + key); return; }
+
+        // 同一首 BGM 正在播放，跳过
+        if (this._bgmKey === key && this._bgm && !this._bgm.paused) return;
+
+        // 淡出旧 BGM
+        if (this._bgm) {
+            this._fadeStop(this._bgm, options.crossfade || 800);
+        }
+
+        var bgm = this._cache[key] || new Audio(path);
+        bgm.src = path;
+        bgm.loop = options.loop !== false; // 默认循环
+        bgm.volume = 0;
+        this._bgm = bgm;
+        this._bgmKey = key;
+
+        var targetVol = this.volumes.bgm * (options.volume || 1);
+        var self = this;
+        bgm.play().then(function() {
+            self._fadeTo(bgm, targetVol, options.fadeIn || 1000);
+        }).catch(function(e) {
+            console.warn('[audio] BGM 播放失败: ' + key, e.message);
+        });
+    },
+
+    stopBGM(fadeOut) {
+        if (this._bgm) {
+            this._fadeStop(this._bgm, fadeOut || 1000);
+            this._bgmKey = null;
+        }
+    },
+
+    // ---- 播放 SFX ----
+    playSFX(key, options) {
+        if (!this._audioSupported || this.muted) return;
+        options = options || {};
+        var path = this.SOUNDS[key];
+        if (!path) { console.warn('[audio] SFX 未找到: ' + key); return; }
+
+        var sfx = new Audio(path);
+        sfx.volume = this.volumes.sfx * (options.volume || 1);
+        sfx.play().catch(function(e) {
+            console.warn('[audio] SFX 播放失败: ' + key, e.message);
+        });
+    },
+
+    // ---- 播放 Voice（返回 Audio 元素，便于同步字幕时序）----
+    playVoice(key, options) {
+        if (!this._audioSupported || this.muted) return null;
+        options = options || {};
+        var path = this.SOUNDS[key];
+        if (!path) { console.warn('[audio] Voice 未找到: ' + key); return null; }
+
+        var voice = new Audio(path);
+        voice.volume = this.volumes.voice * (options.volume || 1);
+        var p = voice.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(function(e) {
+                console.warn('[audio] Voice 播放失败: ' + key, (e && e.message) || e);
+            });
+        }
+        return voice;
+    },
+
+    // ---- 静音/取消静音 ----
+    setMuted(muted) {
+        this.muted = muted;
+        if (muted && this._bgm) { this._bgm.pause(); }
+        else if (!muted && this._bgm && this._bgmKey) { this._bgm.play().catch(function(){}); }
+    },
+
+    // ---- 设置音量 ----
+    setVolume(type, vol) {
+        if (this.volumes[type] !== undefined) {
+            this.volumes[type] = vol;
+            if (type === 'bgm' && this._bgm) {
+                this._bgm.volume = vol;
+            }
+        }
+    },
+
+    // ---- 内部工具：淡入淡出 ----
+    _fadeTo(audio, targetVol, duration) {
+        var startVol = audio.volume;
+        var startTime = performance.now();
+        var self = this;
+        function step(now) {
+            var t = Math.min((now - startTime) / duration, 1);
+            audio.volume = startVol + (targetVol - startVol) * t;
+            if (t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    },
+
+    _fadeStop(audio, duration) {
+        var startVol = audio.volume;
+        var startTime = performance.now();
+        function step(now) {
+            var t = Math.min((now - startTime) / duration, 1);
+            audio.volume = startVol * (1 - t);
+            if (t < 1) { requestAnimationFrame(step); }
+            else { audio.pause(); audio.volume = 0; }
+        }
+        requestAnimationFrame(step);
+    }
+};
+window.AudioManager = AudioManager;
+AudioManager.init();
+
+// ========================================
+// 音频事件绑定 — 与游戏流程联动
+// ========================================
+// 皮影操作音效
+EventBus.on('puppet_placed',  function() { AudioManager.playSFX('sfx_puppet_place'); });
+EventBus.on('puppet_removed', function() { AudioManager.playSFX('sfx_puppet_remove'); });
+EventBus.on('puppet_flipped', function() { AudioManager.playSFX('sfx_puppet_flip'); });
+EventBus.on('puppet_moved',   function() { AudioManager.playSFX('sfx_puppet_drag'); });
+
+// 油尽音效
+EventBus.on('oil_depleted',   function() { AudioManager.playSFX('sfx_oil_deplete'); });
+
+// 月夜切换音效
+EventBus.on('night_mode_on',  function() { AudioManager.playSFX('sfx_moon'); AudioManager.playBGM('bgm_night'); });
+EventBus.on('night_mode_off', function() { AudioManager.playBGM('bgm_stage'); });
+
+console.log('[audio] 音频事件监听已注册');
+</script>
+
+<script>
+// ========================================
 // game.js — 游戏全局状态管理
 // ========================================
 class GameState {
@@ -2179,7 +2373,7 @@ window.AudioManager = AudioManager;
         setTimeout(function() { introBox.classList.add('revealed'); }, 500);
         setTimeout(function() {
             subtitle.classList.add('revealed');
-            // 注：「点燃油灯吧」克隆语音已移除，仅保留原声「你来了？灯快没油了，坐近点」
+            AudioManager.playVoice('voice_light_lamp'); // 老年男性克隆声：「点燃油灯吧」
         }, 2500);
     }
 
