@@ -2929,11 +2929,13 @@ const ShadowJudge = {
         try {
             gameState.triggeredClues.push(clue.id);
             (clue.cipher_link || []).forEach(function(c) { if (gameState.unlockedCiphers.indexOf(c) === -1) gameState.unlockedCiphers.push(c); });
-            var prefix = clue.layer === 3 ? '（师傅的声音低了下去）' : (clue.layer === 2 ? '（师傅顿了顿）' : '');
-            var text = prefix + clue.reveal_content;
-            if (clue.cipher_link && clue.cipher_link.length > 0) text += '\n\n【暗语解锁】你听懂了——' + clue.cipher_link.join('、') + '。';
-            speaker.textContent = '路师傅';
-            typewriter(dialogueText, text, 46);
+            // reveal_content 已在 startCurrentScene 开场时作为提示语提前说过了；
+            // 此处摆放触发只补「暗语解锁」确认，不再重复提示语
+            if (clue.cipher_link && clue.cipher_link.length > 0) {
+                var text = '\n\n【暗语解锁】你听懂了——' + clue.cipher_link.join('、') + '。';
+                speaker.textContent = '路师傅';
+                typewriter(dialogueText, text, 46);
+            }
         } catch (e) {}
     }
     // 每一个皮影摆放完，路师傅都要有一次互动；若本次摆放未触发隐藏线索，则给出针对该皮影的即时反应
@@ -3224,6 +3226,25 @@ const ShadowJudge = {
                 EventBus.emit('narration_chunk',{speaker:'路师傅',text:'三个词——'+scene.keywords.join('、')+'。\n\n剩下的——该你了。',speed:52});
             }
             if (scene.time_limit&&window.LampSystem) { setTimeout(function(){LampSystem.startCountdown();},5000); }
+
+            // —— 场景线索提前提示：把 reveal_content 作为暗示先说出来，
+            //    玩家摆对后再 triggerClue 只补「暗语解锁」确认，不再重复提示语 ——
+            (function() {
+                var cid = getCurrentSceneId();
+                var clues = getActClues(gameState.currentAct - 1).filter(function(c) {
+                    return c.scene_id === cid && gameState.triggeredClues.indexOf(c.id) === -1;
+                });
+                clues.forEach(function(clue) {
+                    if (!clue.reveal_content) return;
+                    var prefix = clue.layer === 3 ? '（师傅的声音低了下去）' : (clue.layer === 2 ? '（师傅顿了顿）' : '');
+                    if (window.NarrationCtl) {
+                        window.NarrationCtl.enqueue(function() {
+                            speaker.textContent = '路师傅';
+                            typewriter(dialogueText, prefix + clue.reveal_content, 46);
+                        });
+                    }
+                });
+            })();
         } catch(e) { showDialogue('路师傅','（……灯晃了一下。刚才说到哪了？——请刷新页面。）'); }
     }
 
