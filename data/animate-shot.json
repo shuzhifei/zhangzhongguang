@@ -1,0 +1,106 @@
+/**
+ * animate-shot.json — 预设兜底分镜脚本（AI异常时启用）
+ *
+ * 包含三幕各一个兜底分镜，确保即使AI生成失败，
+ * 玩家仍能看到皮影动画效果，游戏不中断。
+ */
+const ANIMATE_FALLBACK_DATA = [
+    {
+        "scene": "第一幕·琉璃厂",
+        "shots": [
+            {
+                "shotId": "backup_1_01",
+                "startTime": 0,  "endTime": 5,
+                "cameraType": "开幕",
+                "cameraMove": "远景缓慢拉近",
+                "puppetActions": [
+                    { "puppet": "书生", "targetX": 0.4, "targetY": 0.5, "swingRange": 0.08 },
+                    { "puppet": "槐树", "targetX": 0.15, "targetY": 0.6, "swingRange": 0.03 }
+                ],
+                "dialogue": "月夜，槐树下，一个青衫书生手攥信封，影子被月光拉得很长。",
+                "speaker": "路师傅",
+                "lightingDesc": "月光清冷，油灯光晕温暖，幕布微黄",
+                "bgSound": "wind"
+            },
+            {
+                "shotId": "backup_1_02",
+                "startTime": 5,  "endTime": 10,
+                "cameraType": "特写",
+                "cameraMove": "推近至书生手中的信",
+                "puppetActions": [
+                    { "puppet": "书生", "targetX": 0.5, "targetY": 0.45, "swingRange": 0.05 },
+                    { "puppet": "信",   "targetX": 0.55, "targetY": 0.55, "swingRange": 0.02 }
+                ],
+                "dialogue": "这封信写了三年。不是情话——是比命还重的东西。",
+                "speaker": "路师傅",
+                "lightingDesc": "灯光聚焦信封，火漆封口泛红光",
+                "bgSound": "oil_lamp"
+            }
+        ]
+    },
+    {
+        "scene": "第二幕·大栅栏",
+        "shots": [
+            {
+                "shotId": "backup_2_01",
+                "startTime": 0,  "endTime": 5,
+                "cameraType": "中景",
+                "cameraMove": "静态，轻微呼吸式晃动",
+                "puppetActions": [
+                    { "puppet": "白骨精", "targetX": 0.35, "targetY": 0.5, "swingRange": 0.12 },
+                    { "puppet": "孙悟空", "targetX": 0.65, "targetY": 0.45, "swingRange": 0.06 }
+                ],
+                "dialogue": "大栅栏的夜市灯火通明。有人自称路春福的真传弟子——但他的影，不对。",
+                "speaker": "路师傅",
+                "lightingDesc": "夜市灯火+幕布透光，人影交错",
+                "bgSound": "market"
+            },
+            {
+                "shotId": "backup_2_02",
+                "startTime": 5,  "endTime": 10,
+                "cameraType": "对决",
+                "cameraMove": "快速左右切换",
+                "puppetActions": [
+                    { "puppet": "白骨精", "targetX": 0.3, "targetY": 0.5, "swingRange": 0.15 },
+                    { "puppet": "孙悟空", "targetX": 0.7, "targetY": 0.5, "swingRange": 0.1 }
+                ],
+                "dialogue": "真传人的白骨精——左脚先着地。这是师父教的独门技法。",
+                "speaker": "路师傅",
+                "lightingDesc": "灯油火焰闪烁，影子在幕布上剧烈摇晃",
+                "bgSound": "stage"
+            }
+        ]
+    },
+    {
+        "scene": "第三幕·影子自己的戏",
+        "shots": [
+            {
+                "shotId": "backup_3_01",
+                "startTime": 0,  "endTime": 6,
+                "cameraType": "远景",
+                "cameraMove": "极缓慢向左平移",
+                "puppetActions": [
+                    { "puppet": "小船", "targetX": 0.3, "targetY": 0.6, "swingRange": 0.05 },
+                    { "puppet": "老者", "targetX": 0.6, "targetY": 0.4, "swingRange": 0.04 }
+                ],
+                "dialogue": "寒江、断线、一个人的戏台。这出戏没有名字——因为路师傅还来不及教。",
+                "speaker": "路师傅",
+                "lightingDesc": "灯油将尽，幕布半暗，只剩一束微光",
+                "bgSound": "water"
+            },
+            {
+                "shotId": "backup_3_02",
+                "startTime": 6,  "endTime": 12,
+                "cameraType": "收灯",
+                "cameraMove": "缓慢拉远，逐渐变暗",
+                "puppetActions": [
+                    { "puppet": "油灯", "targetX": 0.5, "targetY": 0.7, "swingRange": 0.02 }
+                ],
+                "dialogue": "灯要灭了。但白布上还有影子——是你的影子。",
+                "speaker": "路师傅",
+                "lightingDesc": "油灯熄灭，只剩幕布上的残影",
+                "bgSound": "silence"
+            }
+        ]
+    }
+];

@@ -132,4 +132,47 @@
     document.addEventListener('mouseup', onMouseUp);
 
     console.log('[puppets] 拖拽系统就绪，共', cards.length, '张皮影');
+
+    // ===== 6. 导出标准化皮影布局（供动画生成模块调用） =====
+    window.puppetStage = {
+        /**
+         * 获取白布上当前所有皮影的标准化布局JSON
+         * @returns {{ puppets: Array<{id, name, x, y, scale}>, sceneName: string }}
+         */
+        getShadowLayoutJSON() {
+            const placed = stage.querySelectorAll('.puppet-on-stage, [data-placed="true"]');
+            const stageW = stage.clientWidth  || 640;
+            const stageH = stage.clientHeight || 400;
+            const puppets = [];
+
+            placed.forEach(el => {
+                const id = el.dataset.puppet || el.dataset.puppetId || '';
+                const left = parseFloat(el.style.left) || 0;
+                const top  = parseFloat(el.style.top)  || 0;
+                const w = parseFloat(el.style.width)  || 80;
+                const h = parseFloat(el.style.height) || 110;
+                puppets.push({
+                    id: id,
+                    name: this._getPuppetName(id),
+                    x: (left + w / 2) / stageW,   // 归一化为0-1
+                    y: (top  + h / 2) / stageH,
+                    scale: 1
+                });
+            });
+
+            return {
+                puppets,
+                sceneName: document.getElementById('sceneInfo')?.textContent || ''
+            };
+        },
+
+        _getPuppetName(id) {
+            const card = document.querySelector(`.puppet-card[data-puppet="${id}"]`);
+            if (card) {
+                const nameEl = card.querySelector('.puppet-name');
+                if (nameEl) return nameEl.textContent.trim();
+            }
+            return id;
+        }
+    };
 })();

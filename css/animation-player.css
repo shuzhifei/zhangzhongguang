@@ -1,0 +1,140 @@
+/**
+ * animation-player.css — 皮影动画播放器样式
+ * 全屏遮罩 + 视频播放 + 字幕 + 皮影戏视觉风格
+ */
+
+/* ---- 动画生成按钮 ---- */
+.animate-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #c17830, #a0522d);
+    color: #fff;
+    border: 2px solid #603810;
+    font-family: 'Noto Serif SC', 'SimSun', serif;
+    font-size: 16px;
+    letter-spacing: 3px;
+    z-index: 100;
+    cursor: pointer;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(193, 120, 48, 0.4);
+    transition: all 0.3s;
+}
+.animate-btn:hover {
+    background: linear-gradient(135deg, #d48940, #b0633d);
+    box-shadow: 0 6px 28px rgba(193, 120, 48, 0.6);
+    transform: translateY(-2px);
+}
+.animate-btn:disabled {
+    background: #555;
+    border-color: #333;
+    color: #999;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* ---- 动画弹窗遮罩 ---- */
+.animate-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.92);
+    display: none;
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+.animate-modal.show {
+    display: flex;
+}
+
+/* ---- 动画容器（模拟皮影幕布） ---- */
+.animate-container {
+    width: 75vw;
+    max-width: 1200px;
+    position: relative;
+    border: 8px solid #6b4020;
+    box-shadow:
+        0 0 60px rgba(248, 192, 96, 0.5),
+        0 0 120px rgba(248, 160, 48, 0.25),
+        inset 0 0 20px rgba(0, 0, 0, 0.3);
+    background: #1a0f08;
+    border-radius: 4px;
+}
+
+/* ---- 视频播放区 ---- */
+#animate-video {
+    width: 100%;
+    display: block;
+    background: #fffef8;
+}
+#animate-video::backdrop {
+    background: #1a0f08;
+}
+
+/* ---- 皮影戏底部字幕 ---- */
+.subtitle-box {
+    position: absolute;
+    bottom: 50px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    padding: 12px 20px;
+    font-family: 'Noto Serif SC', 'SimSun', serif;
+    font-size: 22px;
+    color: #f5e6c0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+    letter-spacing: 2px;
+    transition: opacity 0.3s;
+}
+
+/* ---- 控制栏 ---- */
+.animate-control {
+    margin-top: 14px;
+    text-align: center;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+.animate-control button {
+    padding: 10px 28px;
+    font-family: 'Noto Serif SC', 'SimSun', serif;
+    font-size: 15px;
+    border: 2px solid #8b4513;
+    background: rgba(139, 69, 19, 0.3);
+    color: #f5e6c0;
+    cursor: pointer;
+    border-radius: 4px;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+}
+.animate-control button:hover {
+    background: #8b4513;
+    color: #fff;
+}
+#animate-close {
+    border-color: #c17830;
+    background: rgba(193, 120, 48, 0.4);
+}
+#animate-close:hover {
+    background: #c17830;
+    color: #1a0f08;
+}
+
+/* ---- 灯油耗尽警告 ---- */
+.animate-oil-warning {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #f44336;
+    font-size: 18px;
+    text-align: center;
+    text-shadow: 0 0 10px rgba(244, 67, 54, 0.6);
+    animation: blink 1s infinite;
+}

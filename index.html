@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>掌中光 · 皮影戏AI互动影游</title>
     <link rel="stylesheet" href="css/theater.css">
+    <link rel="stylesheet" href="css/animation-player.css">
 </head>
 <body>
 
@@ -323,12 +324,111 @@
 <script src="js/puppet-images.js"></script>
 <script src="js/prompt-builder.js"></script>
 <script src="js/shadow-judge.js"></script>
-<!-- AI 服务模块（LLM + 文生图 + 图生视频 + TTS + 音频生成） -->
-<script src="js/ai-api-qianwen.js"></script>
-<script src="js/ai-media.js"></script>
+<!-- AI 服务模块 五合一（LLM + 文生图 + 图生视频 + TTS + 音频生成） -->
+<script src="js/ai-all.js"></script>
+<!-- 动画模块 -->
+<script src="js/animate-request.js"></script>
+<script src="js/animate-player.js"></script>
+<script src="js/animate-fallback.js"></script>
 <script src="js/puppets.js"></script>
 <script src="js/theater.js"></script>
 <script src="js/main.js"></script>
+
+<script>
+// 动画生成按钮事件绑定（等待DOM和模块就绪）
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('start-animate-btn');
+    const closeBtn = document.getElementById('animate-close');
+    const modal = document.getElementById('animation-modal');
+
+    if (!btn || !modal) return;
+
+    btn.addEventListener('click', async function() {
+        if (typeof puppetStage === 'undefined') {
+            alert('皮影系统尚未就绪，请稍后再试');
+            return;
+        }
+
+        const layout = puppetStage.getShadowLayoutJSON();
+        if (!layout.puppets || layout.puppets.length === 0) {
+            alert('请先将皮影拖拽至白布戏台，再生成动画');
+            return;
+        }
+
+        if (typeof gameState === 'undefined') {
+            alert('游戏状态未初始化');
+            return;
+        }
+
+        if (gameState.lampOil < 10) {
+            alert('灯油不足（至少需要10%），无法起影开戏');
+            return;
+        }
+
+        // 消耗灯油
+        if (typeof lampSystem !== 'undefined') {
+            lampSystem.cutOil(10);
+        }
+        gameState.lampOil = Math.max(0, gameState.lampOil - 10);
+        var oilEl = document.getElementById('oil-value') || document.getElementById('oilText');
+        if (oilEl) oilEl.textContent = Math.round(gameState.lampOil);
+
+        btn.disabled = true;
+        btn.textContent = '⏳ AI正在生成皮影动画...';
+
+        try {
+            var result = await AnimateRequest.generateFullAnimation(layout, gameState);
+
+            if (result.success) {
+                var player = new AnimatePlayer(result.data);
+                window._animatePlayer = player;
+                player.playAllShots();
+            } else {
+                alert('AI动画生成失败，启用简易兜底动画\n' + (result.error || ''));
+                FallbackAnimate.injectSwingStyle();
+                FallbackAnimate.runSimpleStage(layout, gameState);
+            }
+        } catch (e) {
+            console.error('[动画按钮] 异常:', e);
+            alert('动画生成异常：' + e.message);
+            FallbackAnimate.injectSwingStyle();
+            FallbackAnimate.runSimpleStage(layout, gameState);
+        }
+
+        btn.disabled = false;
+        btn.textContent = '🏮 起影开戏';
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            modal.classList.remove('show');
+            var video = document.getElementById('animate-video');
+            if (video) { video.pause(); video.src = ''; }
+            if (typeof audioSystem !== 'undefined') audioSystem.stopAllVoice();
+            if (typeof gameState !== 'undefined' && gameState.afterAnimationCallback) {
+                gameState.afterAnimationCallback();
+            }
+        });
+    }
+
+    console.log('[动画] 起影开戏按钮就绪');
+});
+</script>
+
+<!-- ===== 皮影动画播放器弹窗 ===== -->
+<div id="animation-modal" class="animate-modal">
+    <div class="animate-container">
+        <video id="animate-video" autoplay playsinline></video>
+        <div id="animate-subtitle" class="subtitle-box"></div>
+        <div class="animate-control">
+            <button id="animate-skip" onclick="window._animatePlayer && window._animatePlayer.skip()">跳过当前</button>
+            <button id="animate-close">关闭动画</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 起影开戏按钮 ===== -->
+<button id="start-animate-btn" class="animate-btn" title="生成皮影动画">🏮 起影开戏</button>
 
 </body>
 </html>

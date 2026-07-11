@@ -118,7 +118,8 @@ const ModuleLoader = {
     });
   },
   async init() {
-    const files = ['data/prompts.json', 'data/acts.json', 'js/prompt-builder.js'];
+    // 加载顺序：配置 → 数据 → 引擎
+    const files = ['js/config.example.js', 'data/prompts.json', 'data/acts.json', 'js/prompt-builder.js'];
     for (const url of files) {
       try { await this._loadByTag(url); } catch (e) {
         try { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); (0, eval)(await r.text()); console.log('  [加载]', url, '✅ (fetch)'); } catch (e2) { this._error = '加载 ' + url + ' 失败'; console.error(this._error); throw new Error(this._error); }
@@ -164,9 +165,15 @@ const App = {
   togglePrompt() { const b=document.getElementById('promptBox'); b.classList.toggle('collapsed'); },
 
   async _streamAPI(sys,msg,speedMs) {
-    const key=document.getElementById('apiKey').value.trim(); if(!key||!key.startsWith('sk-')) throw new Error('请先填入 API Key');
+    const key=document.getElementById('apiKey').value.trim();
+    // API地址：优先走代理（无需前端Key），否则直连DashScope
+    const useProxy = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_API);
+    const apiUrl = useProxy ? API_CONFIG.BASE_API + '/llm/stream' : 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+    const headers = useProxy ? {'Content-Type':'application/json'} : {'Content-Type':'application/json','Authorization':'Bearer '+key};
+    if (!useProxy && (!key||!key.startsWith('sk-'))) throw new Error('请先填入 API Key，或通过代理服务器访问');
+
     this._abortCtrl=new AbortController();
-    const r=await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:document.getElementById('model').value,messages:[{role:'system',content:sys},{role:'user',content:msg}],max_tokens:500,temperature:0.8,stream:true}),signal:this._abortCtrl.signal});
+    const r=await fetch(apiUrl,{method:'POST',headers:headers,body:JSON.stringify({model:document.getElementById('model').value,messages:[{role:'system',content:sys},{role:'user',content:msg}],max_tokens:500,temperature:0.8,stream:true}),signal:this._abortCtrl.signal});
     if(!r.ok){const t=await r.text().catch(()=>'');if(r.status===401)throw new Error('API Key 无效（401）');if(r.status===429)throw new Error('请求太频繁（429）');throw new Error('HTTP '+r.status+': '+t.substring(0,150));}
     const reader=r.body.getReader(),dec=new TextDecoder();let buf='',full='',charQ=[],apiDone=false;
     (async()=>{try{while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const ls=buf.split('\n');buf=ls.pop()||'';for(const l of ls){const t=l.trim();if(!t||!t.startsWith('data:')||t==='data:[DONE]')continue;try{const c=JSON.parse(t.slice(5)).choices?.[0]?.delta?.content;if(c){full+=c;for(const ch of c)charQ.push(ch);}}catch(e){}}}}finally{apiDone=true;}})();
@@ -213,7 +220,9 @@ const App = {
   console.log('🎭 掌中光 · 第一幕开场白测试');
   try{ await ModuleLoader.init(); console.log('   模块加载 ✅'); }catch(e){ console.error(e); document.getElementById('statusText').textContent='⚠️ '+e.message; document.getElementById('output').innerHTML='<span style="color:var(--red)">❌ '+e.message+'</span>'; return; }
   App.init();
-  console.log('   应用就绪 ✅ | 灯油='+App._oil+'%');
+  const mode = (typeof API_CONFIG!=='undefined' && API_CONFIG.BASE_API) ? '代理('+API_CONFIG.BASE_API+')' : '直连DashScope';
+  console.log('   应用就绪 ✅ | 灯油='+App._oil+'% | ' + mode);
+  document.getElementById('statusText').textContent += ' | ' + mode;
 })();
 </script>
 </body>
