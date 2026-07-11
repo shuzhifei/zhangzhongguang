@@ -1564,6 +1564,9 @@ class GameState {
         this.triggeredClues = [];
         this.unlockedCiphers = [];
         this.endingStats = { faithfulness: 0, faithfulnessPossible: 0, creativity: 0, oilConservation: 0, questionsAsked: 0 };
+        // 每幕百分制占比：按幕分别累计"已得/满分"，终局再按幕权重合成（未玩幕自动排除）
+        this.actEarned = {};   // { 幕索引: 该幕已得还原分 }
+        this.actPossible = {}; // { 幕索引: 该幕满分可能 }
         this.aiQuality = "high";
     }
     updateAIQuality() {
@@ -1587,15 +1590,35 @@ class GameState {
 const gameState = new GameState();
 window.gameState = gameState;
 
+// 按"每一幕百分制占比"计算还原度：每幕先算自身 0~100（本幕已得/本幕满分），
+// 再按各幕权重（默认等权；可在 ACTS_DATA.acts[i].weight 设定）合成；
+// 只统计实际玩过的幕，未玩幕自动排除 —— 因此"只交第一幕"时还原度=第一幕自身百分制。
+function computeFaithfulness(state) {
+    try {
+        var acts = (typeof ACTS_DATA!=='undefined' && ACTS_DATA.acts) ? ACTS_DATA.acts : [];
+        var earned = state.actEarned||{};
+        var possible = state.actPossible||{};
+        var totalW = 0, weighted = 0;
+        for (var i=0;i<acts.length;i++) {
+            var poss = possible[i];
+            if (!poss || poss<=0) continue;                       // 该幕未玩
+            var e = (earned[i]!=null) ? earned[i] : 0;
+            var w = (acts[i] && acts[i].weight!=null) ? acts[i].weight : 1;
+            totalW += w;
+            weighted += w * (e/poss);
+        }
+        return totalW>0 ? Math.round(weighted/totalW*100) : 0;
+    } catch(e) { return 0; }
+}
+
 function determineEnding(state) {
     var lampOil = state.lampOil||0;
     // 灯油耗尽 → 强制灯灭
     if (lampOil <= 0) return { name: "灯灭", desc: "全黑。师傅最后一句：「没事。灯灭过很多次。每次都会有人再点起来。」" };
     var endingStats = state.endingStats||{};
-    // 还原度归一：实际得分 / 满分可能（0–100）
-    var fp = endingStats.faithfulnessPossible||0;
-    var faithfulness = fp>0 ? Math.round((endingStats.faithfulness||0)/fp*100) : 0;
-    var creativity = endingStats.creativity||0;
+    // 还原度：每一幕百分制占比（见 computeFaithfulness）
+    var faithfulness = computeFaithfulness(state);
+    var creativity = Math.max(0, Math.min(100, endingStats.creativity||0));
     if (creativity >= 80) return { name: "影子师傅", desc: "你走了自己的路——成为了非传统的传承人。" };
     var ciphers = state.unlockedCiphers || [];
     var truthFound = ciphers.indexOf('金蟾碎了')>=0 && ciphers.indexOf('三根线')>=0;
@@ -3120,13 +3143,13 @@ const ShadowJudge = {
             var exact = !!data.correct;
             if (exact) {
                 scenePassed=true; advancing=true;
-                accumulateEndingStats(data);   // 加回本场满分（错试扣分已即时扣减）
+                accumulateEndingStats(data);   // 按"本场满分 − 本场错试扣分"累计该幕还原度
                 setTimeout(function(){advanceScene();}, 3500);
             } else {
                 // 错了：每次扣5还原度，最多扣两次(共10分)后不再扣，只让玩家继续操作
+                // （实际扣分在"通过时"按本场 sceneDeducted 一次性结算，见 accumulateEndingStats）
                 if (sceneDeducted < 10) {
                     var d = Math.min(5, 10 - sceneDeducted);
-                    gameState.endingStats.faithfulness -= d;
                     sceneDeducted += d;
                     showDialogue('路师傅','（摇了摇头）不对。这出戏——不是这么摆的。\n\n还原度 −'+d+'。再想想。');
                 } else {
@@ -3135,6 +3158,14 @@ const ShadowJudge = {
             }
         } catch(e) { scenePassed=false; advancing=false; }
     });
+
+    // ====== 可提交范围配置（防 deadline 风险）======
+    // maxPlayableAct = 本构建实际可玩的幕数。
+    //   - 完整三幕：默认 = ACTS_DATA.acts.length
+    //   - 截止前若只做完第一幕，把这里改成 1：游戏通关第一幕即结算，
+    //     且"每一幕百分制占比"会把还原度自动归一为仅第一幕的成绩（可单独提交第一幕）。
+    var GAME_CONFIG = { maxPlayableAct: (ACTS_DATA && ACTS_DATA.acts) ? ACTS_DATA.acts.length : 3 };
+    window.GAME_CONFIG = GAME_CONFIG;
 
     function advanceScene() {
         try {
@@ -3145,10 +3176,13 @@ const ShadowJudge = {
                 EventBus.emit('narration_chunk',{speaker:'',text:'——',speed:300});
                 setTimeout(function(){startCurrentScene();},1200);
             } else {
-                if (gameState.currentAct<3) {
+                // 可提交范围：到达本构建最后可玩幕 → 直接结算（支持"只交第一幕"）
+                if (gameState.currentAct >= GAME_CONFIG.maxPlayableAct) {
+                    endGame();
+                } else {
                     if (gameState.currentAct===1) showAct1Intermission();
                     else advanceToNextAct();
-                } else endGame();
+                }
             }
         } catch(e) { resetSceneState(); }
     }
@@ -3216,19 +3250,21 @@ const ShadowJudge = {
 
     function accumulateEndingStats(data) {
         try {
-            var act=ACTS_DATA.acts[gameState.currentAct-1];
-            var scene=act&&act.scenes?act.scenes[gameState.currentScene]:null;
-            if(!scene) return;
-            var perfect = scene.perfect_score||30;
-            // 还原度：加回本场满分（错试的扣分已即时从 faithfulness 扣减）
-            gameState.endingStats.faithfulness += perfect;
-            gameState.endingStats.faithfulnessPossible += perfect;
-            // 创意度：仅摆了"可接受额外"皮影才计
-            var extras=scene.acceptable_extras||[];
-            var placedIds=(data.puppets||[]).map(function(p){return p&&(p.puppetId||p.id||p);});
-            var extraCount=placedIds.filter(function(id){return extras.indexOf(id)!==-1;}).length;
-            var creativity=extraCount>0?Math.min(30,extraCount*10+5):0;
-            gameState.endingStats.creativity+=creativity;
+            var actIdx = gameState.currentAct - 1;
+            var act = ACTS_DATA.acts[actIdx];
+            var scene = act && act.scenes ? act.scenes[gameState.currentScene] : null;
+            if (!scene) return;
+            var perfect = scene.perfect_score || 30;
+            // 本场实得 = 满分 − 本场错试扣分（sceneDeducted 在 resetSceneState 时已归零，只记本场）
+            var earned = Math.max(0, perfect - (sceneDeducted || 0));
+            gameState.actEarned[actIdx] = (gameState.actEarned[actIdx] || 0) + earned;
+            gameState.actPossible[actIdx] = (gameState.actPossible[actIdx] || 0) + perfect;
+            // 创意度：仅摆了"可接受额外"皮影才计（封顶 100）
+            var extras = scene.acceptable_extras || [];
+            var placedIds = (data.puppets || []).map(function(p){ return p && (p.puppetId || p.id || p); });
+            var extraCount = placedIds.filter(function(id){ return extras.indexOf(id) !== -1; }).length;
+            var creativity = extraCount > 0 ? Math.min(30, extraCount*10+5) : 0;
+            gameState.endingStats.creativity = Math.min(100, (gameState.endingStats.creativity || 0) + creativity);
         } catch(e) {}
     }
 
