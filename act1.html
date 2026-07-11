@@ -153,6 +153,7 @@ body {
     justify-content: center;
     padding: 24px 20px;
     position: relative;
+    perspective: 1200px;
 }
 
 .stage-wrapper::before {
@@ -161,6 +162,41 @@ body {
     inset: 0;
     background: radial-gradient(ellipse at center, rgba(200,150,80,0.06) 0%, transparent 70%);
     pointer-events: none;
+}
+
+/* 开场幕布 —— 从中间向两边拉开（模拟真实拉帘子）
+   左帘向左滑出并收窄，右帘向右滑出并收窄，布料的褶皱压缩感 */
+.curtain-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 50;
+    background: url('assets/images/curtain.jpg') no-repeat;
+    background-size: 200% 100%;
+    pointer-events: none;
+}
+
+.curtain-left  { left: 0;    width: 50%; background-position: left center;  transform-origin: center left;  }
+.curtain-right { right: 0;   width: 50%; background-position: right center; transform-origin: center right; }
+
+/* 左帘：向外（左）滑出 + 斜拉褶皱 + 收窄 */
+.curtain-l1 { z-index: 55; animation: curtainLeftOut 2.2s ease-in-out 0.5s forwards; }
+.curtain-l2 { z-index: 54; animation: curtainLeftOut 2.2s ease-in-out 0.68s forwards; }
+.curtain-l3 { z-index: 53; animation: curtainLeftOut 2.2s ease-in-out 0.86s forwards; }
+
+/* 右帘：向外（右）滑出 + 斜拉褶皱 + 收窄 */
+.curtain-r1 { z-index: 55; animation: curtainRightOut 2.2s ease-in-out 0.5s forwards; }
+.curtain-r2 { z-index: 54; animation: curtainRightOut 2.2s ease-in-out 0.68s forwards; }
+.curtain-r3 { z-index: 53; animation: curtainRightOut 2.2s ease-in-out 0.86s forwards; }
+
+@keyframes curtainLeftOut {
+    0%   { transform: translateX(0) skewY(0deg) scaleX(1); opacity: 1; }
+    100% { transform: translateX(-110%) skewY(-8deg) scaleX(0.25); opacity: 0; }
+}
+
+@keyframes curtainRightOut {
+    0%   { transform: translateX(0) skewY(0deg) scaleX(1); opacity: 1; }
+    100% { transform: translateX(110%) skewY(8deg) scaleX(0.25); opacity: 0; }
 }
 
 .stage {
@@ -172,6 +208,7 @@ body {
         url('assets/images/stage-bg.jpg');
     background-size: cover;
     background-position: center;
+    transition: background 1.2s ease, box-shadow 1.2s ease;
     border-radius: 3px;
     box-shadow:
         inset 0 0 80px rgba(180,120,50,0.2),
@@ -180,6 +217,21 @@ body {
         0 0 0 15px #1a0802,
         0 4px 30px rgba(0,0,0,0.7);
     overflow: hidden;
+}
+
+/* 月夜场景：月亮放到舞台上方时触发 */
+.stage.night {
+    background:
+        radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,240,200,0.15) 0%, rgba(240,220,150,0.08) 40%, transparent 70%),
+        url('assets/images/stage-night.jpg');
+    background-size: cover;
+    background-position: center;
+    box-shadow:
+        inset 0 0 120px rgba(20,40,80,0.4),
+        0 0 0 10px #3d1c08,
+        0 0 0 13px #2a1005,
+        0 0 0 15px #1a0802,
+        0 4px 30px rgba(0,0,0,0.7);
 }
 
 .stage::before {
@@ -573,6 +625,12 @@ body {
 
         <!-- 中间：白布舞台 -->
         <div class="stage-wrapper">
+            <div class="curtain-panel curtain-left curtain-l1"></div>
+            <div class="curtain-panel curtain-left curtain-l2"></div>
+            <div class="curtain-panel curtain-left curtain-l3"></div>
+            <div class="curtain-panel curtain-right curtain-r1"></div>
+            <div class="curtain-panel curtain-right curtain-r2"></div>
+            <div class="curtain-panel curtain-right curtain-r3"></div>
             <div class="stage" id="stage">
                 <div class="stage-hint">将皮影拖入幕布</div>
             </div>
@@ -702,7 +760,7 @@ function updateOilUI() {
 }
 
 const LampSystem = {
-    COSTS: { puppet_placed: 3, puppet_removed: 1, puppet_moved: 1, ask_master: 8, wrong_puppet: 5, time_penalty: 2 },
+    COSTS: { puppet_placed: 3, puppet_removed: 3, puppet_moved: 1, ask_master: 8, wrong_puppet: 5, time_penalty: 2 },
     REWARDS: { correct_judge: 2, creativity_bonus: 3, partial_correct: 1, perfect_scene: 10 },
     RECOVERY: { intermission: 80 },
     burn(reason) {
@@ -1060,6 +1118,7 @@ const ShadowJudge = {
 (function() {
     'use strict';
     var stage = document.getElementById('stage');
+    var puppetBox = document.getElementById('puppetBox');
     var cards = document.querySelectorAll('.puppet-card');
     var dragClone = null;
     var dragPuppetId = null;
@@ -1161,41 +1220,57 @@ const ShadowJudge = {
 
     function finishDrag(e) {
         if (dragSource === 'card') {
-            // 清除卡片的 dragging 状态
             cards.forEach(function(c) { c.classList.remove('dragging'); });
         }
 
+        // 记录 clone 实际屏幕位置和尺寸（放置的唯一依据，"放哪就是哪"）
+        var cloneRect = dragClone.getBoundingClientRect();
         dragClone.remove();
-        var clone = dragClone;
+
         var source = dragSource;
         var puppetId = dragPuppetId;
         var puppetEl = dragPuppetEl;
-        var offX = offsetX, offY = offsetY;
 
         // 先清空状态，避免 placeOnStage 里 emit 事件触发其他逻辑时脏读
         dragClone = null; dragPuppetId = null;
         dragSource = null; dragPuppetEl = null;
 
         var stageRect = stage.getBoundingClientRect();
-        var onStage = e.clientX >= stageRect.left && e.clientX <= stageRect.right
-                   && e.clientY >= stageRect.top  && e.clientY <= stageRect.bottom;
+
+        // 用 clone 中心点判断是否落在舞台上
+        var cloneCX = cloneRect.left + cloneRect.width  / 2;
+        var cloneCY = cloneRect.top  + cloneRect.height / 2;
+        var onStage = cloneCX >= stageRect.left && cloneCX <= stageRect.right
+                   && cloneCY >= stageRect.top  && cloneCY <= stageRect.bottom;
 
         if (source === 'card' && onStage) {
-            placeOnStage(e.clientX, e.clientY, puppetId);
+            placeOnStage(cloneRect, puppetId);
         } else if (source === 'stage') {
             if (onStage) {
-                // 拖动到舞台内 → 更新位置
-                var newLeft = e.clientX - stageRect.left - offX;
-                var newTop  = e.clientY - stageRect.top  - offY;
-                puppetEl.style.left = newLeft + 'px';
-                puppetEl.style.top  = newTop  + 'px';
+                // clone 左上角相对于舞台 = 放置位置
+                puppetEl.style.left = (cloneRect.left - stageRect.left) + 'px';
+                puppetEl.style.top  = (cloneRect.top  - stageRect.top)  + 'px';
                 puppetEl.style.opacity = '1';
                 puppetEl.style.pointerEvents = '';
-                EventBus.emit('puppet_moved', { id: puppetId, x: Math.round(newLeft), y: Math.round(newTop) });
+                EventBus.emit('puppet_moved', {
+                    id: puppetId,
+                    x: Math.round(cloneRect.left - stageRect.left),
+                    y: Math.round(cloneRect.top  - stageRect.top)
+                });
+                updateMoonNight();
             } else {
-                // 拖到舞台外 → 恢复原位置
-                puppetEl.style.opacity = '1';
-                puppetEl.style.pointerEvents = '';
+                // 检测是否拖到了皮影箱区域 → 移除
+                var boxRect = puppetBox.getBoundingClientRect();
+                var overBox = cloneCX >= boxRect.left && cloneCX <= boxRect.right
+                           && cloneCY >= boxRect.top  && cloneCY <= boxRect.bottom;
+                if (overBox) {
+                    puppetEl.remove();
+                    EventBus.emit('puppet_removed', { id: puppetId });
+                    updateMoonNight();
+                } else {
+                    puppetEl.style.opacity = '1';
+                    puppetEl.style.pointerEvents = '';
+                }
             }
         }
     }
@@ -1211,8 +1286,28 @@ const ShadowJudge = {
         dragPuppetId = null; dragSource = null; dragPuppetEl = null;
     }
 
-    function placeOnStage(x, y, puppetId) {
+    // ---- 月夜触发：月亮在舞台上方 → 切换夜景 ----
+    function updateMoonNight() {
+        var moons = stage.querySelectorAll('.stage-puppet[data-puppet="moon"]');
+        var stageH = stage.getBoundingClientRect().height;
+        var isNight = false;
+        for (var i = 0; i < moons.length; i++) {
+            var top = parseInt(moons[i].style.top) || 0;
+            if (top < stageH * 0.2) { isNight = true; break; }
+        }
+        if (isNight) {
+            stage.classList.add('night');
+        } else {
+            stage.classList.remove('night');
+        }
+    }
+
+    function placeOnStage(cloneRect, puppetId) {
         var stageRect = stage.getBoundingClientRect();
+
+        // 同一种皮影只能有一个在幕上，先移除旧的
+        var existing = stage.querySelector('.stage-puppet[data-puppet="' + puppetId + '"]');
+        if (existing) existing.remove();
 
         var pup = document.createElement('div');
         pup.className = 'stage-puppet';
@@ -1223,13 +1318,10 @@ const ShadowJudge = {
             ? PuppetImageRenderer.render(puppetId, { width: STAGE_W })
             : '';
 
-        // 鼠标位置就是皮影中心
-        pup.style.left = (x - stageRect.left - STAGE_W / 2) + 'px';
-        // 用 clone 的实际高度算 top 偏移（approximate: 1.4x 宽度的长宽比）
-        var approxH = STAGE_W * 1.4;
-        pup.style.top  = (y - stageRect.top  - approxH / 2) + 'px';
+        // clone 的左上角相对于舞台 = 放置位置，零偏差
+        pup.style.left = (cloneRect.left - stageRect.left) + 'px';
+        pup.style.top  = (cloneRect.top  - stageRect.top)  + 'px';
 
-        // 绑定后续拖动事件
         pup.addEventListener('mousedown', onStagePuppetDown);
 
         stage.appendChild(pup);
@@ -1242,6 +1334,8 @@ const ShadowJudge = {
             x: Math.round(parseInt(pup.style.left)),
             y: Math.round(parseInt(pup.style.top))
         });
+
+        updateMoonNight();
     }
 
     // ---- 初始化：给所有卡片绑定事件 ----
@@ -1250,6 +1344,20 @@ const ShadowJudge = {
     });
 
     console.log('[puppets] 拖拽系统就绪（优化版），共', cards.length, '张皮影');
+})();
+
+// 幕布动画结束后彻底移除，避免遮挡交互
+(function() {
+    var count = 0;
+    var panels = document.querySelectorAll('.curtain-panel');
+    panels.forEach(function(p) {
+        p.addEventListener('animationend', function() {
+            count++;
+            if (count >= panels.length) {
+                panels.forEach(function(pp) { pp.style.display = 'none'; });
+            }
+        });
+    });
 })();
 </script>
 
