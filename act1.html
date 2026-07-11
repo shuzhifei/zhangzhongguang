@@ -3102,27 +3102,42 @@ const ShadowJudge = {
             if (window.TheaterSystem&&TheaterSystem.clearStage) TheaterSystem.clearStage();
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
-            EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:35 });
+            EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:48 });
 
-            // —— 第一幕剧本对齐：认识皮影（3-7 分钟）——
+            // —— 第一幕第一场：开场提示（等上一条旁白打完再出，不中断）——
             if (gameState.currentAct===1 && gameState.currentScene===0) {
                 setTimeout(function(){
-                    EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
-                        '（从皮影箱里，选一枚皮影，放在白布上——接住这出戏。）', speed:42 });
-                }, 5200);
+                    // 若上一条还在打字，等它结束；否则立即发出
+                    var waitAndEmit = function() {
+                        if (typewriterTimer || speakingFlag) {
+                            setTimeout(waitAndEmit, 200);
+                        } else {
+                            EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
+                                '（从皮影箱里，选一枚皮影，放在白布上——接住这出戏。）', speed:68 });
+                        }
+                    };
+                    waitAndEmit();
+                }, 4500);
             }
 
-            // —— 第一幕剧本对齐：戏中戏《刘海戏金蟾》（8-15 分钟）——
+            // —— 第一幕第三场：戏中戏提示（等上一条打完再出）——
             if (gameState.currentAct===1 && gameState.currentScene===2) {
                 setTimeout(function(){
-                    EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
-                        '（戏词里夹着不属于这个故事的东西……你听出来了吗？）\n'+
-                        '摆出你理解的那一幕——老者、三根线、金蟾——让我看看你听懂了没有。', speed:46 });
-                }, 6000);
+                    var waitAndEmit = function() {
+                        if (typewriterTimer || speakingFlag) {
+                            setTimeout(waitAndEmit, 200);
+                        } else {
+                            EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
+                                '（戏词里夹着不属于这个故事的东西……你听出来了吗？）\n'+
+                                '摆出你理解的那一幕——老者、三根线、金蟾——让我看看你听懂了没有。', speed:56 });
+                        }
+                    };
+                    waitAndEmit();
+                }, 5500);
             }
 
             if (scene.time_limit&&window.LampSystem) { setTimeout(function(){LampSystem.startCountdown();},5000); }
-            if (scene.is_improvisation&&scene.keywords) { setTimeout(function(){EventBus.emit('narration_chunk',{speaker:'路师傅',text:'三个词——'+scene.keywords.join('、')+'。\n\n剩下的——该你了。',speed:40});},6000); }
+            if (scene.is_improvisation&&scene.keywords) { setTimeout(function(){ var w=function(){ if(typewriterTimer||speakingFlag){setTimeout(w,200);}else{EventBus.emit('narration_chunk',{speaker:'路师傅',text:'三个词——'+scene.keywords.join('、')+'。\n\n剩下的——该你了。',speed:52});} }; w(); },6000); }
         } catch(e) { showDialogue('路师傅','（……灯晃了一下。刚才说到哪了？——请刷新页面。）'); }
     }
 
