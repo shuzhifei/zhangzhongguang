@@ -605,6 +605,31 @@ body {
     50%      { opacity: 0.85; }
 }
 
+/* 快速进入按钮：跳过开场，直接进入第一幕场景 */
+.intro-quick-enter {
+    position: absolute;
+    bottom: 8%;
+    right: 6%;
+    padding: 9px 22px;
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.15em;
+    color: #c9b074;
+    background: rgba(18,10,3,0.72);
+    border: 1px solid rgba(160,130,70,0.5);
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 202;
+    opacity: 0.9;
+    transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease, opacity 0.3s ease;
+}
+.intro-quick-enter:hover {
+    color: #f0d488;
+    border-color: rgba(220,180,80,0.7);
+    background: rgba(28,16,5,0.85);
+    opacity: 1;
+}
+
 /* ====== 黑屏字幕滚动 ====== */
 .story-intro-overlay {
     position: fixed;
@@ -985,14 +1010,23 @@ body {
 }
 
 .dialogue-area {
-    height: 180px;
+    height: 210px;
     background: linear-gradient(0deg, #0a0401, #140904 50%, #1f0f07 100%);
     border-top: 3px solid #4a2512;
     padding: 14px 20px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: stretch;
     color: #c4a46c;
     box-shadow: 0 -2px 12px rgba(0,0,0,0.5);
+}
+
+/* 对话框左侧：说话人 + 文本区 + 点击继续 */
+.dialogue-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
 .dialogue-speaker {
@@ -1007,7 +1041,7 @@ body {
     flex: 1;
     font-size: 16px;
     line-height: 1.9;
-    padding: 12px 14px;
+    padding: 12px 14px 36px 14px;
     background: rgba(0,0,0,0.35);
     border-radius: 3px;
     border: 1px solid rgba(90,45,21,0.4);
@@ -1018,6 +1052,10 @@ body {
 .dlg-entry:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
 .dlg-entry .dlg-speaker { color: #e8c860; font-weight: 700; margin-right: 8px; letter-spacing: 1px; }
 .dlg-entry .dlg-body { color: #f1e3c6; }
+/* 正在生成（打字中）的当前句：视觉上「占主体」——更大字号、亮色、淡金背景，区别于上方历史 */
+.dlg-entry.current { background: rgba(232,200,96,0.10); border-radius: 6px; padding: 9px 11px; border-bottom: none; box-shadow: 0 0 0 1px rgba(232,200,96,0.18) inset; }
+.dlg-entry.current .dlg-speaker { color: #ffd877; font-size: 17px; }
+.dlg-entry.current .dlg-body { color: #fff8e8; font-size: 18px; line-height: 2; text-shadow: 0 0 8px rgba(232,200,96,0.25); }
 /* 字幕缓缓浮现：整条条目透明度+轻微上移渐入，配合逐字打字实现"实时跟新" */
 @keyframes dlgFadeIn {
     from { opacity: 0; transform: translateY(8px); }
@@ -1048,11 +1086,18 @@ body {
 @keyframes hintBlink { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
 .dialogue-text.scroll, #dialogueText { cursor: pointer; }
 
-.btn-row {
+.btn-col {
     display: flex;
-    gap: 12px;
-    margin-top: 10px;
+    flex-direction: column;
+    gap: 10px;
+    margin-left: 16px;
     justify-content: center;
+    align-items: stretch;
+    width: 110px;
+    flex-shrink: 0;
+}
+.btn-col .btn {
+    white-space: nowrap;
 }
 
 .btn {
@@ -1114,6 +1159,19 @@ body {
     font-size: 14px;
 }
 
+.faithfulness-box {
+    margin-top: 16px;
+    padding: 8px 10px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: #e8c97a;
+    background: rgba(74,37,18,0.35);
+    border: 1px solid #5a2d15;
+    border-radius: 2px;
+    text-align: center;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
+}
+
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: #0a0502; }
 ::-webkit-scrollbar-thumb { background: #4a2512; border-radius: 3px; }
@@ -1142,6 +1200,7 @@ body {
     <div class="intro-opening-line" id="introOpeningLine">你来了？灯快没油了，坐近点</div>
     <div class="intro-subtitle" id="introSubtitle">点燃油灯吧</div>
     <div class="intro-start-hint" id="introStartHint">▷ 点击屏幕任意处开始</div>
+    <button class="intro-quick-enter" id="introQuickEnter" type="button">快 速 进 入 ▸</button>
 </div>
 
 <!-- ====== 油灯点亮后扩散的光圈 ====== -->
@@ -1317,18 +1376,21 @@ body {
                 <div class="oil-text" id="oilText">100 / 100</div>
             </div>
             <div class="ending-preview">当前倾向结局：<br><span id="endingHint">——</span></div>
+            <div class="faithfulness-box" id="faithfulnessDisplay">还 原 度：0</div>
         </div>
     </div>
 
 <!-- 底部：对话框 -->
 <div class="dialogue-area">
-    <div class="dialogue-speaker" id="speaker">路师傅</div>
-    <div class="dialogue-text scroll" id="dialogueText">
-        很多年前，琉璃厂旧书街。<br><br>
-        一个书生在等人——但他等的不是人，是一封永远不会寄到的信。
+    <div class="dialogue-main">
+        <div class="dialogue-speaker" id="speaker">路师傅</div>
+        <div class="dialogue-text scroll" id="dialogueText">
+            很多年前，琉璃厂旧书街。<br><br>
+            一个书生在等人——但他等的不是人，是一封永远不会寄到的信。
+        </div>
+        <div class="narration-hint" id="narrationHint">▸ 点击继续</div>
     </div>
-    <div class="narration-hint" id="narrationHint">▸ 点击继续</div>
-    <div class="btn-row">
+    <div class="btn-col">
         <button class="btn" id="btnConfirm">确认摆影</button>
         <button class="btn" id="btnAsk">追问师父</button>
         <button class="btn" id="btnNext" style="display:none;">下一场</button>
@@ -2294,11 +2356,10 @@ const ShadowJudge = {
                         puppetEl.classList.remove('lamp-lit');
                         puppetEl.classList.add('lamp-out');   // 标记已熄灭
                         LampSystem.burn('lamp_extinguished');  // 扣 5 滴油
-                        // 底部对话框提示
+                        // 通过 EventBus 通知 game 模块显示台词（走标准打字机系统）
                         var se = document.getElementById('speaker');
-                        var de = document.getElementById('dialogueText');
                         if (se) se.textContent = '路师傅';
-                        if (de) de.textContent = '你怎么把油灯给弄灭了（扣5滴油）';
+                        EventBus.emit('lamp_extinguished_dialogue');
                         AudioManager.playSFX('sfx_lamp_out'); // 若有灭灯音效则播放
                         EventBus.emit('lamp_extinguished', { id: puppetId });
 
@@ -2420,6 +2481,7 @@ const ShadowJudge = {
             } else {
                 pup.classList.add('lamp-lit');
             }
+            EventBus.emit('lamp_placed_on_stage');  // 路师傅提示：灯不宜放幕中，点一下让它消失
         }
 
         // clone 的左上角相对于舞台 = 放置位置，零偏差
@@ -2503,6 +2565,7 @@ const ShadowJudge = {
     // 关键：页面加载后只显示「点击屏幕任意处开始」提示，用户点击后才进入开场白；
     //       视觉（开场白 + 流程推进）不依赖音频，音频仅在首次手势后播放（浏览器自动播放策略要求）。
     var openingStarted = false;
+    var quickEntered = false; // 已点「快速进入」：锁定开场流程，防止与正常点击/手势冲突
     var audioPlayed = false;
     var startHint = document.getElementById('introStartHint');
 
@@ -2559,7 +2622,7 @@ const ShadowJudge = {
 
     // 点击屏幕后：先停留 CLICK_PAUSE 秒（黑屏），再浮现开场白字幕 + 同步旁白，随后兜底推进
     function startStory() {
-        if (openingStarted) return;
+        if (openingStarted || quickEntered) return;
         openingStarted = true;
         setTimeout(function() {
             openingLine.classList.add('revealed'); // 3 秒后字幕出现
@@ -2764,6 +2827,50 @@ const ShadowJudge = {
         });
     });
 
+    // ---- 快速进入：跳过开场全流程，直接进第一幕场景（月夜等人）----
+    function quickEnter() {
+        if (quickEntered) return;
+        quickEntered = true;
+        // 锁定开场流程状态，避免后续正常流程时序干扰
+        openingStarted = true;
+        advanced = true;
+        isLit = true;
+        lampReady = true;
+        bgSkipped = true;
+        bgAfterRan = true;
+        // 移除「点击屏幕任意处开始」手势监听，防止再触发正常开场
+        ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev) {
+            document.removeEventListener(ev, onFirstGesture);
+        });
+        // 隐藏所有开场层
+        if (startHint) startHint.style.display = 'none';
+        if (overlay) overlay.classList.add('hidden');
+        if (storyOverlay) { storyOverlay.classList.remove('visible'); storyOverlay.style.display = 'none'; }
+        if (actTitleOverlay) { actTitleOverlay.classList.remove('visible'); actTitleOverlay.style.display = 'none'; }
+        var bloom = document.getElementById('lampBloom');
+        if (bloom) bloom.style.display = 'none';
+        // 音频：停开场 BGM，拉幕并播舞台 BGM
+        try { AudioManager.stopBGM(0); } catch (e) {}
+        panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+        AudioManager.playSFX('sfx_curtain');
+        setTimeout(function() { AudioManager.playBGM('bgm_stage'); }, 1800);
+        // 直接进入第一幕：派发 opening_complete，由游戏模块的监听器触发 startGameFlow
+        // （startGameFlow 在另一作用域，不能直接调用，故沿用正常流程的事件解耦方式）
+        document.dispatchEvent(new Event('opening_complete'));
+    }
+    var quickEnterBtn = document.getElementById('introQuickEnter');
+    if (quickEnterBtn) {
+        function onQuickDown(e) {
+            e.stopPropagation(); // 捕获阶段拦截，先于 document 的 onFirstGesture（冒泡）
+            e.preventDefault();
+            quickEnter();
+        }
+        // 用捕获阶段监听，确保抢在 document 的 onFirstGesture 之前拦截
+        quickEnterBtn.addEventListener('pointerdown', onQuickDown, true);
+        quickEnterBtn.addEventListener('touchstart', onQuickDown, true);
+        quickEnterBtn.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+
     // 幕布动画结束后彻底移除，避免遮挡交互
     var count = 0;
     panels.forEach(function(p) {
@@ -2806,6 +2913,16 @@ const ShadowJudge = {
         var infoPanel = document.querySelector('.info-panel');
         if (infoPanel) { var badge = document.createElement('div'); badge.style.cssText='margin-top:16px;padding:4px 8px;font-size:11px;color:#c48a3e;border:1px solid #5a2d15;border-radius:2px;letter-spacing:1px;'; badge.textContent='离 线 模 式'; infoPanel.appendChild(badge); }
     }
+
+    // 刷新还原度显示（按各幕"已得/满分"加权，初始 0）
+    function updateFaithfulnessUI() {
+        var fa = document.getElementById('faithfulnessDisplay');
+        if (!fa) return;
+        var val = (typeof computeFaithfulness === 'function') ? computeFaithfulness(gameState) : 0;
+        fa.textContent = '还 原 度：' + val;
+    }
+    window.updateFaithfulnessUI = updateFaithfulnessUI;
+    updateFaithfulnessUI();
 
     // 注意：舞台皮影的拖拽和放置已由 puppets.js 统一接管
     // 这里不再注册 stage.addEventListener('mousedown', ...) 
@@ -2852,10 +2969,11 @@ const ShadowJudge = {
         else { typewriter(dialogueText, '（你向师傅请教——师傅沉吟片刻……）', 40); }
     });
 
-    // 点击字幕区 → 推进下一条脚本旁白（点击继续）；仅脚本序列进行中、且当前已打完时响应
+    // 点击字幕区 → 若正在生成语句则瞬间补全；否则推进下一条脚本旁白（点击继续）
     var dialogueArea = document.querySelector('.dialogue-area');
     if (dialogueArea) dialogueArea.addEventListener('click', function(e) {
         if (e.target && e.target.id === 'btnEnterAct2') return; // 不拦截幕间"前往大栅栏"按钮
+        if (fastForwardTyping()) return;                        // 生成中点击空白 → 直接生成完毕
         onDialogueAdvance();
     });
     var narrationHintEl0 = document.getElementById('narrationHint');
@@ -2969,6 +3087,8 @@ const ShadowJudge = {
     // 路师傅对"刚摆上来的那个皮影"的即时反应（每次摆放必有一次互动，且说话期间锁定操作）
     function masterReactToPlacement(pid) {
         if (!pid) return;
+        // 油灯由 lamp_placed_on_stage 专用事件接管台词，此处跳过
+        if (pid === 'lamp') return;
         var scene = ShadowJudge._getSceneData(getCurrentSceneId());
         var name = getPuppetName(pid);
         var required = (scene && scene.standard_puppets) || [];
@@ -3021,7 +3141,19 @@ const ShadowJudge = {
         if (pb) pb.classList.toggle('speaking-lock', speakingFlag);
         if (st) st.classList.toggle('speaking-lock', speakingFlag);
     }
-    function finishTyping() { twEntry=null; twFull=''; setSpeaking(false); if (typingDoneCb) { var cb = typingDoneCb; typingDoneCb = null; cb(); } }
+    function finishTyping() { if (twEntry) twEntry.classList.remove('current'); twEntry=null; twFull=''; setSpeaking(false); if (typingDoneCb) { var cb = typingDoneCb; typingDoneCb = null; cb(); } }
+
+    // 生成中点击对话框空白处 → 当前语句瞬间生成完毕（跳过打字动画）
+    function fastForwardTyping() {
+        if (!typewriterTimer) return false;          // 没在打字，无需快进
+        clearInterval(typewriterTimer); typewriterTimer = null;
+        var body = twEntry ? twEntry.querySelector('.dlg-body') : null;
+        if (body && twFull) body.innerHTML = twFull.replace(/\n/g, '<br>');
+        if (dialogueText) dialogueText.scrollTop = dialogueText.scrollHeight;
+        finishTyping();
+        return true;
+    }
+    window.fastForwardTyping = fastForwardTyping;
 
     // ===== 脚本字幕"点击推进"队列系统 =====
     // 脚本化旁白(开场白/场次描述/操作提示/幕间/结局)进入队列，玩家点击才出下一条；
@@ -3094,6 +3226,13 @@ const ShadowJudge = {
     };
     // 字幕自动滚动 + 跟新最新话语：每条新话语追加为独立条目，自动滚到底部显示最新；
     // 条目整体缓缓浮现（CSS dlgFadeIn），正文逐字浮现，实现实时跟新而非整段一次浮现
+    // 智能跟随：仅当用户已「贴底」(距底部<48px)时才自动滚到最新；用户上翻看历史时不打扰，
+    //   这样打字与自由滑动互不打架，也不会产生「滚一下被拽回」的震动
+    function autoScrollIfAtBottom(el) {
+        if (!el) return;
+        var dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+        if (dist < 48) el.scrollTop = el.scrollHeight;
+    }
     function typewriter(el, text, speed) {
         if (el==null) return;
         speed = speed||50;
@@ -3103,13 +3242,13 @@ const ShadowJudge = {
         // 新建一条字幕条目，并开始"说戏"——锁定摆放，避免说的过程中误操作
         setSpeaking(true);
         var entry = document.createElement('p');
-        entry.className = 'dlg-entry';
+        entry.className = 'dlg-entry current';   // 生成中高亮，作为对话框主体
         var sp = document.createElement('span'); sp.className='dlg-speaker';
         sp.textContent = (speaker && speaker.textContent) ? speaker.textContent : '';
         var body = document.createElement('span'); body.className='dlg-body';
         entry.appendChild(sp); entry.appendChild(body);
         el.appendChild(entry);
-        el.scrollTop = el.scrollHeight;
+        el.scrollTop = el.scrollHeight;   // 新句生成开头：无条件滚到底，确保这句话占住对话框主体、玩家必能看到（无论之前滑到哪）
         twEntry = entry; twFull = text;
         // 即时文本（speed<=0）整段显示后即刻解锁
         if (speed<=0) { body.innerHTML = text.replace(/\n/g,'<br>'); el.scrollTop = el.scrollHeight; finishTyping(); return; }
@@ -3118,7 +3257,7 @@ const ShadowJudge = {
             if (i<text.length) {
                 var ch=text[i];
                 if(ch==='\n') body.innerHTML+='<br>'; else body.innerHTML+=ch;
-                i++; el.scrollTop = el.scrollHeight;
+                i++; autoScrollIfAtBottom(el);
             } else { clearInterval(typewriterTimer); typewriterTimer=null; finishTyping(); }
         }, speed);
     }
@@ -3135,6 +3274,20 @@ const ShadowJudge = {
         if(flame)flame.classList.add('flame-gone');
         speaker.textContent='路师傅'; if(typewriterTimer)clearInterval(typewriterTimer);
         typewriter(dialogueText, '灯——灭了。', 0); btnConfirm.disabled=true; btnAsk.disabled=true;
+    });
+
+    // 把油灯拖到幕中：路师傅即时提示（与熄灭机制呼应——点一下即可让其消失）
+    EventBus.on('lamp_placed_on_stage', function() {
+        speaker.textContent = '路师傅';
+        if (typewriterTimer) clearInterval(typewriterTimer);
+        typewriter(dialogueText, '这灯······不好放在幕中，快点一下让它消失吧', 45);
+    });
+
+    // 油灯被玩家点灭时：路师傅走标准打字机系统提示
+    EventBus.on('lamp_extinguished_dialogue', function() {
+        speaker.textContent = '路师傅';
+        if (typewriterTimer) clearInterval(typewriterTimer);
+        typewriter(dialogueText, '你怎么把油灯给弄灭了（扣5滴油）', 42);
     });
 
     EventBus.on('narration_chunk', function(data) {
@@ -3218,7 +3371,7 @@ const ShadowJudge = {
     }
 
     function showActIntro(act, callback) {
-        EventBus.emit('narration_chunk', { speaker:'路师傅', text:act.intro, speed:38 });
+        EventBus.emit('narration_chunk', { speaker:'路师傅', text:act.intro, speed:62 });
         if (callback && window.NarrationCtl) window.NarrationCtl.enqueueAction(callback);
     }
 
@@ -3232,7 +3385,18 @@ const ShadowJudge = {
             if (window.TheaterSystem&&TheaterSystem.clearStage) TheaterSystem.clearStage();
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
-            EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:48 });
+            EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:80 });
+
+            // 第一场开场：场景描述后接游戏规则
+            if (gameState.currentAct===1 && gameState.currentScene===0) {
+                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
+                    '\n演皮影，有四条规矩——\n'+
+                    '一、从皮影箱把人拖上幕布（扣3滴油）；\n'+
+                    '二、在幕上挪动位置（扣1滴油）；\n'+
+                    '三、点一下让皮影翻个身（扣1滴油）；\n'+
+                    '四、拖回箱子收回（扣3滴油）。\n\n'+
+                    '油用完了，戏也就停了。', speed:38 });
+            }
 
             // —— 脚本提示：直接入队，玩家点字幕才出下一条（不再自动跳）——
             if (gameState.currentAct===1 && gameState.currentScene===0) {
@@ -3412,6 +3576,7 @@ const ShadowJudge = {
             var extraCount = placedIds.filter(function(id){ return extras.indexOf(id) !== -1; }).length;
             var creativity = extraCount > 0 ? Math.min(30, extraCount*10+5) : 0;
             gameState.endingStats.creativity = Math.min(100, (gameState.endingStats.creativity || 0) + creativity);
+            if (typeof updateFaithfulnessUI === 'function') updateFaithfulnessUI();
         } catch(e) {}
     }
 
