@@ -823,6 +823,10 @@ body {
     -webkit-user-drag: none;
     z-index: 3;
     filter: drop-shadow(3px 4px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 2px rgba(180,120,50,0.3));
+    transform: scaleX(1);
+}
+.stage-puppet.flipped {
+    transform: scaleX(-1);
 }
 .stage-puppet:focus { outline: none !important; }
 
@@ -843,6 +847,9 @@ body {
     z-index: 9999;
     opacity: 0.85;
     filter: drop-shadow(4px 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 0 8px rgba(220,160,60,0.3));
+}
+.puppet-drag-clone.flipped {
+    transform: scaleX(-1);
 }
 
 .puppet-drag-clone svg {
@@ -1477,6 +1484,7 @@ AudioManager.init();
 EventBus.on('puppet_placed',  function() { AudioManager.playSFX('sfx_puppet_place'); });
 EventBus.on('puppet_removed', function() { AudioManager.playSFX('sfx_puppet_remove'); });
 EventBus.on('puppet_flipped', function() { AudioManager.playSFX('sfx_puppet_flip'); });
+EventBus.on('puppet_flipped', function() { LampSystem.burn('puppet_flipped'); });
 EventBus.on('puppet_moved',   function() { AudioManager.playSFX('sfx_puppet_drag'); });
 
 // 油尽音效
@@ -1561,7 +1569,7 @@ function updateOilUI() {
 }
 
 const LampSystem = {
-    COSTS: { puppet_placed: 3, puppet_removed: 3, puppet_moved: 1, ask_master: 8, wrong_puppet: 5, time_penalty: 2 },
+    COSTS: { puppet_placed: 3, puppet_removed: 3, puppet_moved: 1, puppet_flipped: 1, ask_master: 8, wrong_puppet: 5, time_penalty: 2 },
     REWARDS: { correct_judge: 2, creativity_bonus: 3, partial_correct: 1, perfect_scene: 10 },
     RECOVERY: { intermission: 80 },
     burn(reason) {
@@ -1971,6 +1979,8 @@ const ShadowJudge = {
         dragSource = 'stage';
         dragPuppetEl = e.currentTarget;
         dragPuppetId = dragPuppetEl.dataset.puppet;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
         var rect = dragPuppetEl.getBoundingClientRect();
         offsetX = e.clientX - rect.left;
         offsetY = e.clientY - rect.top;
@@ -1984,6 +1994,10 @@ const ShadowJudge = {
             : dragPuppetEl.innerHTML;
         dragClone.style.left = (e.clientX - offsetX) + 'px';
         dragClone.style.top  = (e.clientY - offsetY) + 'px';
+        // 若本体是翻转态，拖动 clone 也跟着翻面，保证「本体与旋转方向一致」
+        if (dragPuppetEl.classList.contains('flipped')) {
+            dragClone.classList.add('flipped');
+        }
         document.body.appendChild(dragClone);
 
         // 原皮影淡化，不删除
@@ -2051,7 +2065,24 @@ const ShadowJudge = {
         if (source === 'card' && onStage) {
             placeOnStage(cloneRect, puppetId);
         } else if (source === 'stage') {
-            if (onStage) {
+            // 判断是点击（翻转）还是拖动（移动）：移动距离 > 5px 视为拖动
+            var moved = Math.abs(e.clientX - dragStartX) > 5 || Math.abs(e.clientY - dragStartY) > 5;
+
+            if (!moved) {
+                // 单击 → 左右翻转（Web Animations API 控制动画，两个方向一致）
+                var wasFlipped = puppetEl.classList.contains('flipped');
+                puppetEl.classList.toggle('flipped');
+                var fromScale = wasFlipped ? -1 : 1;
+                var toScale   = wasFlipped ?  1 : -1;
+                puppetEl.animate([
+                    { transform: 'scaleX(' + fromScale + ')', opacity: 1 },
+                    { transform: 'scaleX(0)',                 opacity: 0.5, offset: 0.5 },
+                    { transform: 'scaleX(' + toScale   + ')', opacity: 1 }
+                ], { duration: 380, easing: 'ease-in-out' });
+                puppetEl.style.opacity = '1';
+                puppetEl.style.pointerEvents = '';
+                EventBus.emit('puppet_flipped', { id: puppetId });
+            } else if (onStage) {
                 // clone 左上角相对于舞台 = 放置位置
                 puppetEl.style.left = (cloneRect.left - stageRect.left) + 'px';
                 puppetEl.style.top  = (cloneRect.top  - stageRect.top)  + 'px';
