@@ -1014,10 +1014,28 @@ body {
     overflow-y: auto;
     letter-spacing: 0.5px;
 }
-.dlg-entry { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px dashed rgba(120,70,35,0.22); }
+.dlg-entry { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px dashed rgba(120,70,35,0.22); animation: dlgFadeIn .55s ease both; }
 .dlg-entry:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
 .dlg-entry .dlg-speaker { color: #e8c860; font-weight: 700; margin-right: 8px; letter-spacing: 1px; }
 .dlg-entry .dlg-body { color: #f1e3c6; }
+/* 字幕缓缓浮现：整条条目透明度+轻微上移渐入，配合逐字打字实现"实时跟新" */
+@keyframes dlgFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+/* 说戏中锁定：禁止摆放皮影，并给出视觉反馈 */
+#puppetBox.speaking-lock, #stage.speaking-lock { pointer-events: none !important; }
+#puppetBox.speaking-lock { opacity: .4; filter: grayscale(.35); transition: opacity .25s, filter .25s; }
+#puppetBox.speaking-lock::after {
+    content: "路师傅正在说戏…";
+    position: absolute; left: 50%; top: 38%;
+    transform: translate(-50%,-50%);
+    color: #f0d49a; font-size: 16px; font-weight: 700; letter-spacing: 2px;
+    text-shadow: 0 0 12px rgba(0,0,0,.8); pointer-events: none;
+    background: rgba(20,10,5,.55); padding: 8px 16px; border-radius: 10px;
+    border: 1px solid rgba(180,120,50,.5);
+}
+.puppet-box { position: relative; }
 
 .btn-row {
     display: flex;
@@ -1986,6 +2004,7 @@ const ShadowJudge = {
 
     // ---- 皮影箱卡片 mousedown ----
     function onCardMouseDown(e) {
+        if (window.TheaterSystem && window.TheaterSystem.isSpeaking && window.TheaterSystem.isSpeaking()) return; // 路师傅说戏中，禁止摆放皮影
         if (dragClone || e.button !== 0) return;          // 只处理左键，防重入
         e.preventDefault();                                // 阻止浏览器默认拖拽/选中
         e.stopPropagation();
@@ -2072,6 +2091,7 @@ const ShadowJudge = {
     // 【精确命中】当多个皮影容器重叠时（如大尺寸槐树盖住小书生），
     //   用 resolvePuppetAt 按「图像实际内容区」判定，避免点到书生却触发槐树
     function onStagePuppetDown(e) {
+        if (window.TheaterSystem && window.TheaterSystem.isSpeaking && window.TheaterSystem.isSpeaking()) return; // 说戏中，已上的影也不能拖动
         if (dragClone || e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();
@@ -2682,6 +2702,7 @@ const ShadowJudge = {
 
     // 确认摆影
     btnConfirm.addEventListener('click', function() {
+        if (window.TheaterSystem && window.TheaterSystem.isSpeaking && window.TheaterSystem.isSpeaking()) return; // 说戏中，等路师傅说完
         var staged = collectStagedPuppets();
         if (staged.length===0) { speaker.textContent='路师傅'; typewriter(dialogueText,'白布上还空着呢——先摆几个影儿。'); return; }
         btnConfirm.disabled=true; btnAsk.disabled=true;
@@ -2714,6 +2735,7 @@ const ShadowJudge = {
 
     // 追问师父
     btnAsk.addEventListener('click', function() {
+        if (window.TheaterSystem && window.TheaterSystem.isSpeaking && window.TheaterSystem.isSpeaking()) return; // 说戏中，等路师傅说完
         EventBus.emit('ask_master', { puppets: collectStagedPuppets(), sceneId: getCurrentSceneId() });
         speaker.textContent='路师傅';
         if (OFFLINE_MODE) { var h = buildOfflineHint(collectStagedPuppets(), getCurrentSceneId()); typewriter(dialogueText, h, 45); }
@@ -2825,14 +2847,26 @@ const ShadowJudge = {
     var typewriterTimer = null;
     var twEntry = null;   // 当前正在打字的那条字幕条目
     var twFull = '';      // 当前条目的完整文本
-    // 字幕自动滚动 + 跟新最新话语：每条新话语追加为独立条目，自动滚到底部显示最新
+    var speakingFlag = false;  // 路师傅是否正在"说戏"（打字中）—— 为真时禁止摆放皮影
+    // 说戏中锁定皮影箱与舞台：玩家必须等路师傅把话说完才能继续摆
+    function setSpeaking(b) {
+        speakingFlag = !!b;
+        var pb = document.getElementById('puppetBox');
+        var st = document.getElementById('stage');
+        if (pb) pb.classList.toggle('speaking-lock', speakingFlag);
+        if (st) st.classList.toggle('speaking-lock', speakingFlag);
+    }
+    function finishTyping() { twEntry=null; twFull=''; setSpeaking(false); }
+    // 字幕自动滚动 + 跟新最新话语：每条新话语追加为独立条目，自动滚到底部显示最新；
+    // 条目整体缓缓浮现（CSS dlgFadeIn），正文逐字浮现，实现实时跟新而非整段一次浮现
     function typewriter(el, text, speed) {
         if (el==null) return;
         speed = speed||50;
         // 上一条若还在打字，先瞬间补全，避免半句残留
         if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; }
         if (twEntry) { var pb=twEntry.querySelector('.dlg-body'); if(pb) pb.innerHTML = twFull.replace(/\n/g,'<br>'); twEntry=null; twFull=''; }
-        // 新建一条字幕条目
+        // 新建一条字幕条目，并开始"说戏"——锁定摆放，避免说的过程中误操作
+        setSpeaking(true);
         var entry = document.createElement('p');
         entry.className = 'dlg-entry';
         var sp = document.createElement('span'); sp.className='dlg-speaker';
@@ -2842,15 +2876,15 @@ const ShadowJudge = {
         el.appendChild(entry);
         el.scrollTop = el.scrollHeight;
         twEntry = entry; twFull = text;
-        // 即时文本（speed<=0）整段显示
-        if (speed<=0) { body.innerHTML = text.replace(/\n/g,'<br>'); twEntry=null; twFull=''; el.scrollTop = el.scrollHeight; return; }
+        // 即时文本（speed<=0）整段显示后即刻解锁
+        if (speed<=0) { body.innerHTML = text.replace(/\n/g,'<br>'); el.scrollTop = el.scrollHeight; finishTyping(); return; }
         var i=0;
         typewriterTimer = setInterval(function() {
             if (i<text.length) {
                 var ch=text[i];
                 if(ch==='\n') body.innerHTML+='<br>'; else body.innerHTML+=ch;
                 i++; el.scrollTop = el.scrollHeight;
-            } else { clearInterval(typewriterTimer); typewriterTimer=null; twEntry=null; twFull=''; }
+            } else { clearInterval(typewriterTimer); typewriterTimer=null; finishTyping(); }
         }, speed);
     }
 
@@ -2899,7 +2933,7 @@ const ShadowJudge = {
         if(data&&data.state) { var ot=document.getElementById('oilText'); if(ot)ot.textContent=data.state.lampOil+' / 100'; var ob=document.getElementById('oilBar'); if(ob)ob.style.width=data.state.lampOil+'%'; }
     });
 
-    window.TheaterSystem = { clearStage:clearStage, collectStagedPuppets:collectStagedPuppets, getCurrentSceneId:getCurrentSceneId, typewriter:typewriter, isOfflineMode:function(){return OFFLINE_MODE;} };
+    window.TheaterSystem = { clearStage:clearStage, collectStagedPuppets:collectStagedPuppets, getCurrentSceneId:getCurrentSceneId, typewriter:typewriter, isOfflineMode:function(){return OFFLINE_MODE;}, isSpeaking:function(){return speakingFlag;} };
     console.log('[theater] 舞台管理系统就绪'+(OFFLINE_MODE?'（离线模式）':'（在线模式）'));
 })();
 </script>
