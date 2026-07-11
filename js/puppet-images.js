@@ -13,9 +13,9 @@ const PuppetImageMap = {
     elder:    'assets/images/elder.png',     // 老者
     tree:     'assets/images/tree.png',       // 槐树（已处理：去水印+去背景+透明PNG）
     moon:     'assets/images/moon.png',      // 月亮（已润色：去水印+去背景+透明PNG）
-    letter:   null,                           // 信
+    letter:   'assets/images/letter.png',     // 信（已处理：去背景+透明PNG）
     frog:     'assets/images/frog.png',       // 金蟾
-    lamp:     null,                           // 灯
+    lamp:     'assets/images/lamp.png',       // 灯（已处理：去背景+透明PNG）
     master:   'assets/images/master.png',       // 师傅（已处理：去背景+透明PNG）
 
     // 第二幕 —— 大栅栏·灯灭之前

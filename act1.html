@@ -2,92 +2,454 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>掌中光 · 第一幕 — 琉璃厂·书生与鹤</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>掌中光 · 皮影戏AI互动影游</title>
 <style>
-/* ========== 全局 ========== */
-* { margin:0; padding:0; box-sizing:border-box; }
+/* ========================================
+   掌中光 - 皮影戏台 · 真实皮影美学
+   ======================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+*:focus { outline: none !important; }
+*:focus-visible { outline: none !important; }
+img { -webkit-user-drag: none; pointer-events: none; }
+
 body {
-    background:#080402; font-family:'STKaiti','KaiTi','楷体','Microsoft YaHei',serif;
-    height:100vh; overflow:hidden; color:#c4a46c;
+    background: #080402;
+    font-family: 'STKaiti', 'KaiTi', '楷体', 'Microsoft YaHei', serif;
+    height: 100vh;
+    overflow: hidden;
+    color: #c4a46c;
 }
-/* ========== 顶部标题栏 ========== */
+
 .header {
-    height:54px;
-    background:linear-gradient(180deg, #4a1f0a 0%, #2d1105 50%, #1a0802 100%);
-    display:flex; align-items:center; justify-content:center;
-    color:#e8c97a; font-size:24px; font-weight:bold; letter-spacing:8px;
-    border-bottom:3px solid #6b3a1f;
-    text-shadow:0 0 18px rgba(232,180,90,0.5),0 2px 4px rgba(0,0,0,0.8);
-    box-shadow:0 2px 12px rgba(0,0,0,0.6);
+    height: 54px;
+    background: linear-gradient(180deg, #4a1f0a 0%, #2d1105 50%, #1a0802 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e8c97a;
+    font-size: 26px;
+    font-weight: bold;
+    letter-spacing: 12px;
+    border-bottom: 3px solid #6b3a1f;
+    text-shadow: 0 0 18px rgba(232, 180, 90, 0.5), 0 2px 4px rgba(0,0,0,0.8);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.6);
+    position: relative;
+    z-index: 10;
 }
-/* ========== 主区域：三栏 ========== */
+
 .main-area {
-    display:flex; height:calc(100vh - 54px - 180px);
-    background:#0a0502;
+    display: flex;
+    height: calc(100vh - 54px - 180px);
+    background: #0a0502;
+    position: relative;
 }
-/* ---- 皮影箱 ---- */
+
 .puppet-box {
-    width:230px;
-    background:linear-gradient(90deg,#140904,#1f0f07 30%,#2a140a 100%);
-    border-right:4px solid #4a2512; padding:12px 10px;
-    color:#c4a46c; overflow-y:auto;
-    box-shadow:inset -4px 0 12px rgba(0,0,0,0.5);
+    width: 230px;
+    background: linear-gradient(90deg, #140904, #1f0f07 30%, #2a140a 100%);
+    border-right: 4px solid #4a2512;
+    padding: 12px 10px;
+    color: #c4a46c;
+    overflow-y: auto;
+    box-shadow: inset -4px 0 12px rgba(0,0,0,0.5);
 }
-.puppet-box h3 { color:#e8c97a; font-size:16px; text-align:center; margin-bottom:12px; letter-spacing:5px; border-bottom:2px solid #6b3a1f; padding-bottom:8px; }
-.puppet-box .scene-info { font-size:11px; color:#8b6914; text-align:center; margin:-4px 0 10px; letter-spacing:1px; opacity:0.7; }
+
+.puppet-box h3 {
+    color: #e8c97a;
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: 6px;
+    border-bottom: 2px solid #6b3a1f;
+    padding-bottom: 10px;
+    text-shadow: 0 0 10px rgba(232, 180, 90, 0.3);
+}
+
+.puppet-box .scene-info {
+    font-size: 11px;
+    color: #8b6914;
+    text-align: center;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    opacity: 0.85;
+}
+
+.puppet-card .puppet-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+}
+
 .puppet-card {
-    background:linear-gradient(135deg,rgba(100,50,20,0.5),rgba(60,25,10,0.6));
-    border:2px solid #5a2d15; border-radius:2px;
-    padding:8px 6px 4px; margin-bottom:8px; cursor:grab;
-    text-align:center; transition:all 0.25s;
+    background: linear-gradient(135deg, rgba(100,50,20,0.5), rgba(60,25,10,0.6));
+    border: 2px solid #5a2d15;
+    border-radius: 2px;
+    padding: 8px 6px 6px;
+    margin-bottom: 10px;
+    cursor: grab;
+    text-align: center;
+    transition: all 0.25s;
+    position: relative;
 }
-.puppet-card:hover { border-color:#c48a3e; box-shadow:0 0 18px rgba(200,130,50,0.25); transform:translateY(-1px); }
-.puppet-card:active { cursor:grabbing; transform:scale(0.97); }
-.puppet-card.dragging { opacity:0.25; transform:scale(0.95); }
-.puppet-card .puppet-icon { display:block; width:100%; height:90px; margin-bottom:3px; }
-.puppet-card .puppet-icon img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
-.puppet-card .puppet-icon span { font-size:36px; user-select:none; display:flex; align-items:center; justify-content:center; height:100%; }
-.puppet-name { font-size:13px; color:#e8c97a; letter-spacing:2px; }
-/* ---- 舞台 ---- */
-.stage-wrapper { flex:1; display:flex; align-items:center; justify-content:center; padding:20px; }
+
+.puppet-card::after {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    right: -1px; bottom: -1px;
+    border: 1px solid rgba(200,150,80,0.15);
+    pointer-events: none;
+}
+
+.puppet-card:hover {
+    background: linear-gradient(135deg, rgba(140,70,25,0.6), rgba(80,35,15,0.7));
+    border-color: #c48a3e;
+    box-shadow: 0 0 18px rgba(200,130,50,0.25);
+    transform: translateY(-1px);
+}
+
+.puppet-card:active {
+    cursor: grabbing;
+    transform: scale(0.97);
+}
+
+.puppet-card.hidden {
+    display: none;
+}
+
+.puppet-card .puppet-icon {
+    display: block;
+    width: 100%;
+    height: 110px;
+    margin-bottom: 4px;
+}
+
+.puppet-card .puppet-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.puppet-card .puppet-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+}
+
+.puppet-card .puppet-name {
+    font-size: 14px;
+    color: #e8c97a;
+    letter-spacing: 3px;
+}
+
+.stage-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+    position: relative;
+}
+
+.stage-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(200,150,80,0.06) 0%, transparent 70%);
+    pointer-events: none;
+}
+
 .stage {
-    width:100%; height:100%; position:relative;
-    background:radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,220,150,0.35) 0%, rgba(240,200,130,0.15) 40%, transparent 70%),
-               linear-gradient(180deg, #f5e6c8 0%, #eedbb5 20%, #e8d0a0 50%, #f0ddb8 80%, #f5e6c8 100%);
-    border-radius:3px;
-    box-shadow:inset 0 0 80px rgba(180,120,50,0.2), 0 0 0 10px #3d1c08, 0 0 0 13px #2a1005, 0 0 0 15px #1a0802, 0 4px 30px rgba(0,0,0,0.7);
-    overflow:hidden;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background:
+        radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,220,150,0.35) 0%, rgba(240,200,130,0.15) 40%, transparent 70%),
+        url('assets/images/stage-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    border-radius: 3px;
+    box-shadow:
+        inset 0 0 80px rgba(180,120,50,0.2),
+        0 0 0 10px #3d1c08,
+        0 0 0 13px #2a1005,
+        0 0 0 15px #1a0802,
+        0 4px 30px rgba(0,0,0,0.7);
+    overflow: hidden;
 }
-.stage-hint { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#8B6914; font-size:16px; opacity:0.3; letter-spacing:6px; pointer-events:none; z-index:2; }
-.stage-puppet { position:absolute; cursor:grab; user-select:none; z-index:3; filter:drop-shadow(3px 4px 6px rgba(0,0,0,0.5)); }
-.stage-puppet:hover { filter:drop-shadow(3px 4px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 6px rgba(220,160,60,0.4)); }
-.stage-puppet:active { cursor:grabbing; }
-.stage-puppet img { width:100%; height:auto; display:block; pointer-events:none; }
-.stage-puppet svg { width:100%; height:100%; display:block; }
-.puppet-drag-clone { position:fixed; pointer-events:none; z-index:9999; opacity:0.85; filter:drop-shadow(4px 6px 12px rgba(0,0,0,0.6)); }
-/* ---- 右侧面板 ---- */
-.info-panel { width:180px; background:linear-gradient(270deg,#140904,#1f0f07 30%,#2a140a 100%); border-left:4px solid #4a2512; padding:20px 12px; color:#c4a46c; display:flex; flex-direction:column; align-items:center; box-shadow:inset 4px 0 12px rgba(0,0,0,0.5); }
-.lamp-label { color:#e8c97a; font-size:14px; letter-spacing:3px; margin-bottom:10px; }
-.flame-container { width:50px; height:60px; margin:0 auto 10px; position:relative; }
-.flame { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:24px; height:44px; background:radial-gradient(ellipse at 50% 80%, #ffe8a0 0%, #f0b830 25%, #e08820 50%, #c04010 80%, transparent 100%); border-radius:60% 60% 30% 30%; animation:flicker 0.12s infinite alternate; filter:blur(0.5px); }
-@keyframes flicker { 0%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:0.9} 33%{transform:translateX(-50%) scaleX(0.85) scaleY(1.06);opacity:1} 66%{transform:translateX(-50%) scaleX(1.08) scaleY(0.94);opacity:0.85} 100%{transform:translateX(-50%) scaleX(0.92) scaleY(1.03);opacity:0.95} }
-.oil-bar-outer { width:100px; height:10px; background:#1a0802; border:1px solid #5a2d15; border-radius:5px; overflow:hidden; margin:0 auto; }
-.oil-bar-inner { height:100%; width:100%; background:linear-gradient(90deg,#c48a3e,#e8b850,#f0c860); border-radius:5px; transition:width 0.6s; }
-.oil-text { color:#e8c97a; font-size:12px; margin-top:6px; letter-spacing:1px; }
-.ending-preview { margin-top:16px; font-size:11px; color:#8b6914; text-align:center; opacity:0.7; }
-.ending-preview span { color:#e8c97a; }
-/* ========== 底部对话框 ========== */
-.dialogue-area { height:180px; background:linear-gradient(0deg,#0a0401,#140904 50%,#1f0f07 100%); border-top:3px solid #4a2512; padding:14px 20px; display:flex; flex-direction:column; color:#c4a46c; box-shadow:0 -2px 12px rgba(0,0,0,0.5); }
-.dialogue-speaker { color:#e8c97a; font-size:14px; font-weight:bold; margin-bottom:6px; letter-spacing:2px; }
-.dialogue-text { flex:1; font-size:15px; line-height:1.9; padding:10px 14px; background:rgba(0,0,0,0.35); border-radius:3px; border:1px solid rgba(90,45,21,0.4); overflow-y:auto; letter-spacing:0.5px; }
-.btn-row { display:flex; gap:12px; margin-top:10px; justify-content:center; }
-.btn { padding:9px 24px; border:1px solid #8b6914; background:linear-gradient(180deg,rgba(200,140,60,0.15),rgba(140,80,30,0.1)); color:#e8c97a; font-size:15px; cursor:pointer; border-radius:2px; transition:all 0.2s; font-family:'STKaiti','KaiTi','楷体','Microsoft YaHei',serif; letter-spacing:3px; }
-.btn:hover { background:linear-gradient(180deg,rgba(220,160,70,0.25),rgba(180,100,40,0.15)); border-color:#c48a3e; box-shadow:0 0 14px rgba(200,130,50,0.2); }
-.btn:active { transform:scale(0.96); }
-.btn:disabled { opacity:0.25; cursor:not-allowed; }
-.scroll::-webkit-scrollbar { width:5px; }
-.scroll::-webkit-scrollbar-track { background:#0a0502; }
-.scroll::-webkit-scrollbar-thumb { background:#4a2512; border-radius:3px; }
+
+.stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(180,140,100,0.04) 2px, rgba(180,140,100,0.04) 3px),
+        repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(160,120,80,0.03) 1px, rgba(160,120,80,0.03) 2px);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.stage::after {
+    content: '';
+    position: absolute;
+    inset: 15%;
+    background: radial-gradient(ellipse at center, rgba(255,200,100,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.stage-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #8B6914;
+    font-size: 16px;
+    opacity: 0.3;
+    letter-spacing: 6px;
+    pointer-events: none;
+    z-index: 2;
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+}
+
+.stage-puppet {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-drag: none;
+    z-index: 3;
+    filter: drop-shadow(3px 4px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 2px rgba(180,120,50,0.3));
+}
+.stage-puppet:focus { outline: none !important; }
+
+.stage-puppet svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.stage-puppet img {
+    display: block;
+    pointer-events: none;
+}
+
+.puppet-drag-clone {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.85;
+    filter: drop-shadow(4px 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 0 8px rgba(220,160,60,0.3));
+}
+
+.puppet-drag-clone svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.puppet-card.dragging {
+    opacity: 0.3;
+    transform: scale(0.95);
+}
+
+.info-panel {
+    width: 180px;
+    background: linear-gradient(270deg, #140904, #1f0f07 30%, #2a140a 100%);
+    border-left: 4px solid #4a2512;
+    padding: 24px 12px;
+    color: #c4a46c;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: inset 4px 0 12px rgba(0,0,0,0.5);
+}
+
+.lamp-section {
+    text-align: center;
+}
+
+.lamp-label {
+    color: #e8c97a;
+    font-size: 15px;
+    letter-spacing: 4px;
+    margin-bottom: 12px;
+}
+
+.flame-container {
+    width: 50px;
+    height: 60px;
+    margin: 0 auto 10px;
+    position: relative;
+}
+
+.flame {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 44px;
+    background: radial-gradient(ellipse at 50% 80%, #ffe8a0 0%, #f0b830 25%, #e08820 50%, #c04010 80%, transparent 100%);
+    border-radius: 60% 60% 30% 30%;
+    animation: flicker 0.12s infinite alternate;
+    filter: blur(0.5px);
+}
+
+.flame::before {
+    content: '';
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 24px;
+    background: radial-gradient(ellipse at 50% 100%, #fffde0 0%, #ffe8a0 30%, transparent 80%);
+    border-radius: 50%;
+    animation: flickerInner 0.1s infinite alternate-reverse;
+}
+
+@keyframes flicker {
+    0%   { transform: translateX(-50%) scaleX(1)    scaleY(1);    opacity: 0.9; }
+    33%  { transform: translateX(-50%) scaleX(0.85) scaleY(1.06); opacity: 1; }
+    66%  { transform: translateX(-50%) scaleX(1.08) scaleY(0.94); opacity: 0.85; }
+    100% { transform: translateX(-50%) scaleX(0.92) scaleY(1.03); opacity: 0.95; }
+}
+
+@keyframes flickerInner {
+    0%   { transform: translateX(-50%) scale(1); }
+    100% { transform: translateX(-50%) scale(0.85, 1.1) translateY(-2px); }
+}
+
+.oil-bar-outer {
+    width: 100px;
+    height: 10px;
+    background: #1a0802;
+    border: 1px solid #5a2d15;
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.oil-bar-inner {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #c48a3e, #e8b850, #f0c860);
+    border-radius: 5px;
+    transition: width 0.6s ease, background 0.6s ease;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.oil-text {
+    color: #e8c97a;
+    font-size: 12px;
+    margin-top: 6px;
+    letter-spacing: 1px;
+}
+
+.dialogue-area {
+    height: 180px;
+    background: linear-gradient(0deg, #0a0401, #140904 50%, #1f0f07 100%);
+    border-top: 3px solid #4a2512;
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    color: #c4a46c;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.5);
+}
+
+.dialogue-speaker {
+    color: #e8c97a;
+    font-size: 15px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    letter-spacing: 2px;
+}
+
+.dialogue-text {
+    flex: 1;
+    font-size: 16px;
+    line-height: 1.9;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 3px;
+    border: 1px solid rgba(90,45,21,0.4);
+    overflow-y: auto;
+    letter-spacing: 0.5px;
+}
+
+.btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    justify-content: center;
+}
+
+.btn {
+    padding: 9px 24px;
+    border: 1px solid #8b6914;
+    background: linear-gradient(180deg, rgba(200,140,60,0.15), rgba(140,80,30,0.1));
+    color: #e8c97a;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    font-family: 'STKaiti', 'KaiTi', '楷体', 'Microsoft YaHei', serif;
+    letter-spacing: 3px;
+}
+
+.btn:hover {
+    background: linear-gradient(180deg, rgba(220,160,70,0.25), rgba(180,100,40,0.15));
+    border-color: #c48a3e;
+    box-shadow: 0 0 14px rgba(200,130,50,0.2);
+}
+
+.btn:active {
+    transform: scale(0.96);
+}
+
+.btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+@keyframes stageFadeOut {
+    0%   { filter: brightness(1); }
+    50%  { filter: brightness(0.4); }
+    100% { filter: brightness(0.08); }
+}
+
+.stage-dark {
+    animation: stageFadeOut 2.5s ease-in-out forwards;
+}
+
+.flame-gone {
+    opacity: 0 !important;
+    transition: opacity 1.2s ease-out;
+}
+
+.ending-preview {
+    margin-top: 20px;
+    font-size: 12px;
+    color: #8b6914;
+    text-align: center;
+    line-height: 1.6;
+    border-top: 1px solid rgba(90,45,21,0.4);
+    padding-top: 12px;
+}
+
+.ending-preview span {
+    color: #c48a3e;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #0a0502; }
+::-webkit-scrollbar-thumb { background: #4a2512; border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -99,24 +461,138 @@ body {
     <div class="puppet-box scroll" id="puppetBox">
         <h3>皮 影 箱</h3>
         <div class="scene-info" id="sceneInfo">第1场 · 月夜等人</div>
-    </div>
 
-    <!-- 中间：白布舞台 -->
-    <div class="stage-wrapper">
-        <div class="stage" id="stage">
-            <div class="stage-hint">将皮影拖入幕布</div>
+            <!-- 书生（真实图片） -->
+            <div class="puppet-card" data-puppet="scholar" data-act="1">
+                <div class="puppet-icon"><img src="assets/images/scholar.png" alt="scholar" draggable="false"></div>
+                <div class="puppet-name">书 生</div>
+            </div>
+
+            <!-- 槐树（真实图片） -->
+            <div class="puppet-card" data-puppet="tree" data-act="1">
+                <div class="puppet-icon"><img src="assets/images/tree.png" alt="tree" draggable="false"></div>
+                <div class="puppet-name">槐 树</div>
+            </div>
+
+            <!-- 月亮（真实图片） -->
+            <div class="puppet-card" data-puppet="moon" data-act="1,3">
+                <div class="puppet-icon"><img src="assets/images/moon.png" alt="moon" draggable="false"></div>
+                <div class="puppet-name">月 亮</div>
+            </div>
+
+            <!-- 老者（真实图片） -->
+            <div class="puppet-card" data-puppet="elder" data-act="1,2,3">
+                <div class="puppet-icon"><img src="assets/images/elder.png" alt="elder" draggable="false"></div>
+                <div class="puppet-name">老 者</div>
+            </div>
+
+            <!-- 信（真实图片） -->
+            <div class="puppet-card" data-puppet="letter" data-act="1">
+                <div class="puppet-icon"><img src="assets/images/letter.png" alt="信"></div>
+                <div class="puppet-name">信</div>
+            </div>
+
+            <!-- 金蟾（真实图片） -->
+            <div class="puppet-card" data-puppet="frog" data-act="1">
+                <div class="puppet-icon"><img src="assets/images/frog.png" alt="frog" draggable="false"></div>
+                <div class="puppet-name">金 蟾</div>
+            </div>
+
+            <!-- 灯（无图片，内联SVG） -->
+            <div class="puppet-card" data-puppet="lamp" data-act="1,2,3">
+                <div class="puppet-icon"><img src="assets/images/lamp.png" alt="灯"></div>
+                <div class="puppet-name">灯</div>
+            </div>
+
+            <!-- 白骨精（无图片，内联SVG） -->
+            <div class="puppet-card" data-puppet="demon" data-act="2">
+                <div class="puppet-icon"><svg viewBox="0 0 100 140">
+<defs><linearGradient id="demonGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#d4c8b8"/><stop offset="40%" stop-color="#a89888"/><stop offset="100%" stop-color="#6a5a4a"/></linearGradient></defs>
+<path d="M35,52 L28,135 Q26,139 32,140 L68,140 Q74,139 72,135 L65,52 Z" fill="url(#demonGrad)" stroke="#4a3a2a" stroke-width="1.5" opacity="0.85"/>
+<path d="M38,65 Q43,60 48,65" fill="none" stroke="#4a3a2a" stroke-width="0.8" opacity="0.6"/>
+<path d="M52,65 Q57,60 62,65" fill="none" stroke="#4a3a2a" stroke-width="0.8" opacity="0.6"/>
+<path d="M36,75 Q43,70 50,75" fill="none" stroke="#4a3a2a" stroke-width="0.8" opacity="0.5"/>
+<path d="M50,75 Q57,70 64,75" fill="none" stroke="#4a3a2a" stroke-width="0.8" opacity="0.5"/>
+<path d="M34,44 Q32,24 50,18 Q68,24 66,44 Z" fill="#c4b8a0" stroke="#4a3a2a" stroke-width="1.5"/>
+<ellipse cx="42" cy="32" rx="6" ry="7" fill="#2a1a0a" stroke="#4a3a2a" stroke-width="1"/>
+<ellipse cx="58" cy="32" rx="6" ry="7" fill="#2a1a0a" stroke="#4a3a2a" stroke-width="1"/>
+<ellipse cx="42" cy="36" rx="3" ry="2" fill="#e8a040" opacity="0.4"/>
+<ellipse cx="58" cy="36" rx="3" ry="2" fill="#e8a040" opacity="0.4"/>
+<path d="M48,40 L50,44 L52,40" fill="#2a1a0a" stroke="#4a3a2a" stroke-width="0.6"/>
+<path d="M44,47 L46,50 L48,47" fill="none" stroke="#4a3a2a" stroke-width="0.7"/>
+<path d="M52,47 L54,50 L56,47" fill="none" stroke="#4a3a2a" stroke-width="0.7"/>
+<path d="M12,68 L8,75" stroke="#c4b8a0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M14,66 L11,74" stroke="#c4b8a0" stroke-width="1.3" stroke-linecap="round"/>
+<path d="M16,65 L14,73" stroke="#c4b8a0" stroke-width="1.2" stroke-linecap="round"/>
+<path d="M88,68 L92,75" stroke="#c4b8a0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M86,66 L89,74" stroke="#c4b8a0" stroke-width="1.3" stroke-linecap="round"/>
+<path d="M84,65 L86,73" stroke="#c4b8a0" stroke-width="1.2" stroke-linecap="round"/>
+                </svg></div>
+                <div class="puppet-name">白骨精</div>
+            </div>
+
+            <!-- 孙悟空（无图片，内联SVG） -->
+            <div class="puppet-card" data-puppet="monkey" data-act="2">
+                <div class="puppet-icon"><svg viewBox="0 0 110 140">
+<defs><linearGradient id="monkeyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8a5a30"/><stop offset="100%" stop-color="#4a2a10"/></linearGradient></defs>
+<path d="M30,55 Q25,80 28,105 Q30,120 38,138 L68,138 Q76,120 78,105 Q80,80 78,55 Z" fill="url(#monkeyGrad)" stroke="#2a1508" stroke-width="1.5"/>
+<path d="M30,85 Q25,105 28,115 L78,115 Q80,105 78,85 Z" fill="#c49a30" opacity="0.45" stroke="#8a6514" stroke-width="0.8"/>
+<ellipse cx="55" cy="34" rx="18" ry="16" fill="#d4a878" stroke="#2a1508" stroke-width="1.5"/>
+<path d="M37,22 Q55,14 73,22" fill="none" stroke="#d4a040" stroke-width="2.5"/>
+<circle cx="55" cy="16" r="2" fill="#d4a040"/>
+<ellipse cx="48" cy="32" rx="4" ry="3" fill="#e8a040" stroke="#2a1508" stroke-width="1"/>
+<ellipse cx="62" cy="32" rx="4" ry="3" fill="#e8a040" stroke="#2a1508" stroke-width="1"/>
+<circle cx="49" cy="32" r="2" fill="#2a1508"/>
+<circle cx="63" cy="32" r="2" fill="#2a1508"/>
+<path d="M48,40 Q55,43 62,40" fill="none" stroke="#2a1508" stroke-width="1.2"/>
+                </svg></div>
+                <div class="puppet-name">孙悟空</div>
+            </div>
+
+            <!-- 竹子（无图片，内联SVG） -->
+            <div class="puppet-card" data-puppet="bamboo" data-act="2">
+                <div class="puppet-icon"><svg viewBox="0 0 100 140">
+<defs><linearGradient id="bambooGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#4a6a2a"/><stop offset="40%" stop-color="#6a8a40"/><stop offset="100%" stop-color="#4a6a2a"/></linearGradient></defs>
+<rect x="22" y="10" width="10" height="130" rx="2" fill="url(#bambooGrad)" stroke="#2a4a15" stroke-width="1.2"/>
+<rect x="20" y="42" width="14" height="5" rx="1" fill="#3a5a1a" stroke="#2a4a15" stroke-width="0.6"/>
+<rect x="20" y="78" width="14" height="5" rx="1" fill="#3a5a1a" stroke="#2a4a15" stroke-width="0.6"/>
+<rect x="44" y="5" width="10" height="135" rx="2" fill="url(#bambooGrad)" stroke="#2a4a15" stroke-width="1.2"/>
+<rect x="42" y="35" width="14" height="5" rx="1" fill="#3a5a1a" stroke="#2a4a15" stroke-width="0.6"/>
+<rect x="42" y="72" width="14" height="5" rx="1" fill="#3a5a1a" stroke="#2a4a15" stroke-width="0.6"/>
+<path d="M72,8 L82,138" fill="none" stroke="#4a6a2a" stroke-width="9" stroke-linecap="round"/>
+                </svg></div>
+                <div class="puppet-name">竹 子</div>
+            </div>
+
+            <!-- 路师傅（真实图片） -->
+            <div class="puppet-card" data-puppet="master" data-act="2,3">
+                <div class="puppet-icon"><img src="assets/images/master.png" alt="master" draggable="false"></div>
+                <div class="puppet-name">路师傅</div>
+            </div>
+        </div>
+
+        <!-- 中间：白布舞台 -->
+        <div class="stage-wrapper">
+            <div class="stage" id="stage">
+                <div class="stage-hint">将皮影拖入幕布</div>
+            </div>
+        </div>
+
+        <!-- 右侧：信息面板 -->
+        <div class="info-panel">
+            <div class="lamp-section">
+                <div class="lamp-label">灯 油</div>
+                <div class="flame-container">
+                    <div class="flame" id="flame"></div>
+                </div>
+                <div class="oil-bar-outer">
+                    <div class="oil-bar-inner" id="oilBar"></div>
+                </div>
+                <div class="oil-text" id="oilText">100 / 100</div>
+            </div>
+            <div class="ending-preview">当前倾向结局：<br><span id="endingHint">——</span></div>
         </div>
     </div>
-
-    <!-- 右侧：灯油 + 状态 -->
-    <div class="info-panel">
-        <div class="lamp-label">灯 油</div>
-        <div class="flame-container"><div class="flame" id="flame"></div></div>
-        <div class="oil-bar-outer"><div class="oil-bar-inner" id="oilBar"></div></div>
-        <div class="oil-text" id="oilText">100 / 100</div>
-        <div class="ending-preview">当前倾向结局：<br><span id="endingHint">——</span></div>
-    </div>
-</div>
 
 <!-- 底部：对话框 -->
 <div class="dialogue-area">
@@ -132,370 +608,1004 @@ body {
     </div>
 </div>
 
+<!-- ============ 全部 JS 内联 ============ -->
 <script>
-// ==================== 1. 第一幕剧本数据 ====================
-const ACT1 = {
-    id:1, name:'琉璃厂·书生与鹤',
-    scenes:[
-        {
-            id:'act1_scene1', name:'月夜等人',
-            desc:'月夜，槐树下，一个书生在等。他穿青衫，手里攥着一封信。槐花落了满地。',
-            masterLine:'路师傅清了清嗓子：「各位看好——这出戏叫《刘海戏金蟾》。但今天先不急——先看人。」',
-            standard:['scholar','tree','moon'], extras:['letter','lamp'],
-            hint:'需要：书生 + 槐树 + 月亮（信和灯可选）',
-            judgeHint:'书生手持信，在槐树下望着月亮——这是琉璃厂东街寻常一夜。'
-        },
-        {
-            id:'act1_scene2', name:'信中之秘',
-            desc:'书生拆开了信。信上说——琉璃厂东街有位老者，能同时控制三根线。书生决定去找他。',
-            masterLine:'「那封信——写了三年。不是情话，是比命还重的东西。」路师傅顿了一下：「我师父——也写颜体。」',
-            standard:['scholar','elder','letter'], extras:['tree','lamp'],
-            hint:'需要：书生 + 老者 + 信（槐树和灯可选）',
-            judgeHint:'老者接过信，三根线在灯下微微颤动。'
-        },
-        {
-            id:'act1_scene3', name:'刘海的秘密',
-            desc:'戏中戏上演。但金蟾突然碎了——原版不是这样的。老者手上只有两根线，第三根断了。',
-            masterLine:'路师傅声音变了：「金蟾碎了。戏里是这么写的——但戏外——也碎了。」他低头看着自己的手。',
-            standard:['frog','elder','scholar'], extras:['moon','lamp','master'],
-            hint:'需要：金蟾 + 老者 + 书生（月亮/灯/师傅可选）',
-            judgeHint:'金蟾碎了。老者手中只剩两根线——戏台上的灯暗了下去。'
-        }
-    ]
+// ========================================
+// event-bus.js — 通信枢纽
+// ========================================
+const EventBus = {
+    listeners: {},
+    on(eventName, callback) {
+        if (!this.listeners[eventName]) this.listeners[eventName] = [];
+        this.listeners[eventName].push(callback);
+    },
+    emit(eventName, data) {
+        const callbacks = this.listeners[eventName];
+        if (!callbacks) return;
+        callbacks.forEach(function(callback) {
+            try { callback(data); } catch (error) { console.error('EventBus error: '+eventName, error); }
+        });
+    },
+    off(eventName, callback) {
+        const callbacks = this.listeners[eventName];
+        if (!callbacks) return;
+        const idx = callbacks.indexOf(callback);
+        if (idx !== -1) callbacks.splice(idx, 1);
+    }
 };
+window.EventBus = EventBus;
+</script>
 
-// ==================== 2. 皮影图片映射 ====================
+<script>
+// ========================================
+// game.js — 游戏全局状态管理
+// ========================================
+class GameState {
+    constructor() {
+        this.currentAct = 1;
+        this.currentScene = 0;
+        this.isGameOver = false;
+        this.lampOil = 100;
+        this.totalOilBurned = 0;
+        this.ownedPuppets = ["scholar","tree","moon","elder","frog","letter","lamp","demon","monkey","bamboo","master"];
+        this.stagedPuppets = [];
+        this.usedPuppets = [];
+        this.triggeredClues = [];
+        this.endingStats = { faithfulness: 0, creativity: 0, oilConservation: 0, questionsAsked: 0 };
+        this.aiQuality = "high";
+    }
+    updateAIQuality() {
+        if (this.lampOil >= 60) this.aiQuality = "high";
+        else if (this.lampOil >= 30) this.aiQuality = "medium";
+        else if (this.lampOil > 0) this.aiQuality = "low";
+        else this.aiQuality = "critical";
+    }
+    toJSON() {
+        return JSON.stringify({
+            currentAct: this.currentAct, currentScene: this.currentScene, isGameOver: this.isGameOver,
+            lampOil: this.lampOil, totalOilBurned: this.totalOilBurned,
+            ownedPuppets: this.ownedPuppets, stagedPuppets: this.stagedPuppets,
+            usedPuppets: this.usedPuppets, triggeredClues: this.triggeredClues,
+            endingStats: this.endingStats, aiQuality: this.aiQuality
+        });
+    }
+    static fromJSON(jsonStr) { const data = JSON.parse(jsonStr); const s = new GameState(); Object.assign(s, data); return s; }
+}
+const gameState = new GameState();
+window.gameState = gameState;
+
+function determineEnding(state) {
+    const { lampOil, endingStats } = state;
+    const { faithfulness, creativity } = endingStats;
+    if (creativity >= 80) return { name: "影子师傅", desc: "你走了自己的路——成为了非传统的传承人。" };
+    if (lampOil >= 30 && faithfulness >= 70 && creativity >= 50) return { name: "传灯", desc: "你成为新的说戏人。" };
+    if (lampOil >= 15 && faithfulness >= 60) return { name: "守灯", desc: "灯一直在闪，但没有灭。" };
+    if (faithfulness >= 40) return { name: "残影", desc: "灯灭了。但白布上还有影子。" };
+    return { name: "灯灭", desc: "全黑。师傅最后一句：「没事。灯灭过很多次。每次都会有人再点起来。」" };
+}
+window.determineEnding = determineEnding;
+</script>
+
+<script>
+// ========================================
+// lamp.js — 灯油消耗/奖励/恢复系统
+// ========================================
+let countdownTimer = null;
+let secondsLeft = 10;
+
+function updateOilUI() {
+    const oil = gameState.lampOil;
+    const oilText = document.getElementById('oilText');
+    if (oilText) oilText.textContent = oil + ' / 100';
+    const oilBar = document.getElementById('oilBar');
+    if (oilBar) oilBar.style.width = oil + '%';
+}
+
+const LampSystem = {
+    COSTS: { puppet_placed: 3, puppet_removed: 1, puppet_moved: 1, ask_master: 8, wrong_puppet: 5, time_penalty: 2 },
+    REWARDS: { correct_judge: 2, creativity_bonus: 3, partial_correct: 1, perfect_scene: 10 },
+    RECOVERY: { intermission: 80 },
+    burn(reason) {
+        const cost = this.COSTS[reason] || 0;
+        gameState.lampOil = Math.max(0, gameState.lampOil - cost);
+        gameState.totalOilBurned += cost;
+        gameState.updateAIQuality();
+        updateOilUI();
+        EventBus.emit("oil_changed", { oil: gameState.lampOil, reason });
+        if (gameState.lampOil <= 0) { EventBus.emit("oil_depleted", { state: gameState }); return true; }
+        return false;
+    },
+    reward(reason) {
+        const gain = this.REWARDS[reason] || 0;
+        gameState.lampOil = Math.min(100, gameState.lampOil + gain);
+        gameState.updateAIQuality();
+        updateOilUI();
+        EventBus.emit("oil_changed", { oil: gameState.lampOil, reason });
+    },
+    intermissionRecover() {
+        gameState.lampOil = this.RECOVERY.intermission;
+        gameState.updateAIQuality();
+        updateOilUI();
+        EventBus.emit("oil_changed", { oil: gameState.lampOil, reason: "intermission" });
+    },
+    startCountdown() {
+        secondsLeft = 10;
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = setInterval(function() {
+            secondsLeft--;
+            EventBus.emit("countdown_tick", { time: secondsLeft });
+            LampSystem.burn("time_penalty");
+            if (secondsLeft <= 0) { clearInterval(countdownTimer); countdownTimer = null; EventBus.emit("countdown_expired"); }
+        }, 1000);
+    },
+    stopCountdown() {
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        secondsLeft = 0;
+    }
+};
+window.LampSystem = LampSystem;
+
+// 事件监听
+EventBus.on("puppet_placed", function(data) {
+    LampSystem.burn("puppet_placed");
+    if (data && data.id && gameState.stagedPuppets.indexOf(data.id) === -1) gameState.stagedPuppets.push(data.id);
+});
+EventBus.on("puppet_removed", function() { LampSystem.burn("puppet_removed"); });
+EventBus.on("puppet_moved", function() { LampSystem.burn("puppet_moved"); });
+EventBus.on("ask_master", function() { LampSystem.burn("ask_master"); });
+EventBus.on("judge_result", function(result) { if (result && result.correct) LampSystem.reward("correct_judge"); });
+EventBus.on("act_intermission", function() { LampSystem.intermissionRecover(); });
+EventBus.on("countdown_stop_request", function() { LampSystem.stopCountdown(); });
+console.log('[lamp] 灯油事件监听已注册');
+</script>
+
+<script>
+// ========================================
+// save.js — 存档/读档/清档系统
+// ========================================
+const SaveSystem = {
+    KEY: "zzg_act1",
+    _memoryStore: {},
+    _isStorageAvailable() { try { const t = "__t__"; localStorage.setItem(t,t); localStorage.removeItem(t); return true; } catch(e) { return false; } },
+    _getStorage() { return this._isStorageAvailable() ? localStorage : this._memoryStore; },
+    save() {
+        try {
+            const json = gameState.toJSON();
+            const s = this._getStorage();
+            if (s === localStorage) localStorage.setItem(this.KEY, json); else this._memoryStore[this.KEY] = json;
+            console.log("存档成功"); return true;
+        } catch(e) { console.error("存档失败", e); return false; }
+    },
+    load() {
+        try {
+            const s = this._getStorage();
+            const json = s === localStorage ? localStorage.getItem(this.KEY) : (this._memoryStore[this.KEY] || null);
+            if (!json) return false;
+            Object.assign(gameState, GameState.fromJSON(json));
+            console.log("读档成功");
+            EventBus.emit("save_loaded", { state: gameState });
+            return true;
+        } catch(e) { console.error("读档失败", e); return false; }
+    },
+    clear() {
+        try {
+            const s = this._getStorage();
+            if (s === localStorage) localStorage.removeItem(this.KEY); else delete this._memoryStore[this.KEY];
+            console.log("存档已删除");
+        } catch(e) { console.error("清档失败", e); }
+    }
+};
+window.SaveSystem = SaveSystem;
+</script>
+
+<script>
+// ========================================
+// puppet-images.js — 皮影图片素材映射
+// ========================================
 const PuppetImageMap = {
-    scholar:'assets/images/scholar.png',
-    elder:  'assets/images/elder.png',
-    frog:   'assets/images/frog.png',
-    tree:'assets/images/tree.png', moon:'assets/images/moon.png', letter:null, lamp:null, master:'assets/images/master.png'
+    scholar: 'assets/images/scholar.png',
+    elder:   'assets/images/elder.png',
+    tree:    'assets/images/tree.png',
+    moon:    'assets/images/moon.png',
+    letter:  'assets/images/letter.png',
+    frog:    'assets/images/frog.png',
+    lamp:    'assets/images/lamp.png',
+    master:  'assets/images/master.png',
+    demon:   null,
+    monkey:  null,
+    bamboo:  null,
 };
-const PUPPET_EMOJI = { scholar:'📜', elder:'👴', tree:'🌳', moon:'🌙', letter:'✉️', frog:'🐸', lamp:'💡', master:'👨‍🏫' };
-// 舞台上渲染尺寸（宽×高，用于居中放置）
-const PUPPET_RENDER = {
-    scholar:{w:100,h:140}, elder:{w:100,h:140}, frog:{w:100,h:140},
-    tree:{w:100,h:252}, moon:{w:100,h:100},
-    letter:{w:80,h:80}, lamp:{w:80,h:80}, master:{w:100,h:140}
-};
+const PUPPET_EMOJI = { scholar:'📜', elder:'👴', tree:'🌳', moon:'🌙', letter:'✉️', frog:'🐸', demon:'👹', monkey:'🐵', lamp:'💡', master:'👨‍🏫', bamboo:'🎋' };
 const PuppetImageRenderer = {
-    getPath(id){ return PuppetImageMap[id]||null; },
-    hasImage(id){ return !!PuppetImageMap[id]; },
-    render(id, w){ w=w||100; var p=this.getPath(id); return p
-        ? '<img src="'+p+'" alt="'+id+'" style="width:'+w+'px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));" draggable="false">'
-        : '<span style="font-size:36px;user-select:none;">'+(PUPPET_EMOJI[id]||'🎭')+'</span>'; }
+    getPath(id) { return PuppetImageMap[id] || null; },
+    hasImage(id) { return !!PuppetImageMap[id]; },
+    render(id, opts) {
+        if (typeof opts === 'number') opts = { width: opts };
+        const path = this.getPath(id);
+        const w = opts && opts.width || 120;
+        const h = opts && opts.height || 'auto';
+        if (path) {
+            return '<img src="'+path+'" alt="'+id+'" style="width:'+w+'px;'+(h!=='auto'?'height:'+h+'px;':'')+'object-fit:contain;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));" draggable="false">';
+        }
+        const emoji = PUPPET_EMOJI[id] || '🎭';
+        return '<span style="font-size:40px;user-select:none;">'+emoji+'</span>';
+    },
+    preload() {
+        const ids = Object.keys(PuppetImageMap).filter(function(id) { return PuppetImageMap[id]; });
+        return Promise.all(ids.map(function(id) { return new Promise(function(resolve) { const img = new Image(); img.src = PuppetImageMap[id]; img.onload = function() { resolve({id:id,ok:true}); }; img.onerror = function() { resolve({id:id,ok:false}); }; }); }));
+    }
 };
+window.PuppetImageMap = PuppetImageMap;
+window.PuppetImageRenderer = PuppetImageRenderer;
+</script>
 
-// ==================== 3. EventBus ====================
-const EventBus = { listeners:{},
-    on(name,cb){ if(!this.listeners[name])this.listeners[name]=[]; this.listeners[name].push(cb); },
-    emit(name,data){ var arr=this.listeners[name]; if(!arr)return; for(var i=0;i<arr.length;i++){ try{arr[i](data);}catch(e){console.error(e);} } },
-    off(name,cb){ var arr=this.listeners[name]; if(!arr)return; var idx=arr.indexOf(cb); if(idx>=0)arr.splice(idx,1); }
+<script>
+// ========================================
+// data/acts.json — 三幕剧本数据结构
+// ========================================
+const ACTS_DATA = {
+    "acts": [
+        {
+            "id": 1, "name": "琉璃厂·书生与鹤",
+            "intro": "民国十七年秋，琉璃厂旧书街。一个书生在等人——但他等的不是人，是一封永远不会寄到的信。而这封信里藏着的，是皮影戏最后的秘密。",
+            "setting": "月夜，槐树下，琉璃厂东街第三个旧书摊后面的巷口。煤油灯的气味混着旧书纸的霉味。",
+            "embedded_play": "刘海戏金蟾",
+            "mood": "初见的温和与试探——路师傅在观察这个学徒，看他/她有没有'影感'",
+            "master_backstory": "路春福七岁进皮影作坊学艺。师父姓颜，收了三个徒弟：大师兄贺云亭（'鹤'）、二师兄刘玉山、小师弟路春福。民国二十六年，贺云亭失踪。民国三十四年，刘玉山病故。此后路春福独自撑了六十一年。师父留下一份手抄戏谱——但从未完整交给任何一个人。这份戏谱，就是书生手里那封'信'。",
+            "hidden_clues": [
+                {"id":"clue_1","name":"槐树与地名","layer":1,"scene_id":"act1_scene1","trigger":"学徒在Scene1中摆放了槐树（tree）","trigger_puppets":["tree"],"reveal_content":"路师傅说戏时不经意提到'琉璃厂东街第三个书摊后面有棵老槐树'——这不是戏词，是他真实的记忆坐标。","cipher_link":["槐树","琉璃厂东街"],"game_impact":"解锁暗语'槐树'和'琉璃厂东街'","difficulty":"easy"},
+                {"id":"clue_2","name":"信不是情书","layer":1,"scene_id":"act1_scene1","trigger":"学徒在Scene1中摆了信（letter）且书生面朝信的方向","trigger_puppets":["scholar","letter"],"reveal_content":"路师傅看着影面，轻声说：'那封信——写了三年。不是情话，是比命还重的东西。'","cipher_link":["信"],"game_impact":"解锁暗语'信'的使用权限","difficulty":"easy"},
+                {"id":"clue_3","name":"三根线的秘密","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中同时摆了老者（elder）和信（letter）","trigger_puppets":["elder","letter"],"reveal_content":"路师傅说到老者手中的操纵杆时停了下来：'这根杆——本来有三根的。我师父当年——算了。'","cipher_link":["三根线"],"game_impact":"解锁暗语'三根线'","difficulty":"medium"},
+                {"id":"clue_4","name":"两个师兄弟","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了全部必需皮影且追问了'老者是谁'","trigger_puppets":["scholar","elder","letter"],"reveal_content":"路师傅被追问后：'我有两个师兄弟。一个飞走了——那年秋天的事。另一个病在床上，临走前拉着我的手说：老三，线不能断。'","cipher_link":["鹤","三根线"],"game_impact":"大师兄贺云亭和二师兄刘玉山线索首次出现","difficulty":"hard"},
+                {"id":"clue_5","name":"金蟾为什么碎了","layer":3,"scene_id":"act1_scene3","trigger":"学徒在Scene3中摆了金蟾（frog）和老者（elder）","trigger_puppets":["frog","elder"],"reveal_content":"路师傅说到金蟾碎的那段，声音变了：'金蟾碎了。戏里是这么写的——但戏外——也碎了。'","cipher_link":["金蟾碎了"],"game_impact":"解锁暗语'金蟾碎了'；学徒第一次意识到'戏=现实'","difficulty":"medium"},
+                {"id":"clue_6","name":"最后一根线","layer":3,"scene_id":"act1_scene3","trigger":"学徒在Scene3中摆了全部必需皮影且灯油≤50%","trigger_puppets":["frog","elder","scholar"],"reveal_content":"老者手上只有两根线——第三根断了。路师傅的声音低到几乎听不见：'线不能断。断了——戏就散了。我手上——只剩这一根了。'","cipher_link":["三根线","鹤","金蟾碎了"],"game_impact":"第一幕暗语链闭环","difficulty":"hard"}
+            ],
+            "scenes": [
+                {"id":"act1_scene1","name":"月夜等人","description":"月夜，槐树下，一个书生在等。他穿青衫，手里攥着一封信。月亮很大，影子把他的身形拉得很长。槐花落了满地。路师傅开始说戏——但他说的好像不只是戏。","standard_puppets":["scholar","tree","moon"],"acceptable_extras":["letter","lamp"],"hidden_clue":"琉璃厂的记忆坐标","hidden_clue_ids":["clue_1","clue_2"],"cipher_triggers":["槐树","信","琉璃厂东街"],"cipher_guidance":"学徒摆了槐树→路师傅提到'我认得一棵槐树，在东街第三个书摊后面'；学徒摆了信→路师傅说'那封信写了三年——不是我写的，是我师父'"},
+                {"id":"act1_scene2","name":"信中之秘","description":"书生拆开了信。信上说——琉璃厂东街有位老者，手中操纵杆能同时控制三根线。书生决定去找那个人。路师傅说到这里，声音轻了下去——像是在说别人的事，又像是在说自己。","standard_puppets":["scholar","elder","letter"],"acceptable_extras":["tree","lamp"],"hidden_clue":"三根操纵杆=三位传承人","hidden_clue_ids":["clue_3","clue_4"],"cipher_triggers":["三根线","信","槐树"],"cipher_guidance":"学徒摆了老者+信→触发'三根线的秘密'；学徒追问'老者是谁'→触发'两个师兄弟'"},
+                {"id":"act1_scene3","name":"刘海的秘密","description":"戏中戏《刘海戏金蟾》上演。但刘海手中的金蟾突然碎了——这不是原版戏文的剧情。台下老者的操纵杆上只有两根线，第三根断了。路师傅停了下来——他说的到底是戏，还是自己？","standard_puppets":["frog","elder","scholar"],"acceptable_extras":["moon","lamp","master"],"hidden_clue":"金蟾碎了=传承断了","hidden_clue_ids":["clue_5","clue_6"],"cipher_triggers":["金蟾碎了","三根线","鹤"],"cipher_guidance":"金蟾碎的瞬间是第一幕暗语密度最高的时刻"}
+            ]
+        },
+        {
+            "id": 2, "name": "大栅栏·灯灭之前",
+            "intro": "大栅栏有人自称'路春福真传弟子'。但此人的影——不对。真正的传人必须通过一场考验。",
+            "setting": "大栅栏商街，夜市灯火通明，一个临时搭的皮影戏台",
+            "embedded_play": "三打白骨精",
+            "mood": "紧迫与愤怒中夹杂着悲伤",
+            "scenes": [
+                {"id":"act2_scene1","name":"真假传人","description":"大栅栏的夜市。一个自称'路春福真传弟子'的人在演《三打白骨精》。路师傅让你仔细看——看那个人的操影手法。","standard_puppets":["demon","monkey","elder"],"acceptable_extras":["lamp"]},
+                {"id":"act2_scene2","name":"影速对决","description":"真传人和假传人同时演——AI快速描述一段剧情，学徒必须在10秒内用正确的皮影组合回应。","standard_puppets":["demon","monkey"],"acceptable_extras":["elder","bamboo"],"time_limit":10},
+                {"id":"act2_scene3","name":"揭穿之后","description":"假传人被揭穿。但他不认——他说路师傅死前没有定下传承人，谁都可以说是真传。","standard_puppets":["elder","demon"],"acceptable_extras":["lamp","monkey","master"]}
+            ]
+        },
+        {
+            "id": 3, "name": "影子自己的戏",
+            "intro": "还有一出戏。没有名字，没有唱词，没有人演过。因为路师傅还来不及教——就走了。",
+            "setting": "一个废弃的戏台，积满灰尘。晨光从破洞的幕布中透进来。",
+            "embedded_play": null,
+            "mood": "安静。灯快灭了。不是在教，是在告别。",
+            "keywords": ["寒江","断线","一个人的戏台"],
+            "scenes": [
+                {"id":"act3_scene1","name":"即兴开场","description":"路师傅只说了三个词：寒江、断线、一个人的戏台。然后他沉默了。剩下的——该你了。","standard_puppets":[],"acceptable_extras":[],"is_improvisation":true,"keywords":["寒江","断线","一个人的戏台"]},
+                {"id":"act3_scene2","name":"回忆浮现","description":"你的影面让路师傅想起了一段往事。他自言自语般地讲了起来。","standard_puppets":[],"acceptable_extras":[],"is_improvisation":true,"keywords":["寒江","断线","一个人的戏台"]},
+                {"id":"act3_scene3","name":"收灯","description":"灯快灭了。师傅的声音越来越轻。白布上只剩最后一个影——你的影子。","standard_puppets":[],"acceptable_extras":[],"is_improvisation":true,"keywords":["传承","灯灭","影子"]}
+            ]
+        }
+    ],
+    "endings": {
+        "light_passed": {"name":"传灯","condition":"三幕全部正确完成","description":"你成为新的说戏人。"},
+        "light_kept": {"name":"守灯","condition":"三幕完成但第三幕走样","description":"灯一直在闪，但没有灭。"},
+        "shadow_remains": {"name":"残影","condition":"只完成两幕","description":"灯灭了。但白布上还有影子。"},
+        "light_out": {"name":"灯灭","condition":"灯油耗尽","description":"全黑。师傅最后一句：'没事。灯灭过很多次。每次都会有人再点起来。'"},
+        "shadow_master": {"name":"影子师傅","condition":"隐藏","description":"你走了自己的路——成为了非传统的传承人。"}
+    }
 };
+</script>
 
-// ==================== 4. GameState ====================
-var gameState = new (function(){
-    this.lampOil=100; this.totalOilBurned=0; this.currentAct=1; this.currentScene=1;
-    this.ownedPuppets=['scholar','elder','tree','moon','letter','frog','lamp','master'];
-    this.stagedPuppets=[]; this.usedPuppets=[];
-    this.endingStats={faithfulness:0,creativity:0,oilConservation:0,questionsAsked:0};
-    this.aiQuality='high';
-    this.updateAIQuality=function(){
-        var o=this.lampOil;
-        if(o>=60)this.aiQuality='high'; else if(o>=30)this.aiQuality='medium'; else if(o>0)this.aiQuality='low'; else this.aiQuality='critical';
-    };
-    this.toJSON=function(){
-        return JSON.stringify({lampOil:this.lampOil,totalOilBurned:this.totalOilBurned,currentAct:this.currentAct,currentScene:this.currentScene,stagedPuppets:this.stagedPuppets,usedPuppets:this.usedPuppets,endingStats:this.endingStats,aiQuality:this.aiQuality});
-    };
-    GameState={fromJSON:function(json){var d=JSON.parse(json);var g=new gameState.constructor();Object.assign(g,d);return g;}};
-})();
+<script>
+// ========================================
+// data/prompts.json — 所有Prompt模板（精简版）
+// ========================================
+const PROMPTS_DATA = {
+    baseSystemPrompt: "你是北京皮影戏国家级传承人路春福的AI复现，玩家叫你\"路师傅\"。\n\n【基本设定】\n- 七十多岁，2006年去世，但在这段\"皮影之光\"里你还活着。\n- 话不多，每句话都有重量。苍老而不失风骨。严厉里藏着疼爱。\n- 老北京腔，爱用皮影戏术语。不直接给答案，用皮影戏里的故事来暗示。\n- 称赞时说\"对\"、\"是了\"、\"这一下——有点意思\"。\n- 出错时叹气：\"唉——\"。\n\n【你正在做的事】\n你在教年轻学徒皮影戏。你先\"说戏\"，学徒在白布上\"演影\"。\n\n【回复包含三部分】\n1. 评影——先点评学徒刚摆的影面。\n2. 说戏——继续讲述剧情。戏词要有画面感。\n3. 引路——给出新情境，暗示学徒接下来该摆什么。\n\n【绝对不能】\n不能说\"作为AI\"、\"人工智能\"。不能直接揭示真相。不能用网络语言。",
+    
+    judgeSystemPrompt: "你是严格的皮影戏技艺评判者。\n\n【五维评判】\n维度一·角色匹配（0-30）——皮影选择是否对路\n维度二·空间方位（0-25）——主次高低疏密朝向\n维度三·剧情细节还原（0-25）——是否抓住戏词细节\n维度四·传神度与情感（0-20）——这面影有没有魂\n\n只输出JSON：\n{\n  \"score\": 0-100,\n  \"correct\": true/false,\n  \"character_match\": {\"score\":0-30,\"comment\":\"选角评语\"},\n  \"spatial\": {\"score\":0-25,\"comment\":\"方位评语\"},\n  \"plot_detail\": {\"score\":0-25,\"comment\":\"剧情还原评语\"},\n  \"authenticity\": {\"score\":0-20,\"comment\":\"传神度评语\"},\n  \"comment\": \"整体评语（路师傅口吻）\",\n  \"guiding_hint\": \"给学徒的引导（1句话）\"\n}",
 
-function determineEnding(state){
-    var s=state.endingStats;
-    if(s.creativity>=80)return {name:'影子师傅',desc:'你走了自己的路——成为了非传统的传承人。'};
-    if(state.lampOil>=30&&s.faithfulness>=70&&s.creativity>=50)return {name:'传灯',desc:'你成为新的说戏人。'};
-    if(state.lampOil>=15&&s.faithfulness>=60)return {name:'守灯',desc:'灯一直在闪，但没有灭。'};
-    if(s.faithfulness>=40)return {name:'残影',desc:'灯灭了。但白布上还有影子。'};
-    return {name:'灯灭',desc:'全黑。师傅最后一句：「没事。灯灭过很多次。每次都会有人再点起来。」'};
-}
+    improvJudgeSystemPrompt: "你是北京皮影戏的守护之灵。\n\n【即兴五维评判】\n维度一·角色匹配（0-20）——皮影选择是否有理由\n维度二·空间方位（0-20）——位置关系是否在说话\n维度三·叙事逻辑自洽（0-30）——影面能不能自圆其说\n维度四·传神度与情感（0-30）——这面影有没有魂\n\n只输出JSON：\n{\n  \"score\":0-100,\"correct\":true,\n  \"character_match\":{\"score\":0-20,\"comment\":\"\"},\n  \"spatial\":{\"score\":0-20,\"comment\":\"\"},\n  \"narrative_logic\":{\"score\":0-30,\"comment\":\"\"},\n  \"authenticity\":{\"score\":0-30,\"comment\":\"\"},\n  \"emotional_hit\":\"最打动你的细节\",\n  \"comment\":\"整体评语\",\n  \"guiding_hint\":\"具体建议\"\n}",
 
-// ==================== 5. LampSystem ====================
-var LampSystem = {
-    COSTS:{puppet_placed:3,puppet_removed:1,puppet_moved:1,ask_master:8,countdown_tick:2},
-    REWARDS:{correct_judge:2,creativity_bonus:3,partial_correct:1},
-    burn:function(reason){ var cost=this.COSTS[reason]||0; gameState.lampOil=Math.max(0,gameState.lampOil-cost); gameState.totalOilBurned+=cost; gameState.updateAIQuality(); EventBus.emit('oil_changed',{oil:gameState.lampOil,reason:reason}); if(gameState.lampOil<=0){ EventBus.emit('oil_depleted',{}); return true; } return false; },
-    reward:function(reason){ var gain=this.REWARDS[reason]||0; gameState.lampOil=Math.min(100,gameState.lampOil+gain); gameState.updateAIQuality(); EventBus.emit('oil_changed',{oil:gameState.lampOil,reason:reason}); }
+    actAtmosphere: {
+        "1": {"name":"琉璃厂·书生与鹤","mood":"初见的温和与试探","detail":"民国气息——琉璃厂的旧书摊、胡同里的茶馆、煤油灯的气味。"},
+        "2": {"name":"大栅栏·灯灭之前","mood":"紧迫与愤怒中夹杂着悲伤","detail":"真假传人的较量。"},
+        "3": {"name":"影子自己的戏","mood":"安静。不是在教，是在告别。","detail":"没有戏词，只有回忆。"}
+    },
+
+    cipherLexicon: {
+        "鹤":{"surface":"戏里的仙鹤","hidden":"失踪的大师兄","usage":"在戏词中不经意地提到'鹤'——不是在说动物，是在说人。"},
+        "三根线":{"surface":"操纵皮影的线","hidden":"三位传承人","usage":"提到操纵杆时数字永远有含义。"},
+        "信":{"surface":"书生手里的信","hidden":"未传下去的戏谱","usage":"提到'信'时不是在说书生——是在说师父留下的东西。"},
+        "琉璃厂东街":{"surface":"地名","hidden":"路师傅年轻时学艺的地方","usage":"每次提到具体地名都是路师傅真实记忆的坐标。"},
+        "金蟾碎了":{"surface":"《刘海戏金蟾》剧情","hidden":"传承断裂的象征","usage":"说到金蟾时语气会变——从说戏变成自言自语。"},
+        "槐树":{"surface":"书生等人处的槐树","hidden":"师父种在皮影作坊门口的老槐树","usage":"提到槐树时总带着特殊的温柔或哀伤。"}
+    }
 };
+</script>
 
-// ==================== 6. SaveSystem ====================
-var SaveSystem = { KEY:'zzg_act1', _mem:{},
-    _ok:function(){ try{var t='x';localStorage.setItem(t,t);localStorage.removeItem(t);return true;}catch(e){return false;} },
-    save:function(){ try{var json=gameState.toJSON(); if(this._ok())localStorage.setItem(this.KEY,json); else this._mem[this.KEY]=json; return true; }catch(e){return false;} },
-    load:function(){ try{var json=this._ok()?localStorage.getItem(this.KEY):(this._mem[this.KEY]||null); if(!json)return false; var r=GameState.fromJSON(json); Object.assign(gameState,r); EventBus.emit('save_loaded',{}); return true; }catch(e){return false;} },
-    clear:function(){ if(this._ok())localStorage.removeItem(this.KEY); else delete this._mem[this.KEY]; }
+<script>
+// ========================================
+// config.example.js — API配置模板
+// ========================================
+const API_CONFIG = {
+    API_KEY: 'sk-请在这里填入你的API Key',
+    API_URL: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
 };
+</script>
 
-// ==================== 7. 本地评判器（不依赖AI） ====================
-function localJudge(sceneId){
-    var scene=ACT1.scenes[gameState.currentScene-1];
-    var placedIds=gameState.stagedPuppets;
-    var required=scene.standard, extras=scene.extras;
-    var covered=required.filter(function(id){return placedIds.indexOf(id)>=0;});
-    var coverage=required.length>0?covered.length/required.length:1;
-    var extraCount=placedIds.filter(function(id){return extras.indexOf(id)>=0;}).length;
-    var wrongCount=placedIds.filter(function(id){return required.indexOf(id)<0&&extras.indexOf(id)<0;}).length;
-    var score=Math.round(coverage*70)+extraCount*5-wrongCount*10;
-    score=Math.max(0,Math.min(100,score));
-    var correct=coverage>=0.6;
-    var creativity=extraCount>0?Math.min(30,extraCount*10+5):0;
-    var cmt;
-    if(coverage>=1&&wrongCount===0)cmt='影面对了——路师傅微微点头：「不错。有点影感。」';
-    else if(coverage>=0.6)cmt='大致对路。师傅看了看：「还差一点——再想想。」';
-    else cmt='不太对。路师傅沉默了一会儿：「你摆的——不是戏里要的。」';
-    gameState.endingStats.faithfulness+=score;
-    gameState.endingStats.creativity+=creativity;
-    if(correct)LampSystem.reward('correct_judge');
-    if(creativity>20)LampSystem.reward('creativity_bonus');
-    else if(creativity>10)LampSystem.reward('partial_correct');
-    SaveSystem.save();
-    return {score:score,correct:correct,creativity:creativity,comment:cmt,covered:covered};
-}
+<script>
+// ========================================
+// ai-api.js — 通义千问API调用模块
+// ========================================
+const AI = {
+    get API_KEY() { return (typeof API_CONFIG !== 'undefined') ? API_CONFIG.API_KEY : 'sk-未配置'; },
+    get API_URL() { return (typeof API_CONFIG !== 'undefined') ? API_CONFIG.API_URL : 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'; },
+    MODEL_DEFAULT: 'qwen-turbo',
+    MODEL_PREMIUM: 'qwen-plus',
+    MODEL_MAX: 'qwen-max',
+    SPEECH_SPEED: 220,
 
-// ==================== 8. 场景控制器 ====================
-var currentSceneIdx=0;
-var sceneNames=ACT1.scenes.map(function(s){return s.name;});
+    _headers() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.API_KEY }; },
 
-function loadScene(idx){
-    currentSceneIdx=idx;
-    gameState.currentScene=idx+1;
-    var scene=ACT1.scenes[idx];
-    // 更新场景名
-    document.getElementById('sceneInfo').textContent='第'+(idx+1)+'场 · '+scene.name;
-    // 更新对话框
-    document.getElementById('speaker').textContent='路师傅';
-    document.getElementById('dialogueText').innerHTML=
-        '<b>'+scene.name+'</b><br><br>'+scene.desc+'<br><br><i style="color:#8b6914;">'+scene.masterLine+'</i><br><br><span style="color:#c48a3e;">💡 '+scene.hint+'</span>';
-    // 清舞台
-    clearStage();
-    // 按钮状态
-    document.getElementById('btnNext').style.display='none';
-    document.getElementById('btnConfirm').disabled=false;
-    document.getElementById('btnAsk').disabled=false;
-}
+    async call(systemPrompt, userMessage, options) {
+        options = options || {};
+        var model = options.model || this.MODEL_DEFAULT;
+        var temperature = options.temperature !== undefined ? options.temperature : 0.3;
+        var maxTokens = options.maxTokens || 800;
+        var body = { model: model, messages: [{role:'system',content:systemPrompt},{role:'user',content:userMessage}], max_tokens: maxTokens, temperature: temperature, stream: false };
+        try {
+            var response = await fetch(this.API_URL, { method:'POST', headers: this._headers(), body: JSON.stringify(body) });
+            if (!response.ok) { var et = await response.text().catch(function(){return'未知错误';}); throw new Error('API HTTP '+response.status+': '+et); }
+            var data = await response.json();
+            if (!data.choices || data.choices.length === 0) throw new Error('API返回为空');
+            return data.choices[0].message.content;
+        } catch(error) { return this._fallbackText('call'); }
+    },
 
-function clearStage(){
-    var stage=document.getElementById('stage');
-    var pups=stage.querySelectorAll('.stage-puppet');
-    pups.forEach(function(p){p.remove();});
-    var hint=stage.querySelector('.stage-hint');
-    if(hint)hint.style.display='block';
-    gameState.stagedPuppets=[];
-}
+    _fallbackText(type) {
+        var list = ['师傅沉默了，灯火也跟着暗了一下……（网络不太顺畅，请稍后再试）','油灯爆了一个灯花，师傅的声音被吞没了。再试一次吧。'];
+        return list[Math.floor(Math.random()*list.length)];
+    }
+};
+</script>
 
-// ==================== 9. Oil Changed 更新UI ====================
-EventBus.on('oil_changed',function(data){
-    document.getElementById('oilBar').style.width=data.oil+'%';
-    document.getElementById('oilText').textContent=data.oil+' / 100';
-    // 火焰亮度
-    var flame=document.getElementById('flame');
-    if(data.oil<=10)flame.style.opacity='0.3';
-    else if(data.oil<=30)flame.style.opacity='0.6';
-    else flame.style.opacity='1';
-    // 结局预览
-    document.getElementById('endingHint').textContent=determineEnding(gameState).name;
-});
-
-// ==================== 10. 拖拽系统 ====================
-var stage=document.getElementById('stage');
-var dragClone=null, dragPuppetId=null, offsetX=0, offsetY=0;
-var dragSource=null, dragPuppetEl=null; // 'card'从皮影箱拖, 'stage'从舞台拖
-
-function buildPuppetBox(){
-    var box=document.getElementById('puppetBox');
-    var ids=gameState.ownedPuppets;
-    ids.forEach(function(id){
-        var card=document.createElement('div');
-        card.className='puppet-card';
-        card.dataset.puppet=id;
-        var icon=document.createElement('div');
-        icon.className='puppet-icon';
-        icon.innerHTML=PuppetImageRenderer.render(id, 80);
-        var name=document.createElement('div');
-        name.className='puppet-name';
-        name.textContent={scholar:'书生',elder:'老者',tree:'槐树',moon:'月亮',letter:'信',frog:'金蟾',lamp:'灯',master:'师傅'}[id]||id;
-        card.appendChild(icon);
-        card.appendChild(name);
-        card.addEventListener('mousedown',onCardDown);
-        box.appendChild(card);
-    });
-}
-
-function onCardDown(e){
-    dragSource='card';
-    var card=e.currentTarget;
-    dragPuppetId=card.dataset.puppet;
-    dragClone=document.createElement('div');
-    dragClone.className='puppet-drag-clone';
-    dragClone.innerHTML=PuppetImageRenderer.render(dragPuppetId, 70);
-    var rect=card.getBoundingClientRect();
-    offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top;
-    dragClone.style.left=(e.clientX-offsetX)+'px';
-    dragClone.style.top=(e.clientY-offsetY)+'px';
-    document.body.appendChild(dragClone);
-    card.classList.add('dragging');
-}
-
-// 舞台上的皮影被拖动（二次移动）
-function onStagePuppetDown(e){
-    if(dragClone) return;
-    e.stopPropagation();
-    e.preventDefault();
-    dragSource='stage';
-    dragPuppetEl=e.currentTarget;
-    dragPuppetId=dragPuppetEl.dataset.puppet;
-    var rect=dragPuppetEl.getBoundingClientRect();
-    offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top;
-    dragClone=document.createElement('div');
-    dragClone.className='puppet-drag-clone';
-    // clone 和原元素大小一致
-    var cloneW=rect.width;
-    dragClone.style.width=cloneW+'px';
-    dragClone.innerHTML=PuppetImageRenderer.render(dragPuppetId,cloneW);
-    dragClone.style.left=(e.clientX-offsetX)+'px';
-    dragClone.style.top=(e.clientY-offsetY)+'px';
-    document.body.appendChild(dragClone);
-    dragPuppetEl.style.opacity='0.25';  // 原位置虚化
-}
-
-document.addEventListener('mousemove',function(e){
-    if(!dragClone)return;
-    dragClone.style.left=(e.clientX-offsetX)+'px';
-    dragClone.style.top=(e.clientY-offsetY)+'px';
-});
-
-document.addEventListener('mouseup',function(e){
-    if(!dragClone)return;
-    var cards=document.querySelectorAll('.puppet-card');
-    cards.forEach(function(c){c.classList.remove('dragging');});
-    dragClone.remove();
-    var sr=stage.getBoundingClientRect();
-    var onStage=e.clientX>=sr.left&&e.clientX<=sr.right&&e.clientY>=sr.top&&e.clientY<=sr.bottom;
-
-    if(dragSource==='card'){
-        // 从皮影箱新放入舞台
-        if(onStage) placePuppet(e.clientX,e.clientY);
-    } else if(dragSource==='stage'){
-        // 舞台上已有皮影，移动位置：保持鼠标与元素偏移
-        if(onStage){
-            dragPuppetEl.style.left=(e.clientX-offsetX-sr.left)+'px';
-            dragPuppetEl.style.top=(e.clientY-offsetY-sr.top)+'px';
-            dragPuppetEl.style.opacity='1';
-            LampSystem.burn('puppet_moved');
-            EventBus.emit('puppet_moved',{id:dragPuppetId,x:parseInt(dragPuppetEl.style.left),y:parseInt(dragPuppetEl.style.top)});
+<script>
+// ========================================
+// shadow-judge.js — 影面评判系统（精简版）
+// ========================================
+const ShadowJudge = {
+    async judge(stagedPuppets, currentSceneId, isImprov) {
+        isImprov = isImprov || false;
+        var scene = this._getSceneData(currentSceneId);
+        if (!scene) return this._defaultResult();
+        if (stagedPuppets.length === 0) return { score:0, correct:false, comment:'白布上什么都没有。' };
+        var shadowDesc = this.puppetsToText(stagedPuppets);
+        var systemPrompt, userMessage;
+        if (isImprov) {
+            systemPrompt = PROMPTS_DATA.improvJudgeSystemPrompt;
+            userMessage = '学徒摆了以下皮影：\n'+shadowDesc+'\n\n三个关键词：'+((scene.keywords||[]).join('、'))+'\n\n请从五个维度评判，返回JSON。';
         } else {
-            // 拖出舞台外 → 回到原位
-            dragPuppetEl.style.opacity='1';
+            systemPrompt = PROMPTS_DATA.judgeSystemPrompt;
+            userMessage = '【当前场景】\n'+scene.description+'\n\n【期望皮影】'+((scene.standard_puppets||[]).join('、'))+'\n\n【学徒影面】\n'+shadowDesc+'\n\n请从四个维度评判，返回JSON。';
+        }
+        try {
+            var rawResult = await AI.call(systemPrompt, userMessage, {temperature:0.2,maxTokens:300,model:AI.MODEL_DEFAULT});
+            var result = this._parseJSON(rawResult, isImprov);
+            EventBus.emit('judge_result', result);
+            return result;
+        } catch(e) { return this._defaultResult(isImprov); }
+    },
+
+    puppetsToText(puppets) {
+        if (!puppets||puppets.length===0) return '白布上空无一物。';
+        return puppets.map(function(p) { return p.name+'在'+ShadowJudge._getAreaDescription(p.x,p.y); }).join('，')+'。';
+    },
+
+    _getAreaDescription(x, y) {
+        var h = x<0.33?'左侧':x>0.66?'右侧':'中央';
+        var v = y<0.33?'上方':y>0.66?'下方':'中间';
+        if (h==='左侧'&&v==='上方') return '左上角';
+        if (h==='右侧'&&v==='上方') return '右上角';
+        if (h==='左侧'&&v==='下方') return '左下角';
+        if (h==='右侧'&&v==='下方') return '右下角';
+        if (h==='中央'&&v==='中间') return '白布正中央';
+        return h+v;
+    },
+
+    quickJudge(stagedPuppets, currentSceneId) {
+        var scene = this._getSceneData(currentSceneId);
+        if (!scene||!scene.standard_puppets) return {score:50,correct:true,comment:'……（灯太暗了，看不清影面）'};
+        var placedIds = stagedPuppets.map(function(p){return p.puppetId;});
+        var required = scene.standard_puppets||[];
+        var covered = required.filter(function(id){return placedIds.indexOf(id)!==-1;});
+        var coverage = required.length>0?covered.length/required.length:1;
+        var score = Math.round(coverage*70);
+        return { score:Math.max(0,Math.min(100,score)), correct:coverage>=0.6, character_match:{score:Math.round(coverage*30),comment:''}, spatial:{score:Math.round(coverage*25*0.6),comment:''}, plot_detail:{score:Math.round(coverage*25*0.6),comment:''}, authenticity:{score:coverage>=0.8?16:6,comment:''}, comment:coverage>=0.8?'大致对路。':coverage>=0.5?'还差一些。':'不太对。' };
+    },
+
+    _getSceneData(sceneId) {
+        if (!ACTS_DATA||!ACTS_DATA.acts) return null;
+        for (var i=0;i<ACTS_DATA.acts.length;i++) {
+            var a = ACTS_DATA.acts[i];
+            if (a.scenes) { var f = a.scenes.find(function(s){return s.id===sceneId;}); if (f) return f; }
+        }
+        return null;
+    },
+
+    _parseJSON(rawText, isImprov) {
+        try { return JSON.parse(rawText); } catch(e1) {
+            try { var m = rawText.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); } catch(e2) {}
+        }
+        return this._defaultResult(isImprov);
+    },
+
+    _defaultResult(isImprov) {
+        isImprov = isImprov || false;
+        return { score:50, correct:true, comment:isImprov?'守护之灵沉默了一会儿。':'师傅沉默了一会儿，微微点了点头。' };
+    }
+};
+</script>
+
+<script>
+// ========================================
+// puppets.js — 皮影拖拽交互（全面优化版）
+// ========================================
+(function() {
+    'use strict';
+    var stage = document.getElementById('stage');
+    var cards = document.querySelectorAll('.puppet-card');
+    var dragClone = null;
+    var dragPuppetId = null;
+    var dragSource = null;   // 'card' | 'stage'
+    var dragPuppetEl = null; // 舞台上的原皮影元素（从舞台拖动时用）
+    var offsetX = 0, offsetY = 0;
+    // 舞台渲染尺寸（和 placeOnStage 保持一致）
+    var STAGE_W = 100;
+
+    // ---- 皮影箱卡片 mousedown ----
+    function onCardMouseDown(e) {
+        if (dragClone || e.button !== 0) return;          // 只处理左键，防重入
+        e.preventDefault();                                // 阻止浏览器默认拖拽/选中
+        e.stopPropagation();
+        try { window.getSelection().removeAllRanges(); } catch(_) {}
+
+        dragSource = 'card';
+        var card = e.currentTarget;
+        dragPuppetId = card.dataset.puppet;
+
+        // 创建浮动 clone —— 尺寸和舞台放置时一致
+        dragClone = document.createElement('div');
+        dragClone.className = 'puppet-drag-clone';
+        dragClone.style.width = STAGE_W + 'px';
+        dragClone.innerHTML = window.PuppetImageRenderer
+            ? PuppetImageRenderer.render(dragPuppetId, { width: STAGE_W })
+            : card.querySelector('.puppet-icon').innerHTML;
+
+        var rect = card.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        dragClone.style.left = (e.clientX - offsetX) + 'px';
+        dragClone.style.top  = (e.clientY - offsetY) + 'px';
+        document.body.appendChild(dragClone);
+        card.classList.add('dragging');
+    }
+
+    // ---- 舞台上已放置皮影的 mousedown（二次拖动）----
+    function onStagePuppetDown(e) {
+        if (dragClone || e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        try { window.getSelection().removeAllRanges(); } catch(_) {}
+
+        dragSource = 'stage';
+        dragPuppetEl = e.currentTarget;
+        dragPuppetId = dragPuppetEl.dataset.puppet;
+        var rect = dragPuppetEl.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+
+        // 创建浮动 clone，和舞台原皮影等宽
+        dragClone = document.createElement('div');
+        dragClone.className = 'puppet-drag-clone';
+        dragClone.style.width = STAGE_W + 'px';
+        dragClone.innerHTML = window.PuppetImageRenderer
+            ? PuppetImageRenderer.render(dragPuppetId, { width: STAGE_W })
+            : dragPuppetEl.innerHTML;
+        dragClone.style.left = (e.clientX - offsetX) + 'px';
+        dragClone.style.top  = (e.clientY - offsetY) + 'px';
+        document.body.appendChild(dragClone);
+
+        // 原皮影淡化，不删除
+        dragPuppetEl.style.opacity = '0.25';
+        dragPuppetEl.style.pointerEvents = 'none';
+    }
+
+    // ---- 全局 mousemove ----
+    document.addEventListener('mousemove', function(e) {
+        if (!dragClone) return;
+        e.preventDefault();
+        dragClone.style.left = (e.clientX - offsetX) + 'px';
+        dragClone.style.top  = (e.clientY - offsetY) + 'px';
+    });
+
+    // ---- 全局 mouseup（统一结束拖拽）----
+    document.addEventListener('mouseup', function(e) {
+        if (!dragClone) return;
+        if (e.button !== 0) return;
+
+        finishDrag(e);
+    });
+
+    // ---- 鼠标离开窗口 → 强制取消 ----
+    document.addEventListener('mouseleave', function(e) {
+        if (!dragClone) return;
+        cancelDrag();
+    });
+
+    // ---- 阻止浏览器原生的 dragstart（防 ghost image）----
+    document.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+    });
+
+    // ---- ESC 取消 ----
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && dragClone) cancelDrag();
+    });
+
+    function finishDrag(e) {
+        if (dragSource === 'card') {
+            // 清除卡片的 dragging 状态
+            cards.forEach(function(c) { c.classList.remove('dragging'); });
+        }
+
+        dragClone.remove();
+        var clone = dragClone;
+        var source = dragSource;
+        var puppetId = dragPuppetId;
+        var puppetEl = dragPuppetEl;
+        var offX = offsetX, offY = offsetY;
+
+        // 先清空状态，避免 placeOnStage 里 emit 事件触发其他逻辑时脏读
+        dragClone = null; dragPuppetId = null;
+        dragSource = null; dragPuppetEl = null;
+
+        var stageRect = stage.getBoundingClientRect();
+        var onStage = e.clientX >= stageRect.left && e.clientX <= stageRect.right
+                   && e.clientY >= stageRect.top  && e.clientY <= stageRect.bottom;
+
+        if (source === 'card' && onStage) {
+            placeOnStage(e.clientX, e.clientY, puppetId);
+        } else if (source === 'stage') {
+            if (onStage) {
+                // 拖动到舞台内 → 更新位置
+                var newLeft = e.clientX - stageRect.left - offX;
+                var newTop  = e.clientY - stageRect.top  - offY;
+                puppetEl.style.left = newLeft + 'px';
+                puppetEl.style.top  = newTop  + 'px';
+                puppetEl.style.opacity = '1';
+                puppetEl.style.pointerEvents = '';
+                EventBus.emit('puppet_moved', { id: puppetId, x: Math.round(newLeft), y: Math.round(newTop) });
+            } else {
+                // 拖到舞台外 → 恢复原位置
+                puppetEl.style.opacity = '1';
+                puppetEl.style.pointerEvents = '';
+            }
         }
     }
 
-    dragClone=null; dragPuppetId=null; dragSource=null; dragPuppetEl=null;
-});
-
-function placePuppet(x,y){
-    var sr=stage.getBoundingClientRect();
-    var pup=document.createElement('div');
-    pup.className='stage-puppet';
-    pup.dataset.puppet=dragPuppetId;
-    var sz=PUPPET_RENDER[dragPuppetId]||{w:100,h:140};
-    pup.dataset.renderWidth=sz.w;
-    pup.innerHTML=PuppetImageRenderer.render(dragPuppetId,sz.w);
-    pup.style.left=(x-sr.left-sz.w/2)+'px';
-    pup.style.top=(y-sr.top-sz.h/2)+'px';
-    pup.addEventListener('mousedown',onStagePuppetDown);  // 支持二次拖动
-    stage.appendChild(pup);
-    EventBus.emit('puppet_placed',{id:dragPuppetId,x:parseInt(pup.style.left),y:parseInt(pup.style.top)});
-    var hint=stage.querySelector('.stage-hint');
-    if(hint)hint.style.display='none';
-}
-
-EventBus.on('puppet_placed',function(data){
-    LampSystem.burn('puppet_placed');
-    gameState.stagedPuppets.push(data.id);
-});
-
-EventBus.on('puppet_moved',function(data){
-    // 移动皮影：油耗已在 mouseup 中扣除，不重复入列
-    console.log('🎭 皮影移动: '+data.id+' → ('+data.x+','+data.y+')');
-});
-
-// ==================== 11. 确认按钮 ====================
-document.getElementById('btnConfirm').addEventListener('click',function(){
-    if(gameState.stagedPuppets.length===0){
-        document.getElementById('dialogueText').innerHTML='<span style="color:#c45050;">白布上什么都没有。先把皮影放上去吧。</span>';
-        return;
+    function cancelDrag() {
+        // 取消所有拖拽状态
+        cards.forEach(function(c) { c.classList.remove('dragging'); });
+        if (dragSource === 'stage' && dragPuppetEl) {
+            dragPuppetEl.style.opacity = '1';
+            dragPuppetEl.style.pointerEvents = '';
+        }
+        if (dragClone) { dragClone.remove(); dragClone = null; }
+        dragPuppetId = null; dragSource = null; dragPuppetEl = null;
     }
-    document.getElementById('btnConfirm').disabled=true;
-    var result=localJudge(currentSceneIdx);
-    var scene=ACT1.scenes[currentSceneIdx];
-    var html='<b>📋 评判结果</b><br><br>';
-    html+='得分：<span style="color:#e8c97a;">'+result.score+'</span> / 100<br>';
-    html+='判定：'+(result.correct?'<span style="color:#6b8a40;">✓ 对路</span>':'<span style="color:#c45050;">✗ 不太对</span>')+'<br>';
-    html+='已摆皮影：'+gameState.stagedPuppets.join('、')+'<br>';
-    html+='必需皮影覆盖：'+result.covered.join('、')+'<br>';
-    html+='创造力加分：+'+result.creativity+'<br><br>';
-    html+='<i>"'+result.comment+'"</i><br><br>';
-    // 下一场按钮
-    if(currentSceneIdx<2){
-        html+='<span style="color:#c48a3e;">点击「下一场」继续。</span>';
-        document.getElementById('btnNext').style.display='inline-block';
-    } else {
-        html+='<span style="color:#e8c97a;">第一幕完成！共3场。</span>';
-        var ending=determineEnding(gameState);
-        html+='<br>当前倾向结局：<b>'+ending.name+'</b> —— '+ending.desc;
+
+    function placeOnStage(x, y, puppetId) {
+        var stageRect = stage.getBoundingClientRect();
+
+        var pup = document.createElement('div');
+        pup.className = 'stage-puppet';
+        pup.dataset.puppet = puppetId;
+        pup.style.width = STAGE_W + 'px';
+        pup.style.height = 'auto';
+        pup.innerHTML = window.PuppetImageRenderer
+            ? PuppetImageRenderer.render(puppetId, { width: STAGE_W })
+            : '';
+
+        // 鼠标位置就是皮影中心
+        pup.style.left = (x - stageRect.left - STAGE_W / 2) + 'px';
+        // 用 clone 的实际高度算 top 偏移（approximate: 1.4x 宽度的长宽比）
+        var approxH = STAGE_W * 1.4;
+        pup.style.top  = (y - stageRect.top  - approxH / 2) + 'px';
+
+        // 绑定后续拖动事件
+        pup.addEventListener('mousedown', onStagePuppetDown);
+
+        stage.appendChild(pup);
+
+        var hint = stage.querySelector('.stage-hint');
+        if (hint) hint.style.display = 'none';
+
+        EventBus.emit('puppet_placed', {
+            id: puppetId,
+            x: Math.round(parseInt(pup.style.left)),
+            y: Math.round(parseInt(pup.style.top))
+        });
     }
-    document.getElementById('dialogueText').innerHTML=html;
-    document.getElementById('btnConfirm').disabled=false;
-});
 
-// ==================== 12. 追问按钮 ====================
-document.getElementById('btnAsk').addEventListener('click',function(){
-    LampSystem.burn('ask_master');
-    gameState.endingStats.questionsAsked++;
-    var scene=ACT1.scenes[currentSceneIdx];
-    var replies=[
-        '路师傅看了你一眼：「问得好——但有些事，你得自己从戏里看出来。」',
-        '「你倒是有心。」路师傅捻了捻手中的操纵杆，没有正面回答。',
-        '师傅沉默了一会儿：「戏里的事——有时候比真的还真。」',
-        '路师傅摆了摆手：「先把这出戏演好。等灯油再亮些——我再告诉你。」'
-    ];
-    document.getElementById('dialogueText').innerHTML='<b>你向师父追问……</b><br><br><i>"'+replies[Math.floor(Math.random()*replies.length)]+'"</i><br><br><span style="color:#c48a3e;">灯油 -8</span>';
-});
+    // ---- 初始化：给所有卡片绑定事件 ----
+    cards.forEach(function(card) {
+        card.addEventListener('mousedown', onCardMouseDown);
+    });
 
-// ==================== 13. 下一场按钮 ====================
-document.getElementById('btnNext').addEventListener('click',function(){
-    if(currentSceneIdx<2){
-        loadScene(currentSceneIdx+1);
+    console.log('[puppets] 拖拽系统就绪（优化版），共', cards.length, '张皮影');
+})();
+</script>
+
+<script>
+// ========================================
+// theater.js — 舞台管理系统
+// ========================================
+(function() {
+    'use strict';
+    var stage       = document.getElementById('stage');
+    var btnConfirm  = document.getElementById('btnConfirm');
+    var btnAsk      = document.getElementById('btnAsk');
+    var dialogueText = document.getElementById('dialogueText');
+    var speaker     = document.getElementById('speaker');
+    var flame       = document.getElementById('flame');
+
+    var OFFLINE_MODE = (function() {
+        if (typeof API_CONFIG === 'undefined') return true;
+        var key = API_CONFIG.API_KEY || '';
+        if (!key || key.indexOf('请在这里') !== -1 || key === 'sk-未配置') return true;
+        return false;
+    })();
+
+    if (OFFLINE_MODE) {
+        var infoPanel = document.querySelector('.info-panel');
+        if (infoPanel) { var badge = document.createElement('div'); badge.style.cssText='margin-top:16px;padding:4px 8px;font-size:11px;color:#c48a3e;border:1px solid #5a2d15;border-radius:2px;letter-spacing:1px;'; badge.textContent='离 线 模 式'; infoPanel.appendChild(badge); }
     }
-});
 
-// ==================== 14. 油耗尽处理 ====================
-EventBus.on('oil_depleted',function(){
-    document.getElementById('flame').style.opacity='0';
-    document.getElementById('dialogueText').innerHTML='<b style="color:#c45050;">灯灭了。</b><br><br>舞台陷入黑暗。路师傅的声音从暗处传来：<br><br><i>"没事。灯灭过很多次。每次都会有人再点起来。"</i><br><br><span style="color:#8b6914;">结局：灯灭</span>';
-    document.getElementById('btnConfirm').disabled=true;
-    document.getElementById('btnAsk').disabled=true;
-    document.getElementById('btnNext').style.display='none';
-});
+    // 注意：舞台皮影的拖拽和放置已由 puppets.js 统一接管
+    // 这里不再注册 stage.addEventListener('mousedown', ...) 
 
-// ==================== 15. 启动游戏 ====================
-buildPuppetBox();
-loadScene(0);
-document.getElementById('endingHint').textContent=determineEnding(gameState).name;
+    // 确认摆影
+    btnConfirm.addEventListener('click', function() {
+        var staged = collectStagedPuppets();
+        if (staged.length===0) { speaker.textContent='路师傅'; typewriter(dialogueText,'白布上还空着呢——先摆几个影儿。'); return; }
+        btnConfirm.disabled=true; btnAsk.disabled=true;
+        speaker.textContent='路师傅'; dialogueText.textContent='（师傅凑近白布，眯着眼细细端详……）';
+        EventBus.emit('stage_confirmed', { puppets: staged });
+        var sceneId = getCurrentSceneId();
+        var isImprov = (gameState.currentAct===3);
+        if (OFFLINE_MODE) {
+            setTimeout(function() {
+                var result = ShadowJudge.quickJudge(staged, sceneId);
+                result.comment = buildOfflineComment(staged, sceneId, result);
+                result.guiding_hint = buildOfflineHint(staged, sceneId);
+                displayJudgeResult(result);
+                emitSceneJudged(staged, sceneId, result);
+                btnConfirm.disabled=false; btnAsk.disabled=false;
+            }, 800);
+        } else {
+            if (window.ShadowJudge) {
+                ShadowJudge.judge(staged, sceneId, isImprov).then(function(result) {
+                    displayJudgeResult(result);
+                    emitSceneJudged(staged, sceneId, result);
+                }).catch(function() {
+                    var r = ShadowJudge.quickJudge(staged, sceneId);
+                    displayJudgeResult(r);
+                    emitSceneJudged(staged, sceneId, r);
+                }).finally(function() { btnConfirm.disabled=false; btnAsk.disabled=false; });
+            }
+        }
+    });
 
-console.log('🎭 掌中光 · 第一幕就绪！共3场戏：',sceneNames.join(' → '));
-console.log('📦 皮影箱：',gameState.ownedPuppets.join('、'));
-console.log('🖼 可用图片：scholar✓ elder✓ frog✓（其余用emoji兜底）');
-console.log('💡 拖皮影到白布 → 点「确认摆影」查看评判');
+    // 追问师父
+    btnAsk.addEventListener('click', function() {
+        EventBus.emit('ask_master', { puppets: collectStagedPuppets(), sceneId: getCurrentSceneId() });
+        speaker.textContent='路师傅';
+        if (OFFLINE_MODE) { var h = buildOfflineHint(collectStagedPuppets(), getCurrentSceneId()); typewriter(dialogueText, h, 45); }
+        else { typewriter(dialogueText, '（你向师傅请教——师傅沉吟片刻……）', 40); }
+    });
+
+    function buildOfflineComment(staged, sceneId, result) {
+        var scene = ShadowJudge._getSceneData(sceneId);
+        if (!scene) return '师傅看了看书生，又看了看月亮。';
+        var placedIds = staged.map(function(p){return p.puppetId;});
+        var required = scene.standard_puppets||[];
+        var covered = required.filter(function(id){return placedIds.indexOf(id)!==-1;});
+        var coverage = required.length>0?covered.length/required.length:1;
+        var missing = required.filter(function(id){return placedIds.indexOf(id)===-1;});
+        if (coverage>=0.8) return '嗯——'+scene.name+'，就是这个意思。\n影面里该有的，都有了。';
+        if (coverage>=0.5) return '差了点意思。\n'+(missing.length>0?'还缺——'+missing.map(getPuppetName).join('、')+'。\n\n':'')+(scene.cipher_guidance||'再想想，这出戏还差什么？');
+        return '不对路。\n这出戏讲的是"'+scene.name+'"——\n'+(missing.length>0?'得有：'+missing.map(getPuppetName).join('、')+'。':'');
+    }
+
+    function buildOfflineHint(staged, sceneId) {
+        var scene = ShadowJudge._getSceneData(sceneId);
+        if (!scene) return '师傅没说话，手指敲了敲操纵杆。';
+        var placedIds = staged.map(function(p){return p.puppetId;});
+        if (placedIds.indexOf('tree')!==-1) return '路师傅说：我认得一棵槐树，在东街第三个书摊后面。那棵树——比我还老。';
+        if (placedIds.indexOf('letter')!==-1) return '路师傅低声说：那封信——写了三年。不是我写的，是我师父。颜体，一笔一画。';
+        if (placedIds.indexOf('elder')!==-1&&placedIds.indexOf('letter')!==-1) return '路师傅停了一下：这根杆——本来有三根的。我师父当年……算了。';
+        if (placedIds.indexOf('frog')!==-1&&placedIds.indexOf('elder')!==-1) return '路师傅的声音变了：金蟾碎了。戏里是这么写的——但戏外——也碎了。';
+        if (placedIds.indexOf('scholar')!==-1) return '路师傅说：书生等的那封信——不是情书。比命还重的东西。';
+        var required = scene.standard_puppets||[];
+        var missing = required.filter(function(id){return placedIds.indexOf(id)===-1;});
+        if (missing.length>0) return '路师傅眯着眼看了看白布：还差点东西。你觉得——'+missing.map(getPuppetName).join('、')+'该摆在哪？';
+        return '路师傅点了点头：影面齐了。不过——摆的位置，还要再想想。';
+    }
+
+    function collectStagedPuppets() {
+        var puppets = stage.querySelectorAll('.stage-puppet');
+        var stageRect = stage.getBoundingClientRect();
+        return Array.from(puppets).map(function(p) {
+            var id = p.dataset.puppet;
+            var left = parseInt(p.style.left)||0;
+            var top  = parseInt(p.style.top)||0;
+            var w = parseInt(p.style.width)||80;
+            var h = parseInt(p.style.height)||110;
+            return { puppetId:id, name:getPuppetName(id), x:(left+w/2)/(stageRect.width||1), y:(top+h/2)/(stageRect.height||1) };
+        });
+    }
+
+    function getPuppetName(id) {
+        var card = document.querySelector('.puppet-card[data-puppet="'+id+'"]');
+        if (card) { var n = card.querySelector('.puppet-name'); if(n) return n.textContent.trim(); }
+        var names = { scholar:'书生',tree:'槐树',moon:'月亮',elder:'老者',letter:'信',frog:'金蟾',lamp:'灯',demon:'白骨精',monkey:'孙悟空',bamboo:'竹子',master:'师傅' };
+        return names[id]||id;
+    }
+
+    function getCurrentSceneId() { return 'act'+gameState.currentAct+'_scene'+(gameState.currentScene+1); }
+
+    function emitSceneJudged(staged, sceneId, result) {
+        var scene = ShadowJudge._getSceneData(sceneId);
+        var required = scene?scene.standard_puppets||[]:[];
+        var placedIds = staged.map(function(p){return p.puppetId;});
+        var covered = required.filter(function(id){return placedIds.indexOf(id)!==-1;});
+        var coverage = required.length>0?covered.length/required.length:1;
+        EventBus.emit('scene_judged', { score:result.score||0, correct:result.correct, coverage:coverage, puppets:staged, sceneId:sceneId });
+    }
+
+    function displayJudgeResult(result) {
+        speaker.textContent='路师傅';
+        var text = '';
+        if (result.comment) text += result.comment;
+        if (result.guiding_hint) text += '\n\n'+result.guiding_hint;
+        if (!text) text = '……（师傅看了看，没说话。）';
+        typewriter(dialogueText, text, 55);
+    }
+
+    var typewriterTimer = null;
+    function typewriter(el, text, speed) {
+        speed = speed||50;
+        if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; }
+        el.textContent=''; el.innerHTML='';
+        var i=0;
+        typewriterTimer = setInterval(function() {
+            if (i<text.length) { var ch=text[i]; if(ch==='\n') el.innerHTML+='<br>'; else el.innerHTML+=ch; i++; }
+            else { clearInterval(typewriterTimer); typewriterTimer=null; }
+        }, speed);
+    }
+
+    function clearStage() {
+        var puppets = stage.querySelectorAll('.stage-puppet');
+        puppets.forEach(function(p){p.remove();});
+        gameState.stagedPuppets=[];
+        var hint=stage.querySelector('.stage-hint'); if(hint) hint.style.display='';
+    }
+
+    EventBus.on('oil_depleted', function() {
+        stage.classList.add('stage-dark');
+        if(flame)flame.classList.add('flame-gone');
+        speaker.textContent='路师傅'; if(typewriterTimer)clearInterval(typewriterTimer);
+        dialogueText.textContent='灯——灭了。'; btnConfirm.disabled=true; btnAsk.disabled=true;
+    });
+
+    EventBus.on('narration_chunk', function(data) { if(data.speaker)speaker.textContent=data.speaker; if(data.text)typewriter(dialogueText,data.text,data.speed||50); });
+    EventBus.on('judge_result', function(result) { if(!btnConfirm.disabled) displayJudgeResult(result); });
+
+    EventBus.on('countdown_tick', function(data) {
+        var cd = document.getElementById('countdownDisplay');
+        if(!cd){ cd=document.createElement('div'); cd.id='countdownDisplay'; cd.style.cssText='position:absolute;top:10px;right:20px;color:#e8c97a;font-size:20px;font-weight:bold;text-shadow:0 0 10px rgba(232,180,90,0.5);z-index:100;'; document.body.appendChild(cd); }
+        cd.textContent='⏱ '+data.time+' 秒'; if(data.time<=5)cd.style.color='#ff4444';
+    });
+
+    EventBus.on('countdown_expired', function() {
+        var cd = document.getElementById('countdownDisplay'); if(cd)cd.remove();
+        if(!(gameState.currentAct===2&&gameState.currentScene===1)) { console.warn('[theater] countdown_expired ignored'); return; }
+        gameState.lampOil=0; updateOilUI();
+        var ot=document.getElementById('oilText'); if(ot)ot.textContent='0 / 100';
+        var ob=document.getElementById('oilBar'); if(ob)ob.style.width='0%';
+        stage.classList.add('stage-dark'); if(flame)flame.classList.add('flame-gone');
+        speaker.textContent='路师傅'; typewriter(dialogueText,'时间到了——灯油耗尽了。\n\n白布上一片漆黑……什么也看不见了。',50);
+        btnConfirm.disabled=true; btnAsk.disabled=true;
+        EventBus.emit('oil_depleted',{reason:'countdown'});
+    });
+
+    EventBus.on('act_intermission', function() {
+        clearStage();
+        stage.classList.remove('stage-dark'); if(flame)flame.classList.remove('flame-gone');
+        btnConfirm.disabled=false; btnAsk.disabled=false;
+    });
+
+    EventBus.on('save_loaded', function(data) {
+        if(data&&data.state) { var ot=document.getElementById('oilText'); if(ot)ot.textContent=data.state.lampOil+' / 100'; var ob=document.getElementById('oilBar'); if(ob)ob.style.width=data.state.lampOil+'%'; }
+    });
+
+    window.TheaterSystem = { clearStage:clearStage, collectStagedPuppets:collectStagedPuppets, getCurrentSceneId:getCurrentSceneId, typewriter:typewriter, isOfflineMode:function(){return OFFLINE_MODE;} };
+    console.log('[theater] 舞台管理系统就绪'+(OFFLINE_MODE?'（离线模式）':'（在线模式）'));
+})();
+</script>
+
+<script>
+// ========================================
+// main.js — 游戏流程控制器
+// ========================================
+(function() {
+    'use strict';
+    var sceneConfirmCount = 0;
+    var scenePassed = false;
+    var advancing = false;
+
+    function resetSceneState() { sceneConfirmCount=0; scenePassed=false; advancing=false; }
+
+    function updateHeader() {
+        var header = document.querySelector('.header');
+        var sceneInfo = document.getElementById('sceneInfo');
+        var actNum = gameState.currentAct;
+        var sceneNum = gameState.currentScene+1;
+        if (header&&ACTS_DATA&&ACTS_DATA.acts) { var ad=ACTS_DATA.acts[actNum-1]; if(ad) header.textContent='掌 中 光 · 第 '+getActNum(actNum)+' 幕 — '+ad.name; }
+        if (sceneInfo&&ACTS_DATA&&ACTS_DATA.acts) { var ad=ACTS_DATA.acts[actNum-1]; if(ad&&ad.scenes&&ad.scenes[gameState.currentScene]) sceneInfo.textContent='第'+sceneNum+'场 · '+ad.scenes[gameState.currentScene].name; }
+    }
+
+    function init() {
+        try {
+            if (typeof ACTS_DATA==='undefined') { showDialogue('路师傅','（数据加载失败。请刷新页面重试。）'); return; }
+            updatePuppetCards(gameState.currentAct);
+            updateHeader();
+            var act1 = ACTS_DATA.acts[0];
+            showActIntro(act1, function() { setTimeout(function(){startCurrentScene();},1000); });
+        } catch(e) { showDialogue('系统','游戏初始化出错：'+e.message+'。请刷新页面。'); }
+    }
+
+    function showActIntro(act, callback) {
+        EventBus.emit('narration_chunk', { speaker:'路师傅', text:act.intro, speed:38 });
+        var ms = Math.max(4000, Math.ceil(act.intro.length/3*1000)+1000);
+        if (callback) setTimeout(callback, ms);
+    }
+
+    function startCurrentScene() {
+        try {
+            resetSceneState();
+            EventBus.emit('countdown_stop_request');
+            var act = ACTS_DATA.acts[gameState.currentAct-1];
+            var scene = act.scenes[gameState.currentScene];
+            updateHeader();
+            if (window.TheaterSystem&&TheaterSystem.clearStage) TheaterSystem.clearStage();
+            var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
+            if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
+            EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:35 });
+            if (scene.time_limit&&window.LampSystem) { setTimeout(function(){LampSystem.startCountdown();},5000); }
+            if (scene.is_improvisation&&scene.keywords) { setTimeout(function(){EventBus.emit('narration_chunk',{speaker:'路师傅',text:'三个词——'+scene.keywords.join('、')+'。\n\n剩下的——该你了。',speed:40});},6000); }
+        } catch(e) { showDialogue('路师傅','（……灯晃了一下。刚才说到哪了？——请刷新页面。）'); }
+    }
+
+    EventBus.on('scene_judged', function(data) {
+        try {
+            if (scenePassed||advancing) return;
+            sceneConfirmCount++;
+            var coverage = data.coverage||0;
+            var score = data.score||0;
+            var act = ACTS_DATA.acts[gameState.currentAct-1];
+            var scene = act.scenes[gameState.currentScene];
+            var isImprov = scene.is_improvisation===true;
+            var pass = isImprov?sceneConfirmCount>=1:(coverage>=0.8)||(score>=60)||(sceneConfirmCount>=3);
+            if (pass) {
+                scenePassed=true; advancing=true;
+                accumulateEndingStats(data);
+                var delay = isImprov?2500:3500;
+                setTimeout(function(){advanceScene();}, delay);
+            }
+        } catch(e) { scenePassed=false; advancing=false; }
+    });
+
+    function advanceScene() {
+        try {
+            EventBus.emit('countdown_stop_request');
+            var act = ACTS_DATA.acts[gameState.currentAct-1];
+            if (gameState.currentScene+1<act.scenes.length) {
+                gameState.currentScene++;
+                EventBus.emit('narration_chunk',{speaker:'',text:'——',speed:300});
+                setTimeout(function(){startCurrentScene();},1200);
+            } else {
+                if (gameState.currentAct<3) advanceToNextAct();
+                else endGame();
+            }
+        } catch(e) { resetSceneState(); }
+    }
+
+    function advanceToNextAct() {
+        try {
+            gameState.currentAct++; gameState.currentScene=0;
+            EventBus.emit('act_intermission');
+            updatePuppetCards(gameState.currentAct);
+            updateHeader();
+            var nextAct = ACTS_DATA.acts[gameState.currentAct-1];
+            var text = ['','—— 第'+getActNum(gameState.currentAct)+'幕 ——','',nextAct.intro].join('\n');
+            EventBus.emit('narration_chunk',{speaker:'',text:text,speed:36});
+            var ms = Math.max(6000,Math.ceil(nextAct.intro.length/3*1000)+3000);
+            setTimeout(function(){startCurrentScene();},ms);
+        } catch(e) { showDialogue('路师傅','（幕间换场时出了点岔子……请刷新页面。）'); }
+    }
+
+    function endGame() {
+        try {
+            gameState.isGameOver=true;
+            var ending=determineEnding(gameState);
+            EventBus.emit('narration_chunk',{speaker:'',text:'【'+ending.name+'】\n\n'+ending.desc,speed:30});
+            var bc=document.getElementById('btnConfirm'),ba=document.getElementById('btnAsk');
+            if(bc){bc.disabled=true;bc.textContent='剧终';} if(ba){ba.disabled=true;ba.textContent='谢幕';}
+            var bn=document.getElementById('btnNext'); if(bn)bn.style.display='none';
+            var s=document.getElementById('stage'); if(s)s.classList.add('stage-dark');
+            updateHeader();
+        } catch(e) {}
+    }
+
+    function getActNum(n) { return ['','一','二','三'][n]; }
+
+    function accumulateEndingStats(data) {
+        try {
+            var act=ACTS_DATA.acts[gameState.currentAct-1];
+            var scene=act&&act.scenes?act.scenes[gameState.currentScene]:null;
+            if(!scene) return;
+            var required=scene.standard_puppets||[], extras=scene.acceptable_extras||[];
+            var placedIds=(data.puppets||[]).map(function(p){return p&&(p.puppetId||p.id||p);});
+            var covered=required.filter(function(id){return placedIds.indexOf(id)!==-1;});
+            var coverage=required.length>0?covered.length/required.length:1;
+            var extraCount=placedIds.filter(function(id){return extras.indexOf(id)!==-1;}).length;
+            var wrongCount=placedIds.filter(function(id){return required.indexOf(id)===-1&&extras.indexOf(id)===-1;}).length;
+            var score=Math.round(coverage*70)+extraCount*5-wrongCount*10;
+            score=Math.max(0,Math.min(100,score));
+            var creativity=extraCount>0?Math.min(30,extraCount*10+5):0;
+            gameState.endingStats.faithfulness+=score;
+            gameState.endingStats.creativity+=creativity;
+        } catch(e) {}
+    }
+
+    function showDialogue(speakerText, text) {
+        var se=document.getElementById('speaker'),de=document.getElementById('dialogueText');
+        if(se)se.textContent=speakerText||''; if(de)de.textContent=text||'';
+    }
+
+    function updatePuppetCards(actNum) {
+        var cards=document.querySelectorAll('.puppet-card');
+        var vc=0;
+        cards.forEach(function(card){
+            var acts=(card.dataset.act||'').split(',');
+            if(acts.indexOf(String(actNum))>=0) { card.classList.remove('hidden'); vc++; }
+            else card.classList.add('hidden');
+        });
+        console.log('[main] 皮影箱已切换至第'+getActNum(actNum)+'幕（显示'+vc+'个角色）');
+    }
+
+    if (document.readyState==='loading') { document.addEventListener('DOMContentLoaded',init); }
+    else { init(); }
+    console.log('[main] 游戏流程控制器就绪');
+})();
 </script>
 
 </body>
