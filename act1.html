@@ -436,6 +436,29 @@ body {
 .intro-box.lit .intro-puppet-name { color: #c4a44a; }
 
 /* ---- 底部字幕 ---- */
+.intro-opening-line {
+    position: absolute;
+    bottom: 14%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 1.5rem;
+    color: #8a7a5a;
+    text-shadow: 0 0 20px rgba(255,180,80,0.3);
+    letter-spacing: 0.15em;
+    pointer-events: none;
+    z-index: 201;
+    opacity: 0;
+    transition: opacity 2s ease;
+    white-space: nowrap;
+}
+.intro-opening-line.revealed {
+    opacity: 0.7;
+}
+.intro-opening-line.fade-out {
+    opacity: 0;
+}
+
 .intro-subtitle {
     position: absolute;
     bottom: 14%;
@@ -458,6 +481,76 @@ body {
 @keyframes subtitlePulse {
     0%, 100% { opacity: 0.5; }
     50% { opacity: 0.9; }
+}
+
+/* ====== 黑屏字幕滚动 ====== */
+.story-intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 210;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.5s ease;
+}
+.story-intro-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.story-intro-overlay.fade-out {
+    opacity: 0;
+}
+.story-intro-text {
+    position: absolute;
+    bottom: -100%;
+    width: 70%;
+    max-width: 700px;
+    text-align: center;
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 1.35rem;
+    line-height: 2.6;
+    color: #c4a46c;
+    text-shadow: 0 0 12px rgba(200,160,80,0.25);
+    letter-spacing: 0.12em;
+    white-space: pre-line;
+}
+.story-intro-overlay.visible .story-intro-text {
+    animation: storyScroll 22s linear forwards;
+}
+@keyframes storyScroll {
+    0%   { bottom: -100%; }
+    100% { bottom: 120%; }
+}
+
+/* 跳过按钮 */
+.story-skip-btn {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    padding: 8px 24px;
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 0.95rem;
+    color: #6a5a3a;
+    background: rgba(30,20,10,0.5);
+    border: 1px solid rgba(160,130,70,0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 211;
+    opacity: 0;
+    transition: opacity 0.8s ease, color 0.3s ease, border-color 0.3s ease;
+    letter-spacing: 0.15em;
+}
+.story-intro-overlay.visible .story-skip-btn {
+    opacity: 0.6;
+}
+.story-skip-btn:hover {
+    color: #e8c860;
+    border-color: rgba(220,180,80,0.6);
+    opacity: 1;
 }
 
 .stage {
@@ -536,6 +629,10 @@ body {
     -webkit-user-drag: none;
     z-index: 3;
     filter: drop-shadow(3px 4px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 2px rgba(180,120,50,0.3));
+    transform: scaleX(1);
+}
+.stage-puppet.flipped {
+    transform: scaleX(-1);
 }
 .stage-puppet:focus { outline: none !important; }
 
@@ -556,6 +653,9 @@ body {
     z-index: 9999;
     opacity: 0.85;
     filter: drop-shadow(4px 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 0 8px rgba(220,160,60,0.3));
+}
+.puppet-drag-clone.flipped {
+    transform: scaleX(-1);
 }
 
 .puppet-drag-clone svg {
@@ -785,7 +885,29 @@ body {
             </div>
         </div>
     </div>
-    <div class="intro-subtitle" id="introSubtitle">请点燃油灯吧</div>
+    <div class="intro-opening-line" id="introOpeningLine">你来了？灯快没油了，坐近点</div>
+    <div class="intro-subtitle" id="introSubtitle">点燃油灯吧</div>
+</div>
+
+<!-- ====== 黑屏字幕滚动：背景介绍 ====== -->
+<div class="story-intro-overlay" id="storyIntroOverlay">
+    <div class="story-intro-text" id="storyIntroText">民国年间，琉璃厂旧书街。
+
+一间旧书铺的后院，支着一方小小的皮影戏台。
+
+台前无人，白布蒙尘，木箱里躺着五个皮影——
+书生、槐树、月亮、老者、金蟾。
+
+老师傅已等了许久。
+灯油将尽，他却不急。
+
+他在等一个人来。
+
+听一出戏，演一出戏。
+
+戏名叫《刘海戏金蟾》，
+可这戏里，藏着另一段故事……</div>
+    <div class="story-skip-btn" id="storySkipBtn">跳 过</div>
 </div>
 
 <div class="header">掌 中 光 · 第 一 幕 — 琉璃厂·书生与鹤</div>
@@ -1042,7 +1164,7 @@ function updateOilUI() {
 }
 
 const LampSystem = {
-    COSTS: { puppet_placed: 3, puppet_removed: 3, puppet_moved: 1, ask_master: 8, wrong_puppet: 5, time_penalty: 2 },
+    COSTS: { puppet_placed: 3, puppet_removed: 3, puppet_moved: 1, puppet_flipped: 1, ask_master: 8, wrong_puppet: 5, time_penalty: 2 },
     REWARDS: { correct_judge: 2, creativity_bonus: 3, partial_correct: 1, perfect_scene: 10 },
     RECOVERY: { intermission: 80 },
     burn(reason) {
@@ -1091,6 +1213,7 @@ EventBus.on("puppet_placed", function(data) {
     if (data && data.id && gameState.stagedPuppets.indexOf(data.id) === -1) gameState.stagedPuppets.push(data.id);
 });
 EventBus.on("puppet_removed", function() { LampSystem.burn("puppet_removed"); });
+EventBus.on("puppet_flipped", function() { LampSystem.burn("puppet_flipped"); });
 EventBus.on("puppet_moved", function() { LampSystem.burn("puppet_moved"); });
 EventBus.on("ask_master", function() { LampSystem.burn("ask_master"); });
 EventBus.on("judge_result", function(result) { if (result && result.correct) LampSystem.reward("correct_judge"); });
@@ -1407,6 +1530,7 @@ const ShadowJudge = {
     var dragSource = null;   // 'card' | 'stage'
     var dragPuppetEl = null; // 舞台上的原皮影元素（从舞台拖动时用）
     var offsetX = 0, offsetY = 0;
+    var dragStartX = 0, dragStartY = 0;
     // 舞台渲染尺寸（和 placeOnStage 保持一致）
     var STAGE_W = 100;
 
@@ -1448,6 +1572,8 @@ const ShadowJudge = {
         dragSource = 'stage';
         dragPuppetEl = e.currentTarget;
         dragPuppetId = dragPuppetEl.dataset.puppet;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
         var rect = dragPuppetEl.getBoundingClientRect();
         offsetX = e.clientX - rect.left;
         offsetY = e.clientY - rect.top;
@@ -1461,6 +1587,9 @@ const ShadowJudge = {
             : dragPuppetEl.innerHTML;
         dragClone.style.left = (e.clientX - offsetX) + 'px';
         dragClone.style.top  = (e.clientY - offsetY) + 'px';
+        if (dragPuppetEl.classList.contains('flipped')) {
+            dragClone.classList.add('flipped');
+        }
         document.body.appendChild(dragClone);
 
         // 原皮影淡化，不删除
@@ -1528,7 +1657,24 @@ const ShadowJudge = {
         if (source === 'card' && onStage) {
             placeOnStage(cloneRect, puppetId);
         } else if (source === 'stage') {
-            if (onStage) {
+            // 判断是点击（翻转）还是拖动（移动）
+            var moved = Math.abs(e.clientX - dragStartX) > 5 || Math.abs(e.clientY - dragStartY) > 5;
+
+            if (!moved) {
+                // 单击 → 左右翻转（Web Animations API 控制动画，两个方向一致）
+                var wasFlipped = puppetEl.classList.contains('flipped');
+                puppetEl.classList.toggle('flipped');
+                var fromScale = wasFlipped ? -1 : 1;
+                var toScale   = wasFlipped ?  1 : -1;
+                puppetEl.animate([
+                    { transform: 'scaleX(' + fromScale + ')', opacity: 1 },
+                    { transform: 'scaleX(0)',                 opacity: 0.5, offset: 0.5 },
+                    { transform: 'scaleX(' + toScale   + ')', opacity: 1 }
+                ], { duration: 380, easing: 'ease-in-out' });
+                puppetEl.style.opacity = '1';
+                puppetEl.style.pointerEvents = '';
+                EventBus.emit('puppet_flipped', { id: puppetId });
+            } else if (onStage) {
                 // clone 左上角相对于舞台 = 放置位置
                 puppetEl.style.left = (cloneRect.left - stageRect.left) + 'px';
                 puppetEl.style.top  = (cloneRect.top  - stageRect.top)  + 'px';
@@ -1640,6 +1786,7 @@ const ShadowJudge = {
     var oilDisplay = document.getElementById('introOilDisplay');
     var introBox = document.getElementById('introBox');
     var subtitle = document.getElementById('introSubtitle');
+    var openingLine = document.getElementById('introOpeningLine');
     var gallery = document.getElementById('introBoxGallery');
     var panels = document.querySelectorAll('.curtain-panel');
 
@@ -1667,11 +1814,18 @@ const ShadowJudge = {
     });
 
     var isLit = false;
+    var storyOverlay = document.getElementById('storyIntroOverlay');
 
     // ---- 2 秒全黑后，油灯与皮影箱渐显 ----
-    setTimeout(function() { lampWrap.classList.add('revealed'); }, 2000);
-    setTimeout(function() { introBox.classList.add('revealed'); }, 2500);
-    setTimeout(function() { subtitle.classList.add('revealed'); }, 4500);
+    // 0.5 秒后显示开场白
+    setTimeout(function() { openingLine.classList.add('revealed'); }, 500);
+    // 5.5 秒后油灯渐显，开场白淡出（开场白持续5秒）
+    setTimeout(function() {
+        lampWrap.classList.add('revealed');
+        openingLine.classList.add('fade-out');
+    }, 5500);
+    setTimeout(function() { introBox.classList.add('revealed'); }, 6000);
+    setTimeout(function() { subtitle.classList.add('revealed'); }, 8000);
 
     // ---- 点击油灯 → 点亮 ----
     lampWrap.addEventListener('click', function() {
@@ -1693,17 +1847,43 @@ const ShadowJudge = {
         subtitle.style.color = '#e8c860';
         subtitle.style.textShadow = '0 0 30px rgba(255,200,60,0.6)';
 
-        // 2.5 秒后黑幕淡出，幕布拉开
+        // 2.5 秒后黑幕淡出，黑屏字幕滚动同时出现（避免中间露出舞台）
         setTimeout(function() {
             overlay.classList.add('fade-out');
             subtitle.style.transition = 'opacity 1s ease';
             subtitle.style.opacity = '0';
+            storyOverlay.classList.add('visible'); // 与淡出同步，覆盖舞台
         }, 2500);
 
+        // 3.5 秒后彻底隐藏 intro overlay
         setTimeout(function() {
             overlay.classList.add('hidden');
+        }, 3500);
+
+        // 字幕滚动结束后（22s 动画 + 余量），淡出并拉开幕布
+        setTimeout(function() {
+            storyOverlay.classList.add('fade-out');
+        }, 26500);
+
+        setTimeout(function() {
+            storyOverlay.style.display = 'none';
             panels.forEach(function(p) { p.classList.add('curtain-opening'); });
-        }, 4000);
+        }, 28000);
+
+        // 跳过按钮
+        var skipBtn = document.getElementById('storySkipBtn');
+        var skipped = false;
+        skipBtn.addEventListener('click', function() {
+            if (skipped) return;
+            skipped = true;
+            var storyText = document.getElementById('storyIntroText');
+            storyText.style.animation = 'none'; // 停止滚动
+            storyOverlay.classList.add('fade-out');
+            setTimeout(function() {
+                storyOverlay.style.display = 'none';
+                panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+            }, 1500);
+        });
     });
 
     // 幕布动画结束后彻底移除，避免遮挡交互
