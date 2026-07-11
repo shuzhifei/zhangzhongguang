@@ -166,6 +166,8 @@ function parseBody(req) {
     return new Promise((resolve, reject) => {
         const chunks = [];
         let total = 0;
+        const contentLength = req.headers['content-length'];
+        log('DEBUG', 'parseBody 开始', 'Content-Length=' + contentLength + ' method=' + req.method + ' url=' + req.url);
         req.on('data', (c) => {
             total += c.length;
             if (total > MAX_BODY_SIZE) {
@@ -177,6 +179,7 @@ function parseBody(req) {
         });
         req.on('end', () => {
             const raw = Buffer.concat(chunks).toString('utf-8');
+            log('DEBUG', 'parseBody 结束', 'receivedBytes=' + total + ' raw=' + raw.substring(0, 200));
             try {
                 resolve(raw ? JSON.parse(raw) : {});
             } catch (e) {
@@ -221,7 +224,9 @@ function serveStatic(req, res, filePath) {
     }
 
     // 如果是目录 → index.html
-    const finalPath = fs.statSync(fullPath, { throwIfNoEntry: false })?.isDirectory()
+    var stat = null;
+    try { stat = fs.statSync(fullPath); } catch (e) { stat = null; }
+    var finalPath = (stat && stat.isDirectory())
         ? path.join(fullPath, 'index.html')
         : fullPath;
 
@@ -334,7 +339,7 @@ async function handleAPI(req, res, apiPath, body) {
             dashscopePath = ENDPOINTS.tts;
             label = 'TTS';
             log('INFO', 'TTS 请求体', JSON.stringify(body).substring(0, 500));
-            if (!body || !body.model || !body.input?.text) {
+            if (!body || !body.model || !body.input || !body.input.text) {
                 return errorResponse(res, 400, 'TTS 请求体缺少必填字段：model 或 input.text。请检查前端是否发送了正确的 JSON 请求体，并尝试 Ctrl+F5 强制刷新浏览器。');
             }
             break;
@@ -375,7 +380,11 @@ async function handleAPI(req, res, apiPath, body) {
             } catch (e) {
                 data = { raw: result.body.toString('utf-8') };
             }
-            log('INFO', label + ' 完成', 'status=' + result.status);
+            if (result.status >= 400) {
+                log('WARN', label + ' 完成', 'status=' + result.status + ' body=' + result.body.toString('utf-8').substring(0, 500));
+            } else {
+                log('INFO', label + ' 完成', 'status=' + result.status);
+            }
             jsonResponse(res, result.status, data);
         }
     } catch (e) {

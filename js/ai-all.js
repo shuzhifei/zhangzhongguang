@@ -206,6 +206,7 @@ const AIGallery = {
         if (this._useAuth() && (!this._key() || !this._key().startsWith('sk-'))) throw new Error('API Key 未配置');
         console.log('[AI ' + label + '] 调用...', url.substring(0, 50));
         const st = Date.now();
+        console.log('[AI ' + label + '] 即将发送请求体:', JSON.stringify(body));
         const r = await fetch(url, { method: 'POST', headers: this._headers(), body: JSON.stringify(body) });
         if (!r.ok) { const t = await r.text().catch(() => '?'); throw new Error(label + ' HTTP ' + r.status + ': ' + t.substring(0, 200)); }
         const d = await r.json();
@@ -345,17 +346,30 @@ const AIGallery = {
     // ---- ④ TTS 语音合成（路师傅苍老人声） ----
     async textToSpeech(text, options = {}) {
         const cfg = this._config().TTS || {};
-        const { voice = cfg.VOICE || 'longcheng', rate = cfg.SPEED || 1.0, volume = cfg.VOLUME || 50, format = cfg.FORMAT || 'mp3' } = options;
+        const { voice = cfg.VOICE || 'longlaobo', rate = cfg.SPEED || 1.0, volume = cfg.VOLUME || 50, format = cfg.FORMAT || 'mp3' } = options;
         if (!text?.trim()) throw new Error('TTS: 文本为空');
         console.log('[TTS]', text.substring(0, 40) + '...');
         const body = {
-            model: cfg.MODEL || 'cosyvoice-v3.5-plus',
-            input: { text, voice, format, sample_rate: cfg.SAMPLE_RATE || 22050, volume }
+            model: cfg.MODEL || 'cosyvoice-v2',
+            input: { text },
+            parameters: {
+                voice,
+                format,
+                sample_rate: cfg.SAMPLE_RATE || 24000
+            }
+            // 注意：CosyVoice HTTP API 官方不支持 volume 参数
         };
+        console.log('[TTS] 构造请求体:', JSON.stringify(body));
         const data = await this._post(cfg.ENDPOINT || cfg.API_URL || '/api/tts', body, 'TTS');
         const b64 = data.output?.audio?.data || data.output?.audio_url || data.output?.results?.[0]?.audio?.data || '';
+        const remoteUrl = data.output?.audio?.url || data.output?.audio_url || data.output?.results?.[0]?.audio?.url || '';
         let audioUrl = null;
-        if (b64) { const mime = format === 'mp3' ? 'audio/mpeg' : 'audio/wav'; audioUrl = this._b64ToBlobUrl(b64, mime); }
+        if (b64) {
+            const mime = format === 'mp3' ? 'audio/mpeg' : 'audio/wav';
+            audioUrl = this._b64ToBlobUrl(b64, mime);
+        } else if (remoteUrl) {
+            audioUrl = remoteUrl;
+        }
         console.log('[TTS]', audioUrl ? '✅' : '❌');
         return { audioUrl, b64, duration: data.output?.duration || 0, raw: data };
     },

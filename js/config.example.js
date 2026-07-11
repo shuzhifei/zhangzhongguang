@@ -83,12 +83,12 @@ const API_CONFIG = {
     // ============================================================
     TTS: {
         ENDPOINT: BASE_API + '/tts',
-        MODEL: 'cosyvoice-v3.5-plus',
-        VOICE: 'longcheng',
+        MODEL: 'cosyvoice-v2',
+        VOICE: 'longlaobo',       // 龙老伯 — 沧桑岁月爷，适合路师傅旁白
         SPEED: 1.0,
-        VOLUME: 50,
+        VOLUME: 50,            // 仅用于前端音量预览，不会发送到阿里云 CosyVoice HTTP API
         FORMAT: 'mp3',
-        SAMPLE_RATE: 22050
+        SAMPLE_RATE: 24000    // 官方示例常用 24000，22050 可能导致部分模型报错
     },
 
     // ============================================================
