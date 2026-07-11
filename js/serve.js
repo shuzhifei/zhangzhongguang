@@ -80,7 +80,7 @@ const ENDPOINTS = {
     llm:        '/compatible-mode/v1/chat/completions',
     t2i:        '/api/v1/services/aigc/text2image/image-synthesis',
     i2v:        '/api/v1/services/aigc/video-generation/video-synthesis',
-    tts:        '/api/v1/services/audio/tts/speech',
+    tts:        '/api/v1/services/audio/tts/SpeechSynthesizer',
 };
 
 // ================================================================
@@ -104,7 +104,7 @@ function forwardToDashScope(dashscopePath, body, extraHeaders = {}) {
             path: isFullUrl ? targetUrl.pathname + targetUrl.search : dashscopePath,
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json; charset=utf-8',
                 'Authorization': 'Bearer ' + DASHSCOPE_KEY,
                 'Content-Length': Buffer.byteLength(payload),
                 ...extraHeaders
@@ -112,11 +112,14 @@ function forwardToDashScope(dashscopePath, body, extraHeaders = {}) {
             timeout: 120000 // 2分钟超时（视频生成可能较慢）
         };
 
+        log('INFO', 'DashScope 请求', options.path + ' | payload=' + payload.substring(0, 400) + ' | headers=' + JSON.stringify(options.headers));
+
         const req = https.request(options, (res) => {
             const chunks = [];
             res.on('data', (c) => chunks.push(c));
             res.on('end', () => {
                 const raw = Buffer.concat(chunks);
+                log('INFO', 'DashScope 响应', 'status=' + res.statusCode + ' body=' + raw.toString('utf-8').substring(0, 400));
                 resolve({
                     status: res.statusCode,
                     headers: res.headers,
@@ -330,6 +333,10 @@ async function handleAPI(req, res, apiPath, body) {
         case '/api/tts':
             dashscopePath = ENDPOINTS.tts;
             label = 'TTS';
+            log('INFO', 'TTS 请求体', JSON.stringify(body).substring(0, 500));
+            if (!body || !body.model || !body.input?.text) {
+                return errorResponse(res, 400, 'TTS 请求体缺少必填字段：model 或 input.text。请检查前端是否发送了正确的 JSON 请求体，并尝试 Ctrl+F5 强制刷新浏览器。');
+            }
             break;
 
         default:

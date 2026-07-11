@@ -235,7 +235,7 @@ const AIGallery = {
     // ---- ② 文生图 Wanx2.1-T2I-Plus（异步模式） ----
     async textToImage(shotDescription, options = {}) {
         const cfg = this._config().T2I || {};
-        const { size = cfg.DEFAULT_SIZE || '1664*928', n = 1, negativePrompt = cfg.NEGATIVE_PROMPT || '' } = options;
+        const { size = cfg.DEFAULT_SIZE || '1024*1024', n = 1, negativePrompt = cfg.NEGATIVE_PROMPT || '' } = options;
         const prompt = (cfg.STYLE_PREFIX || '北京非遗皮影戏风格,幕布投影,暖黄灯光,') + shotDescription;
         console.log('[T2I] 异步提交:', prompt.substring(0, 80) + '...');
 
@@ -348,7 +348,10 @@ const AIGallery = {
         const { voice = cfg.VOICE || 'longcheng', rate = cfg.SPEED || 1.0, volume = cfg.VOLUME || 50, format = cfg.FORMAT || 'mp3' } = options;
         if (!text?.trim()) throw new Error('TTS: 文本为空');
         console.log('[TTS]', text.substring(0, 40) + '...');
-        const body = { model: cfg.MODEL || 'cosyvoice-v3.5-plus', input: { text }, parameters: { voice, rate, volume, format, sample_rate: cfg.SAMPLE_RATE || 22050 } };
+        const body = {
+            model: cfg.MODEL || 'cosyvoice-v3.5-plus',
+            input: { text, voice, format, sample_rate: cfg.SAMPLE_RATE || 22050, volume }
+        };
         const data = await this._post(cfg.ENDPOINT || cfg.API_URL || '/api/tts', body, 'TTS');
         const b64 = data.output?.audio?.data || data.output?.audio_url || data.output?.results?.[0]?.audio?.data || '';
         let audioUrl = null;

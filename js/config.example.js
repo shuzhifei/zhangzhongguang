@@ -55,7 +55,7 @@ const API_CONFIG = {
         ENDPOINT: BASE_API + '/t2i',
         ENDPOINT_POLL: BASE_API + '/t2i/poll',  // 轮询地址，不能省略，否则会请求到前端端口
         MODEL: 'wanx2.1-t2i-plus',
-        DEFAULT_SIZE: '1664*928',
+        DEFAULT_SIZE: '1024*1024',
         DEFAULT_N: 1,
         NEGATIVE_PROMPT: '写实照片,3D渲染,卡通,动漫,油画,水彩,现代风格,人物正面特写',
         STYLE_PREFIX: '北京非遗皮影戏风格,幕布投影,暖黄灯光,牛皮镂刻质感,半透明皮影,老北京民国年间,暖色调,舞台光影,'
