@@ -854,10 +854,7 @@ body {
     0%   { opacity: 0.55; transform: translateX(-50%) scale(0.95) translateY(0); }
     100% { opacity: 1;   transform: translateX(-50%) scale(1.06) translateY(-2px); }
 }
-/* 油灯「熄灭」：仅标记态 — 不虚化整灯，油灯图保持原样 */
-.stage-puppet.lamp-out {
-    /* 无 filter 虚化；火焰因移除 lamp-lit 自然消失 */
-}
+/* .lamp-out 仅作 JS 状态标记（无额外视觉样式），火焰因移除 lamp-lit 自然消失 */
 .stage-puppet:focus { outline: none !important; }
 
 .stage-puppet svg {
