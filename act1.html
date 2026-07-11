@@ -357,6 +357,30 @@ body {
     50% { filter: brightness(0.3) saturate(0.2); }
 }
 
+/* 油灯点亮后扩散的光圈：从灯心不断变大，铺满全屏后跳到背景介绍 */
+.lamp-bloom {
+    position: fixed;
+    inset: 0;
+    z-index: 205;            /* 高于黑幕(200)，低于背景字幕层(210) */
+    pointer-events: none;
+    display: none;
+    overflow: hidden;
+}
+.lamp-bloom-circle {
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    transform: scale(0.1);
+    background: radial-gradient(circle at center,
+        rgba(255,228,175,0.7) 0%,
+        rgba(255,196,118,0.5) 30%,
+        rgba(255,158,68,0.26) 55%,
+        rgba(255,128,48,0.07) 78%,
+        transparent 100%);
+    box-shadow: 0 0 70px 28px rgba(255,168,80,0.25);
+}
+
 /* ---- 右侧：木箱（皮影箱）---- */
 .intro-box {
     width: 300px;
@@ -481,6 +505,25 @@ body {
 @keyframes subtitlePulse {
     0%, 100% { opacity: 0.5; }
     50% { opacity: 0.9; }
+}
+
+/* 开始提示：页面打开即出现，提示用户可交互，避免「黑屏像打不开」 */
+.intro-start-hint {
+    position: absolute;
+    bottom: 8%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 1rem;
+    color: #8a7a5a;
+    letter-spacing: 0.3em;
+    pointer-events: none;
+    z-index: 201;
+    animation: hintPulse 2s ease-in-out infinite;
+}
+@keyframes hintPulse {
+    0%, 100% { opacity: 0.3; }
+    50%      { opacity: 0.85; }
 }
 
 /* ====== 黑屏字幕滚动 ====== */
@@ -933,7 +976,11 @@ body {
     </div>
     <div class="intro-opening-line" id="introOpeningLine">你来了？灯快没油了，坐近点</div>
     <div class="intro-subtitle" id="introSubtitle">点燃油灯吧</div>
+    <div class="intro-start-hint" id="introStartHint">▷ 点击屏幕任意处开始</div>
 </div>
+
+<!-- ====== 油灯点亮后扩散的光圈 ====== -->
+<div class="lamp-bloom" id="lampBloom"><div class="lamp-bloom-circle" id="lampBloomCircle"></div></div>
 
 <!-- ====== 黑屏字幕滚动：背景介绍 ====== -->
 <div class="story-intro-overlay" id="storyIntroOverlay">
@@ -1148,6 +1195,199 @@ const EventBus = {
     }
 };
 window.EventBus = EventBus;
+</script>
+
+<script>
+// ========================================
+// audio-manager.js — 音频管理系统
+// ========================================
+const AudioManager = {
+    // ---- 音频文件路径映射 ----
+    // 文件放入 assets/audio/ 目录，命名如下
+    SOUNDS: {
+        // BGM（背景音乐，循环播放）
+        bgm_intro:    'assets/audio/bgm-intro.mp3',     // 开场序幕 BGM
+        bgm_stage:    'assets/audio/bgm-stage.mp3',     // 舞台默认 BGM
+        bgm_night:    'assets/audio/bgm-night.mp3',     // 月夜 BGM
+        // SFX（音效，单次播放）
+        sfx_lamp_light:   'assets/audio/sfx-lamp-light.mp3',   // 点燃油灯
+        sfx_curtain:      'assets/audio/sfx-curtain.mp3',      // 幕布拉开
+        sfx_puppet_place: 'assets/audio/sfx-puppet-place.mp3', // 放置皮影
+        sfx_puppet_remove:'assets/audio/sfx-puppet-remove.mp3',// 移除皮影
+        sfx_puppet_flip:  'assets/audio/sfx-puppet-flip.mp3',  // 翻转皮影
+        sfx_puppet_drag:  'assets/audio/sfx-puppet-drag.mp3',  // 拖动皮影
+        sfx_moon:         'assets/audio/sfx-moon.mp3',         // 月夜切换
+        sfx_oil_deplete:  'assets/audio/sfx-oil-deplete.mp3',  // 油尽
+        sfx_click:        'assets/audio/sfx-click.mp3',        // 通用点击
+        // Voice（人声旁白，单次播放）
+        voice_opening:    'assets/audio/voice-opening.mp3',    // "你来了？灯快没油了，坐近点"
+        voice_bg_intro:   'assets/audio/voice-bg-intro.mp3',   // 背景介绍旁白
+        voice_act_title:  'assets/audio/voice-act-title.mp3',  // "第一场·月夜等人"
+    },
+
+    // ---- 音量控制 ----
+    volumes: { bgm: 0.4, sfx: 0.7, voice: 1.0 },
+    muted: false,
+
+    // ---- 内部状态 ----
+    _bgm: null,        // 当前 BGM 的 Audio 元素
+    _bgmKey: null,     // 当前 BGM 的 key
+    _cache: {},        // 预加载缓存
+    _audioSupported: typeof Audio !== 'undefined',
+
+    // ---- 初始化 ----
+    init() {
+        if (!this._audioSupported) { console.warn('[audio] 浏览器不支持 Audio'); return; }
+        console.log('[audio] AudioManager 已就绪，共 ' + Object.keys(this.SOUNDS).length + ' 个音频槽位');
+    },
+
+    // ---- 预加载 ----
+    preload(keys) {
+        if (!this._audioSupported) return;
+        var self = this;
+        (keys || Object.keys(this.SOUNDS)).forEach(function(key) {
+            if (self._cache[key]) return;
+            var path = self.SOUNDS[key];
+            if (!path) return;
+            var a = new Audio();
+            a.src = path;
+            a.preload = 'auto';
+            self._cache[key] = a;
+        });
+    },
+
+    // ---- 播放 BGM ----
+    playBGM(key, options) {
+        if (!this._audioSupported || this.muted) return;
+        options = options || {};
+        var path = this.SOUNDS[key];
+        if (!path) { console.warn('[audio] BGM 未找到: ' + key); return; }
+
+        // 同一首 BGM 正在播放，跳过
+        if (this._bgmKey === key && this._bgm && !this._bgm.paused) return;
+
+        // 淡出旧 BGM
+        if (this._bgm) {
+            this._fadeStop(this._bgm, options.crossfade || 800);
+        }
+
+        var bgm = this._cache[key] || new Audio(path);
+        bgm.src = path;
+        bgm.loop = options.loop !== false; // 默认循环
+        bgm.volume = 0;
+        this._bgm = bgm;
+        this._bgmKey = key;
+
+        var targetVol = this.volumes.bgm * (options.volume || 1);
+        var self = this;
+        bgm.play().then(function() {
+            self._fadeTo(bgm, targetVol, options.fadeIn || 1000);
+        }).catch(function(e) {
+            console.warn('[audio] BGM 播放失败: ' + key, e.message);
+        });
+    },
+
+    stopBGM(fadeOut) {
+        if (this._bgm) {
+            this._fadeStop(this._bgm, fadeOut || 1000);
+            this._bgmKey = null;
+        }
+    },
+
+    // ---- 播放 SFX ----
+    playSFX(key, options) {
+        if (!this._audioSupported || this.muted) return;
+        options = options || {};
+        var path = this.SOUNDS[key];
+        if (!path) { console.warn('[audio] SFX 未找到: ' + key); return; }
+
+        var sfx = new Audio(path);
+        sfx.volume = this.volumes.sfx * (options.volume || 1);
+        sfx.play().catch(function(e) {
+            console.warn('[audio] SFX 播放失败: ' + key, e.message);
+        });
+    },
+
+    // ---- 播放 Voice（返回 Audio 元素，便于同步字幕时序）----
+    playVoice(key, options) {
+        if (!this._audioSupported || this.muted) return null;
+        options = options || {};
+        var path = this.SOUNDS[key];
+        if (!path) { console.warn('[audio] Voice 未找到: ' + key); return null; }
+
+        var voice = new Audio(path);
+        voice.volume = this.volumes.voice * (options.volume || 1);
+        var p = voice.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(function(e) {
+                console.warn('[audio] Voice 播放失败: ' + key, (e && e.message) || e);
+            });
+        }
+        return voice;
+    },
+
+    // ---- 静音/取消静音 ----
+    setMuted(muted) {
+        this.muted = muted;
+        if (muted && this._bgm) { this._bgm.pause(); }
+        else if (!muted && this._bgm && this._bgmKey) { this._bgm.play().catch(function(){}); }
+    },
+
+    // ---- 设置音量 ----
+    setVolume(type, vol) {
+        if (this.volumes[type] !== undefined) {
+            this.volumes[type] = vol;
+            if (type === 'bgm' && this._bgm) {
+                this._bgm.volume = vol;
+            }
+        }
+    },
+
+    // ---- 内部工具：淡入淡出 ----
+    _fadeTo(audio, targetVol, duration) {
+        var startVol = audio.volume;
+        var startTime = performance.now();
+        var self = this;
+        function step(now) {
+            var t = Math.min((now - startTime) / duration, 1);
+            audio.volume = startVol + (targetVol - startVol) * t;
+            if (t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    },
+
+    _fadeStop(audio, duration) {
+        var startVol = audio.volume;
+        var startTime = performance.now();
+        function step(now) {
+            var t = Math.min((now - startTime) / duration, 1);
+            audio.volume = startVol * (1 - t);
+            if (t < 1) { requestAnimationFrame(step); }
+            else { audio.pause(); audio.volume = 0; }
+        }
+        requestAnimationFrame(step);
+    }
+};
+window.AudioManager = AudioManager;
+AudioManager.init();
+
+// ========================================
+// 音频事件绑定 — 与游戏流程联动
+// ========================================
+// 皮影操作音效
+EventBus.on('puppet_placed',  function() { AudioManager.playSFX('sfx_puppet_place'); });
+EventBus.on('puppet_removed', function() { AudioManager.playSFX('sfx_puppet_remove'); });
+EventBus.on('puppet_flipped', function() { AudioManager.playSFX('sfx_puppet_flip'); });
+EventBus.on('puppet_moved',   function() { AudioManager.playSFX('sfx_puppet_drag'); });
+
+// 油尽音效
+EventBus.on('oil_depleted',   function() { AudioManager.playSFX('sfx_oil_deplete'); });
+
+// 月夜切换音效
+EventBus.on('night_mode_on',  function() { AudioManager.playSFX('sfx_moon'); AudioManager.playBGM('bgm_night'); });
+EventBus.on('night_mode_off', function() { AudioManager.playBGM('bgm_stage'); });
+
+console.log('[audio] 音频事件监听已注册');
 </script>
 
 <script>
@@ -1868,21 +2108,127 @@ const ShadowJudge = {
     var isLit = false;
     var storyOverlay = document.getElementById('storyIntroOverlay');
 
-    // ---- 2 秒全黑后，油灯与皮影箱渐显 ----
-    // 0.5 秒后显示开场白
-    setTimeout(function() { openingLine.classList.add('revealed'); }, 500);
-    // 5.5 秒后油灯渐显，开场白淡出（开场白持续5秒）
-    setTimeout(function() {
+    // ---- 开场序列：点击屏幕后才开始 ----
+    // 关键：页面加载后只显示「点击屏幕任意处开始」提示，用户点击后才进入开场白；
+    //       视觉（开场白 + 流程推进）不依赖音频，音频仅在首次手势后播放（浏览器自动播放策略要求）。
+    var openingStarted = false;
+    var audioPlayed = false;
+    var startHint = document.getElementById('introStartHint');
+
+    // 旁白结束（或兜底）后：开场白淡出 → 油灯、皮影箱渐显 → 提示字幕
+    function advanceAfterOpening() {
+        if (isLit) return; // 用户已提前点灯，走点灯流程，不再重复推进开场白
         lampWrap.classList.add('revealed');
         openingLine.classList.add('fade-out');
-    }, 5500);
-    setTimeout(function() { introBox.classList.add('revealed'); }, 6000);
-    setTimeout(function() { subtitle.classList.add('revealed'); }, 8000);
+        setTimeout(function() { introBox.classList.add('revealed'); }, 500);
+        setTimeout(function() {
+            subtitle.classList.add('revealed');
+            // 注：「点燃油灯吧」克隆语音已移除，仅保留原声「你来了？灯快没油了，坐近点」
+        }, 2500);
+    }
+
+    var advanced = false;
+    function tryAdvance() {
+        if (advanced) return;
+        advanced = true;
+        advanceAfterOpening();
+    }
+    var CLICK_PAUSE = 3000;  // 点击屏幕后停留 3 秒，再出现字幕
+    var SUBTITLE_HOLD = 5000; // 字幕浮现后至推进的兜底时长（不依赖音频事件）
+
+    // 音频尽力播放（首次手势后、且字幕浮现时）：被自动播放策略拦截时静默失败，不影响流程
+    function startOpeningAudio() {
+        if (audioPlayed) return;
+        audioPlayed = true;
+        AudioManager.playBGM('bgm_intro', { volume: 0.5 });
+        var voiceEl = AudioManager.playVoice('voice_opening');
+        if (voiceEl) {
+            voiceEl.addEventListener('ended', tryAdvance, { once: true });
+            voiceEl.addEventListener('loadedmetadata', function() {
+                if (voiceEl.duration && isFinite(voiceEl.duration)) {
+                    var t = voiceEl.duration * 1000 + 800;
+                    if (t < SUBTITLE_HOLD) setTimeout(tryAdvance, t);
+                }
+            }, { once: true });
+        }
+    }
+
+    // 点击屏幕后：先停留 CLICK_PAUSE 秒（黑屏），再浮现开场白字幕 + 同步旁白，随后兜底推进
+    function startStory() {
+        if (openingStarted) return;
+        openingStarted = true;
+        setTimeout(function() {
+            openingLine.classList.add('revealed'); // 3 秒后字幕出现
+            startOpeningAudio();                    // 字幕与旁白同步
+            setTimeout(tryAdvance, SUBTITLE_HOLD);  // 兜底推进，绝不成阻塞
+        }, CLICK_PAUSE);
+    }
+
+    // 首次任意手势：隐藏提示，开始剧情（含 3 秒停留）
+    function onFirstGesture() {
+        if (startHint) { startHint.style.animation = 'none'; startHint.style.opacity = '0'; }
+        startStory();
+    }
+    ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev) {
+        document.addEventListener(ev, onFirstGesture, { passive: true });
+    });
+
+    // 不再自动开始：必须等用户「点击屏幕任意处」后才进入开场白（见 onFirstGesture）
+    // 页面加载后只显示提示，点击后才开始剧情，避免误以为打不开。
+
+    // ---- 油灯光圈扩散 → 跳到背景介绍 ----
+    var BLOOM_DELAY = 800;  // 点灯后稍候再开始扩散
+    var BLOOM_DUR = 2600;   // 光圈从灯心铺满全屏的时长
+
+    // 光圈铺满全屏后：瞬间切入黑屏字幕滚动（背景介绍）
+    function goToBackgroundInfo() {
+        storyOverlay.style.transition = 'none'; // 瞬间出现，不走淡入
+        storyOverlay.classList.add('visible');
+        overlay.classList.add('hidden');         // 立即隐藏 intro overlay，不让舞台露出来
+        subtitle.style.opacity = '0';
+        AudioManager.playVoice('voice_bg_intro'); // 背景介绍旁白
+        // 光圈完成使命，淡出（此时背景介绍黑层已盖在上方）
+        var bloom = document.getElementById('lampBloom');
+        if (bloom) {
+            bloom.style.transition = 'opacity 0.8s ease';
+            bloom.style.opacity = '0';
+            setTimeout(function() { bloom.style.display = 'none'; }, 900);
+        }
+    }
+
+    // 以油灯中心为原点，让光圈不断变大直到铺满整个屏幕
+    function startLampBloom() {
+        var bloom = document.getElementById('lampBloom');
+        var circle = document.getElementById('lampBloomCircle');
+        if (!bloom || !circle) { goToBackgroundInfo(); return; }
+        var r = lampWrap.getBoundingClientRect();
+        var cx = r.left + r.width / 2;
+        var cy = r.top + r.height / 2;
+        var size = 260;
+        circle.style.left = (cx - size / 2) + 'px';
+        circle.style.top = (cy - size / 2) + 'px';
+        circle.style.transform = 'scale(0.1)';
+        bloom.style.display = 'block';
+        bloom.style.opacity = '1';
+        var anim = circle.animate(
+            [{ transform: 'scale(0.1)' }, { transform: 'scale(45)' }],
+            { duration: BLOOM_DUR, easing: 'ease-in', fill: 'forwards' }
+        );
+        var done = false;
+        function finish() { if (done) return; done = true; goToBackgroundInfo(); }
+        anim.onfinish = finish;
+        // 兜底：个别浏览器 onfinish 不触发时，用定时器保险
+        setTimeout(finish, BLOOM_DUR + 400);
+    }
 
     // ---- 点击油灯 → 点亮 ----
     lampWrap.addEventListener('click', function() {
         if (isLit) return;
+        onFirstGesture(); // 确保音频上下文已解锁（首次手势）
         isLit = true;
+
+        // 若开场白尚未推进（用户直接点灯），淡出开场白，避免文字残留
+        if (openingStarted) openingLine.classList.add('fade-out');
 
         // 灯亮了
         lampWrap.classList.add('lit');
@@ -1891,6 +2237,10 @@ const ShadowJudge = {
         lampFlame.classList.add('visible');
         oilDisplay.classList.add('visible');
         introBox.classList.add('lit');
+        AudioManager.playSFX('sfx_lamp_light');
+
+        // 「油量: 100」界面显示 3 秒后淡出
+        setTimeout(function() { oilDisplay.classList.remove('visible'); }, 3000);
 
         // 字幕变化
         subtitle.textContent = '油灯已点燃';
@@ -1899,13 +2249,8 @@ const ShadowJudge = {
         subtitle.style.color = '#e8c860';
         subtitle.style.textShadow = '0 0 30px rgba(255,200,60,0.6)';
 
-        // 2.5 秒后黑幕淡出，黑屏字幕滚动瞬间出现（避免中间露出舞台）
-        setTimeout(function() {
-            storyOverlay.style.transition = 'none'; // 瞬间出现，不走淡入
-            storyOverlay.classList.add('visible');
-            overlay.classList.add('hidden'); // 立即隐藏 intro overlay，不让舞台露出来
-            subtitle.style.opacity = '0';
-        }, 2500);
+        // 点灯后：稍候让灯光稳定，再以油灯为中心扩散光圈；铺满全屏后才跳到背景介绍
+        setTimeout(startLampBloom, BLOOM_DELAY);
 
         // 字幕滚动结束后（22s 动画 + 余量），淡出
         setTimeout(function() {
@@ -1917,6 +2262,7 @@ const ShadowJudge = {
         setTimeout(function() {
             storyOverlay.style.display = 'none';
             actTitleOverlay.classList.add('visible');
+            AudioManager.playVoice('voice_act_title'); // 场次标题旁白
         }, 28000);
 
         // 33s: 标题卡片淡出
@@ -1928,6 +2274,9 @@ const ShadowJudge = {
         setTimeout(function() {
             actTitleOverlay.style.display = 'none';
             panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+            AudioManager.playSFX('sfx_curtain'); // 幕布声
+            AudioManager.stopBGM(1500); // 淡出开场 BGM
+            setTimeout(function() { AudioManager.playBGM('bgm_stage'); }, 2000); // 播放舞台 BGM
         }, 34500);
 
         // 跳过按钮
@@ -1942,6 +2291,7 @@ const ShadowJudge = {
             setTimeout(function() {
                 storyOverlay.style.display = 'none';
                 actTitleOverlay.classList.add('visible');
+                AudioManager.playVoice('voice_act_title');
             }, 1500);
             setTimeout(function() {
                 actTitleOverlay.classList.add('fade-out');
@@ -1949,6 +2299,9 @@ const ShadowJudge = {
             setTimeout(function() {
                 actTitleOverlay.style.display = 'none';
                 panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+                AudioManager.playSFX('sfx_curtain');
+                AudioManager.stopBGM(1500);
+                setTimeout(function() { AudioManager.playBGM('bgm_stage'); }, 2000);
             }, 6500);
         });
     });
