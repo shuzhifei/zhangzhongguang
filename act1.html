@@ -1931,9 +1931,33 @@ const ShadowJudge = {
         try {
             var rawResult = await AI.call(systemPrompt, userMessage, {temperature:0.2,maxTokens:300,model:AI.MODEL_DEFAULT});
             var result = this._parseJSON(rawResult, isImprov);
+            result = this._applyPenalty(result, stagedPuppets, currentSceneId);
             EventBus.emit('judge_result', result);
             return result;
         } catch(e) { return this._defaultResult(isImprov); }
+    },
+
+    // 统一扣分：多放(非允许额外皮影)/少放(缺必需皮影) 都按规则扣，并与快速评判保持一致
+    _applyPenalty(result, stagedPuppets, currentSceneId) {
+        result = result || {};
+        var scene = this._getSceneData(currentSceneId);
+        if (!scene) return result;
+        var required = scene.standard_puppets||[];
+        if (required.length===0) return result; // 即兴/隐藏机制场景不按阵容扣分
+        var placedIds = stagedPuppets.map(function(p){return p.puppetId;});
+        var acceptable = scene.acceptable_extras||[];
+        var allowedSet = required.concat(acceptable);
+        var missing = required.filter(function(id){return placedIds.indexOf(id)===-1;});
+        var extra = placedIds.filter(function(id){return allowedSet.indexOf(id)===-1;});
+        var coverage = required.length>0?(required.length-missing.length)/required.length:1;
+        result.score = Math.max(0, Math.min(100, Math.round(coverage*100) - extra.length*20));
+        result.correct = (missing.length===0) && (extra.length===0);
+        return result;
+    },
+
+    _puppetName(id) {
+        var NAMES = { scholar:'书生', tree:'槐树', moon:'月亮', elder:'老者', letter:'信', frog:'金蟾', lamp:'灯', demon:'白骨精', monkey:'孙悟空', bamboo:'竹子', master:'路师傅' };
+        return NAMES[id] || id;
     },
 
     puppetsToText(puppets) {
@@ -1955,12 +1979,31 @@ const ShadowJudge = {
     quickJudge(stagedPuppets, currentSceneId) {
         var scene = this._getSceneData(currentSceneId);
         if (!scene||!scene.standard_puppets) return {score:50,correct:true,comment:'……（灯太暗了，看不清影面）'};
-        var placedIds = stagedPuppets.map(function(p){return p.puppetId;});
         var required = scene.standard_puppets||[];
+        // 即兴/隐藏机制场景（无标准阵容）：不按"多放少放"扣分
+        if (required.length===0) {
+            return { score:60, correct: stagedPuppets.length>0, comment: stagedPuppets.length>0?'你摆的，我都看着。':'白布上什么都没有。', noStandard:true };
+        }
+        var placedIds = stagedPuppets.map(function(p){return p.puppetId;});
+        var acceptable = scene.acceptable_extras||[];
+        var allowedSet = required.concat(acceptable);                       // 允许=必需+可接受额外
         var covered = required.filter(function(id){return placedIds.indexOf(id)!==-1;});
-        var coverage = required.length>0?covered.length/required.length:1;
-        var score = Math.round(coverage*70);
-        return { score:Math.max(0,Math.min(100,score)), correct:coverage>=0.6, character_match:{score:Math.round(coverage*30),comment:''}, spatial:{score:Math.round(coverage*25*0.6),comment:''}, plot_detail:{score:Math.round(coverage*25*0.6),comment:''}, authenticity:{score:coverage>=0.8?16:6,comment:''}, comment:coverage>=0.8?'大致对路。':coverage>=0.5?'还差一些。':'不太对。' };
+        var missing = required.filter(function(id){return placedIds.indexOf(id)===-1;});      // 少放
+        var extra = placedIds.filter(function(id){return allowedSet.indexOf(id)===-1;});       // 多放(非允许)
+        var coverage = covered.length/required.length;
+        // 评分：满覆盖=100；每少一个必需角儿 -25；每多一个非允许 -20
+        var score = Math.max(0, Math.min(100, Math.round(coverage*100) - extra.length*20));
+        var correct = (missing.length===0) && (extra.length===0);
+        var missNames = missing.map(function(id){return ShadowJudge._puppetName(id);}).join('、');
+        var extraNames = extra.map(function(id){return ShadowJudge._puppetName(id);}).join('、');
+        return {
+            score: score, correct: correct,
+            character_match:{score:Math.round(coverage*30),comment:''},
+            spatial:{score:Math.round(coverage*25*0.6),comment:''},
+            plot_detail:{score:Math.round(coverage*25*0.6),comment:''},
+            authenticity:{score:coverage>=0.8?16:6,comment:''},
+            comment: (missing.length===0&&extra.length===0)?'这一面，齐了。':((missing.length>0?'少摆了'+missNames+'。':'')+(extra.length>0?(missing.length>0?' ':'')+'多摆了'+extraNames+'。':'')+'要扣分。')
+        };
     },
 
     _getSceneData(sceneId) {
@@ -2747,26 +2790,38 @@ const ShadowJudge = {
         if (!scene) return '师傅看了看书生，又看了看月亮。';
         var placedIds = staged.map(function(p){return p.puppetId;});
         var required = scene.standard_puppets||[];
-        var covered = required.filter(function(id){return placedIds.indexOf(id)!==-1;});
-        var coverage = required.length>0?covered.length/required.length:1;
-        var missing = required.filter(function(id){return placedIds.indexOf(id)===-1;});
-        if (coverage>=0.8) return '嗯——'+scene.name+'，就是这个意思。\n影面里该有的，都有了。';
-        if (coverage>=0.5) return '差了点意思。\n'+(missing.length>0?'还缺——'+missing.map(getPuppetName).join('、')+'。\n\n':'')+(scene.cipher_guidance||'再想想，这出戏还差什么？');
-        return '不对路。\n这出戏讲的是"'+scene.name+'"——\n'+(missing.length>0?'得有：'+missing.map(getPuppetName).join('、')+'。':'');
+        var acceptable = scene.acceptable_extras||[];
+        var allowedSet = required.concat(acceptable);
+        var missing = required.filter(function(id){return placedIds.indexOf(id)===-1;});        // 少放
+        var extra = placedIds.filter(function(id){return allowedSet.indexOf(id)===-1;});          // 多放
+        if (required.length===0) return staged.length>0 ? '你摆的，我都看着。' : '白布上什么都没有。';
+        if (missing.length===0 && extra.length===0) {
+            return '这一面，齐了。' + (scene.name ? ('《' + scene.name + '》的意思到了。') : '');
+        }
+        var parts = [];
+        if (missing.length>0) parts.push('少了' + missing.map(getPuppetName).join('、') + '——这出戏缺了角儿，要扣分。');
+        if (extra.length>0)   parts.push('多了' + extra.map(getPuppetName).join('、') + '——戏里没这角儿，多摆也要扣分。');
+        return parts.join('\n');
     }
 
     function buildOfflineHint(staged, sceneId) {
         var scene = ShadowJudge._getSceneData(sceneId);
         if (!scene) return '师傅没说话，手指敲了敲操纵杆。';
         var placedIds = staged.map(function(p){return p.puppetId;});
+        // —— 戏词式专属提示（保持路师傅叙事口吻，仅在对应皮影在场时触发）——
         if (placedIds.indexOf('tree')!==-1) return '路师傅说：我认得一棵槐树，在东街第三个书摊后面。那棵树——比我还老。';
         if (placedIds.indexOf('letter')!==-1) return '路师傅低声说：那封信——写了三年。不是我写的，是我师父。颜体，一笔一画。';
         if (placedIds.indexOf('elder')!==-1&&placedIds.indexOf('letter')!==-1) return '路师傅停了一下：这根杆——本来有三根的。我师父当年……算了。';
         if (placedIds.indexOf('frog')!==-1&&placedIds.indexOf('elder')!==-1) return '路师傅的声音变了：金蟾碎了。戏里是这么写的——但戏外——也碎了。';
         if (placedIds.indexOf('scholar')!==-1) return '路师傅说：书生等的那封信——不是情书。比命还重的东西。';
+        // —— 阵容校验提示（多放/少放都会明确提示扣分）——
         var required = scene.standard_puppets||[];
+        var acceptable = scene.acceptable_extras||[];
+        var allowedSet = required.concat(acceptable);
         var missing = required.filter(function(id){return placedIds.indexOf(id)===-1;});
-        if (missing.length>0) return '路师傅眯着眼看了看白布：还差点东西。你觉得——'+missing.map(getPuppetName).join('、')+'该摆在哪？';
+        var extra = placedIds.filter(function(id){return allowedSet.indexOf(id)===-1;});
+        if (extra.length>0) return '路师傅皱了皱眉：' + extra.map(getPuppetName).join('、') + '是多余的——拿下去吧，评判要扣分的。';
+        if (missing.length>0) return '路师傅眯着眼看了看白布：还差——' + missing.map(getPuppetName).join('、') + '。你觉得该摆在哪？';
         return '路师傅点了点头：影面齐了。不过——摆的位置，还要再想想。';
     }
 
@@ -2798,6 +2853,7 @@ const ShadowJudge = {
         return (act && act.hidden_clues) ? act.hidden_clues : [];
     }
     function checkClues(isAsk) {
+        var triggered = false;
         try {
             var sceneId = getCurrentSceneId();
             var clues = getActClues(gameState.currentAct - 1).filter(function(c) { return c.scene_id === sceneId; });
@@ -2810,8 +2866,10 @@ const ShadowJudge = {
                 var needsAsk = /追问/.test(clue.trigger || '');
                 if (needsAsk && !isAsk) return;
                 triggerClue(clue);
+                triggered = true;
             });
         } catch (e) {}
+        return triggered;
     }
     function triggerClue(clue) {
         try {
@@ -2823,16 +2881,44 @@ const ShadowJudge = {
             EventBus.emit('narration_chunk', { speaker: '路师傅', text: text, speed: 46 });
         } catch (e) {}
     }
-    EventBus.on('puppet_placed', function() { checkClues(false); });
+    // 每一个皮影摆放完，路师傅都要有一次互动；若本次摆放未触发隐藏线索，则给出针对该皮影的即时反应
+    EventBus.on('puppet_placed', function(data) {
+        var triggered = checkClues(false);
+        if (!triggered) masterReactToPlacement(data && data.id);
+    });
+
+    // 路师傅对"刚摆上来的那个皮影"的即时反应（每次摆放必有一次互动，且说话期间锁定操作）
+    function masterReactToPlacement(pid) {
+        if (!pid) return;
+        var scene = ShadowJudge._getSceneData(getCurrentSceneId());
+        var name = getPuppetName(pid);
+        var required = (scene && scene.standard_puppets) || [];
+        var acceptable = (scene && scene.acceptable_extras) || [];
+        var isRequired = required.indexOf(pid) !== -1;
+        var isAcceptable = acceptable.indexOf(pid) !== -1;
+        var line;
+        if (isRequired) {
+            line = '（路师傅眯眼看了看）这' + name + '——是该有的。';
+        } else if (isAcceptable) {
+            line = '这' + name + '……搁在边上，也说得通。';
+        } else {
+            line = '这' + name + '？戏里没这角儿啊。多摆一个，评判要扣分的。';
+        }
+        speaker.textContent = '路师傅';
+        typewriter(dialogueText, line, 45);
+    }
     EventBus.on('ask_master', function() { setTimeout(function() { checkClues(true); }, 700); });
 
     function emitSceneJudged(staged, sceneId, result) {
         var scene = ShadowJudge._getSceneData(sceneId);
         var required = scene?scene.standard_puppets||[]:[];
+        var acceptable = scene?scene.acceptable_extras||[]:[];
+        var allowedSet = required.concat(acceptable);
         var placedIds = staged.map(function(p){return p.puppetId;});
         var covered = required.filter(function(id){return placedIds.indexOf(id)!==-1;});
         var coverage = required.length>0?covered.length/required.length:1;
-        EventBus.emit('scene_judged', { score:result.score||0, correct:result.correct, coverage:coverage, puppets:staged, sceneId:sceneId });
+        var extraCount = placedIds.filter(function(id){return allowedSet.indexOf(id)===-1;}).length; // 多放数量
+        EventBus.emit('scene_judged', { score:result.score||0, correct:result.correct, coverage:coverage, extraCount:extraCount, puppets:staged, sceneId:sceneId });
     }
 
     function displayJudgeResult(result) {
@@ -3016,10 +3102,12 @@ const ShadowJudge = {
             sceneConfirmCount++;
             var coverage = data.coverage||0;
             var score = data.score||0;
+            var extraCount = data.extraCount||0;
             var act = ACTS_DATA.acts[gameState.currentAct-1];
             var scene = act.scenes[gameState.currentScene];
             var isImprov = scene.is_improvisation===true;
-            var pass = isImprov?sceneConfirmCount>=1:(coverage>=0.8)||(score>=60)||(sceneConfirmCount>=3);
+            // 通过条件：多放(extraCount>0)或严重少放(覆盖<0.8)不直接通过，需修正；仅完美(无缺无多)可过，或重试满3次放行
+            var pass = isImprov ? (sceneConfirmCount>=1) : (data.correct && extraCount===0) || (sceneConfirmCount>=3);
             if (pass) {
                 scenePassed=true; advancing=true;
                 accumulateEndingStats(data);
