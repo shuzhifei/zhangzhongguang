@@ -3856,6 +3856,8 @@ const ShadowJudge = {
     var _ttsAudio = null;
     function playTTS(text) {
         if (!text || OFFLINE_MODE) return;
+        // 跳过AI兜底/错误文本，不浪费TTS配额
+        if (text.indexOf('网络不太顺畅')!==-1||text.indexOf('灯花')!==-1||text.indexOf('再试一次')!==-1) return;
         try {
             var apiBase = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_API) ? API_CONFIG.BASE_API : 'http://123.57.90.233:3000/api';
             fetch(apiBase + '/tts', {
