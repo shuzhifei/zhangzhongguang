@@ -2193,14 +2193,10 @@ const ShadowJudge = {
         var coverage = required.length>0?(required.length-missing.length)/required.length:1;
         result.score = Math.max(0, Math.min(100, Math.round(coverage*100) - extra.length*20));
         result.correct = (missing.length===0) && (extra.length===0);
-        // 数量对了还要位置对（方案D：错了才提示往哪挪）
+        // 数量对了还要位置对（方案D：位置不对则不通过；具体提示留给追问师傅）
         if (result.correct) {
             var pc = this._checkPositions(stagedPuppets, currentSceneId);
-            if (!pc.ok) {
-                result.correct = false;
-                result.comment = '（师傅凑近白布）影儿是齐了，可位置——不对。';
-                result.guiding_hint = pc.wrong.map(function(w){ return w.msg; }).join('\n');
-            }
+            if (!pc.ok) result.correct = false;
         }
         return result;
     },
@@ -2238,7 +2234,7 @@ const ShadowJudge = {
         'act1_scene1': {
             tree:    { type:'abs',   cx:0.80, cy:0.72, r:0.13, label:'槐树·右下角' },
             moon:    { type:'night',                        label:'月亮·天空(变黑即可)' },
-            scholar: { type:'rel', to:'tree',    dx:-0.12, dy:0.10, r:0.13, label:'书生·槐树左下' },
+            scholar: { type:'rel', to:'tree',    dx:-0.08, dy:0.08, r:0.09, label:'书生·槐树左下' },
             letter:  { type:'rel', to:'scholar', dx:0.04, dy:-0.03, r:0.07, label:'信·书生手里' }
         }
     },
@@ -2283,14 +2279,20 @@ const ShadowJudge = {
     },
 
     // 错了才提示：指出该皮影往哪个方向挪（dx>0=偏右→往左；dy>0=偏下→往上）
+    // 信特殊：离书生很远→"该在书生手上"(不给方向); 近但不在手→"对准他的手"+方向
     _posHint(pid, rule, dx, dy) {
         var name = ShadowJudge._puppetName(pid);
+        var dist = Math.sqrt(dx*dx + dy*dy);
         var dirs = [];
         if (Math.abs(dx) > 0.05) dirs.push(dx > 0 ? '往左' : '往右');
         if (Math.abs(dy) > 0.05) dirs.push(dy > 0 ? '往上' : '往下');
         var move = dirs.length ? dirs.join('、') + '挪挪' : '再挪挪';
+        // 信的两级判定
+        if (rule.type === 'rel' && rule.to === 'scholar') {
+            if (dist > 0.18) return '（师傅摇头）这封信——得攥在书生手里。';
+            return '（师傅摇头）这封信，得攥在书生手里——' + move + '，对准他的手，别搁在身上。';
+        }
         if (rule.type === 'rel' && rule.to === 'tree')    return '（师傅摇头）' + name + '该在槐树左下方——' + move + '。';
-        if (rule.type === 'rel' && rule.to === 'scholar') return '（师傅摇头）这封信，得攥在书生手里——' + move + '，对准他的手，别搁在身上。';
         var where = (rule.label && rule.label.indexOf('·')>=0) ? rule.label.split('·')[1] : '';
         return '（师傅摇头）' + name + (where ? ('该在' + where + '——') : '位置不对——') + move + '。';
     },
@@ -2313,26 +2315,20 @@ const ShadowJudge = {
         // 评分：满覆盖=100；每少一个必需角儿 -25；每多一个非允许 -20
         var score = Math.max(0, Math.min(100, Math.round(coverage*100) - extra.length*20));
         var correct = (missing.length===0) && (extra.length===0);
-        var missNames = missing.map(function(id){return ShadowJudge._puppetName(id);}).join('、');
-        var extraNames = extra.map(function(id){return ShadowJudge._puppetName(id);}).join('、');
-        // 数量对了，再看位置（方案D：位置不对不通过，且只在此时才提示往哪挪）
-        var posFail = false, posComment = '', posHint = '';
+        // 数量对了，再看位置（方案D：位置不对不通过）
         if (correct) {
             var pc = ShadowJudge._checkPositions(stagedPuppets, currentSceneId);
-            if (!pc.ok) {
-                correct = false; posFail = true;
-                posComment = '（师傅凑近白布）影儿是齐了，可位置——不对。';
-                posHint = pc.wrong.map(function(w){ return w.msg; }).join('\n');
-            }
+            if (!pc.ok) correct = false;
         }
+        // ===== 确认按钮只说简短判断（对/不对），具体提示留给"追问师傅" =====
         return {
-            score: score, correct: correct, posFail: posFail,
+            score: score, correct: correct,
             character_match:{score:Math.round(coverage*30),comment:''},
             spatial:{score:Math.round(coverage*25*0.6),comment:''},
             plot_detail:{score:Math.round(coverage*25*0.6),comment:''},
             authenticity:{score:coverage>=0.8?16:6,comment:''},
-            comment: posFail ? posComment : ((missing.length===0&&extra.length===0)?'这一面，齐了。':((missing.length>0?'少摆了'+missNames+'。':'')+(extra.length>0?(missing.length>0?' ':'')+'多摆了'+extraNames+'。':'')+'这出戏，还不齐。')),
-            guiding_hint: posFail ? posHint : ''
+            comment: correct ? '这一面，齐了。' : '（摇了摇头）不对。这出戏——不是这么摆的。再想想。',
+            guiding_hint: ''   // 不在此处给提示——追问师傅才给详情
         };
     },
 
@@ -3158,12 +3154,7 @@ const ShadowJudge = {
         if (OFFLINE_MODE) {
             setTimeout(function() {
                 var result = ShadowJudge.quickJudge(staged, sceneId);
-                if (result.posFail) {
-                    // 位置错（数量已对）：保留 quickJudge 的位置评语+方向提示（方案D：错了才提示位置）
-                } else {
-                    result.comment = buildOfflineComment(staged, sceneId, result);
-                    result.guiding_hint = buildOfflineHint(staged, sceneId);
-                }
+                // quickJudge 已只返回简短判断(comment)，具体提示留给"追问师傅"
                 displayJudgeResult(result);
                 emitSceneJudged(staged, sceneId, result);
                 btnConfirm.disabled=false; btnAsk.disabled=false;
@@ -3352,9 +3343,8 @@ const ShadowJudge = {
 
     function displayJudgeResult(result) {
         speaker.textContent='路师傅';
-        var text = '';
-        if (result.comment) text += result.comment;
-        if (result.guiding_hint) text += '\n\n'+result.guiding_hint;
+        var text = result.comment || '';
+        if (result.guiding_hint) text += '\n\n' + result.guiding_hint;
         if (!text) text = '……（师傅看了看，没说话。）';
         typingDoneCb = function() {
             // 通关后：等玩家点击对话框 → 弹出「展示皮影戏」按钮（显示"点击继续"提示）
