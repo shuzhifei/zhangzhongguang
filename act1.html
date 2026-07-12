@@ -3161,6 +3161,34 @@ const ShadowJudge = {
         if (infoPanel) { var badge = document.createElement('div'); badge.style.cssText='margin-top:16px;padding:4px 8px;font-size:11px;color:#c48a3e;border:1px solid #5a2d15;border-radius:2px;letter-spacing:1px;'; badge.textContent='离 线 模 式'; infoPanel.appendChild(badge); }
     }
 
+    // —— 调试：跳场入口（开发测试用，发布前删除）——
+    (function addJumpButtons() {
+        var infoPanel = document.querySelector('.info-panel');
+        if (!infoPanel) return;
+        var container = document.createElement('div');
+        container.style.cssText = 'margin-top:20px;display:flex;flex-direction:column;gap:6px;';
+        function makeBtn(label, targetScene) {
+            var btn = document.createElement('button');
+            btn.textContent = label;
+            btn.style.cssText = 'padding:6px 10px;font-size:12px;color:#e8c97a;background:rgba(74,31,10,0.7);border:1px solid #6b3a1f;border-radius:3px;cursor:pointer;font-family:inherit;letter-spacing:2px;transition:background 0.2s;';
+            btn.onmouseenter = function() { btn.style.background = 'rgba(100,45,18,0.9)'; };
+            btn.onmouseleave = function() { btn.style.background = 'rgba(74,31,10,0.7)'; };
+            btn.onclick = function() {
+                try {
+                    EventBus.emit('countdown_stop_request');
+                    gameState.currentScene = targetScene;
+                    resetSceneState();
+                    if (window.NarrationCtl) window.NarrationCtl.reset();
+                    startCurrentScene();
+                } catch(e) { console.error('[jumpScene] 跳场失败:', e); }
+            };
+            return btn;
+        }
+        container.appendChild(makeBtn('跳到第二场', 1));
+        container.appendChild(makeBtn('跳到第三场', 2));
+        infoPanel.appendChild(container);
+    })();
+
     // 注意：舞台皮影的拖拽和放置已由 puppets.js 统一接管
     // 这里不再注册 stage.addEventListener('mousedown', ...) 
 
@@ -3966,21 +3994,28 @@ const ShadowJudge = {
 
     function showActIntro(act, callback) {
         // AI生成幕间开场白，替代硬编码的act.intro
-        if (!OFFLINE_MODE && typeof AI !== 'undefined') {
-            EventBus.emit('narration_chunk', { speaker:'路师傅', text:'（路师傅清了清嗓子，灯焰安静下来……）', speed:50 });
-            AI.call(
-                PROMPTS_DATA.baseSystemPrompt + '\n\n【当前剧目】第'+act.id+'幕：'+act.name+'。灯油'+gameState.lampOil+'%。请以路师傅口吻说一段幕间开场白（60-120字），自然引入这幕戏的背景：'+act.intro,
-                '幕间休息结束。请路师傅开场说第一段话，把学徒带入这幕戏的氛围中。',
-                {temperature:0.8, maxTokens:250, model:AI.MODEL_DEFAULT}
-            ).then(function(reply){
-                EventBus.emit('narration_chunk', { speaker:'路师傅', text:reply, speed:48 });
+        if (!OFFLINE_MODE && typeof AI !== 'undefined' && typeof AI.call === 'function') {
+            try {
+                EventBus.emit('narration_chunk', { speaker:'路师傅', text:'（路师傅清了清嗓子，灯焰安静下来……）', speed:50 });
+                AI.call(
+                    (typeof PROMPTS_DATA !== 'undefined' ? PROMPTS_DATA.baseSystemPrompt : '') + '\n\n【当前剧目】第'+act.id+'幕：'+act.name+'。灯油'+gameState.lampOil+'%。请以路师傅口吻说一段幕间开场白（60-120字），自然引入这幕戏的背景：'+(act.intro||''),
+                    '幕间休息结束。请路师傅开场说第一段话，把学徒带入这幕戏的氛围中。',
+                    {temperature:0.8, maxTokens:250, model:AI.MODEL_DEFAULT || 'default'}
+                ).then(function(reply){
+                    EventBus.emit('narration_chunk', { speaker:'路师傅', text:reply, speed:48 });
+                    if (callback && window.NarrationCtl) window.NarrationCtl.enqueueAction(callback);
+                }).catch(function(err){
+                    console.warn('[showActIntro] AI调用失败，回退到硬编码:', err && err.message);
+                    EventBus.emit('narration_chunk', { speaker:'路师傅', text: act.intro || '', speed:62 });
+                    if (callback && window.NarrationCtl) window.NarrationCtl.enqueueAction(callback);
+                });
+            } catch(e) {
+                console.warn('[showActIntro] 同步异常，回退到硬编码:', e.message);
+                EventBus.emit('narration_chunk', { speaker:'路师傅', text: act.intro || '', speed:62 });
                 if (callback && window.NarrationCtl) window.NarrationCtl.enqueueAction(callback);
-            }).catch(function(){
-                EventBus.emit('narration_chunk', { speaker:'路师傅', text:act.intro, speed:62 });
-                if (callback && window.NarrationCtl) window.NarrationCtl.enqueueAction(callback);
-            });
+            }
         } else {
-            EventBus.emit('narration_chunk', { speaker:'路师傅', text:act.intro, speed:62 });
+            EventBus.emit('narration_chunk', { speaker:'路师傅', text: act.intro || '', speed:62 });
             if (callback && window.NarrationCtl) window.NarrationCtl.enqueueAction(callback);
         }
     }
@@ -3996,17 +4031,23 @@ const ShadowJudge = {
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
             // AI生成场景开场白（替代硬编码的scene.name+description）
-            if (!OFFLINE_MODE && typeof AI !== 'undefined') {
-                EventBus.emit('narration_chunk', { speaker:'路师傅', text:'（路师傅看着白布，缓缓开口……）', speed:50 });
-                AI.call(
-                    PROMPTS_DATA.baseSystemPrompt + '\n\n第'+act.id+'幕：'+act.name+'。当前场景：'+scene.name+'。场景设定：'+scene.description+'。灯油'+gameState.lampOil+'%。请以路师傅口吻说一段场景开场白（80-150字），自然引入这个场景。',
-                    '学徒坐在白布前等待。请路师傅开始说这场戏。场景：'+scene.description,
-                    {temperature:0.8, maxTokens:300, model:AI.MODEL_DEFAULT}
-                ).then(function(reply){
-                    EventBus.emit('narration_chunk', { speaker:'路师傅', text:reply, speed:48 });
-                }).catch(function(){
-                    EventBus.emit('narration_chunk', { speaker:'路师傅', text:scene.description, speed:80 });
-                });
+            if (!OFFLINE_MODE && typeof AI !== 'undefined' && typeof AI.call === 'function') {
+                try {
+                    EventBus.emit('narration_chunk', { speaker:'路师傅', text:'（路师傅看着白布，缓缓开口……）', speed:50 });
+                    AI.call(
+                        (typeof PROMPTS_DATA !== 'undefined' ? PROMPTS_DATA.baseSystemPrompt : '') + '\n\n第'+act.id+'幕：'+act.name+'。当前场景：'+scene.name+'。场景设定：'+(scene.description||'')+'。灯油'+gameState.lampOil+'%。请以路师傅口吻说一段场景开场白（80-150字），自然引入这个场景。',
+                        '学徒坐在白布前等待。请路师傅开始说这场戏。场景：'+(scene.description||''),
+                        {temperature:0.8, maxTokens:300, model:AI.MODEL_DEFAULT || 'default'}
+                    ).then(function(reply){
+                        EventBus.emit('narration_chunk', { speaker:'路师傅', text:reply, speed:48 });
+                    }).catch(function(err){
+                        console.warn('[startCurrentScene] AI调用失败，回退:', err && err.message);
+                        EventBus.emit('narration_chunk', { speaker:'路师傅', text: scene.description || '', speed:80 });
+                    });
+                } catch(e) {
+                    console.warn('[startCurrentScene] 同步异常，回退:', e.message);
+                    EventBus.emit('narration_chunk', { speaker:'路师傅', text: scene.description || '', speed:80 });
+                }
             } else {
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:80 });
             }
