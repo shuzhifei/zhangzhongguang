@@ -2193,6 +2193,15 @@ const ShadowJudge = {
         var coverage = required.length>0?(required.length-missing.length)/required.length:1;
         result.score = Math.max(0, Math.min(100, Math.round(coverage*100) - extra.length*20));
         result.correct = (missing.length===0) && (extra.length===0);
+        // 数量对了还要位置对（方案D：错了才提示往哪挪）
+        if (result.correct) {
+            var pc = this._checkPositions(stagedPuppets, currentSceneId);
+            if (!pc.ok) {
+                result.correct = false;
+                result.comment = '（师傅凑近白布）影儿是齐了，可位置——不对。';
+                result.guiding_hint = pc.wrong.map(function(w){ return w.msg; }).join('\n');
+            }
+        }
         return result;
     },
 
@@ -2217,6 +2226,75 @@ const ShadowJudge = {
         return h+v;
     },
 
+    // ==========================================================
+    // 位置判定（数量对之外，还要"摆对位置"才通过；方案D=错了才提示）
+    // [DEV-TUNABLE] 下面这张表就是每个皮影的目标位置，调试时直接改这里的数值即可。
+    // 归一化坐标：x 左0→右1，y 上0→下1；r=容差半径(归一化，越大越宽松)。
+    //   type:'abs'  固定点 {cx,cy,r}
+    //   type:'rel'  相对另一皮影【当前实时位置】{to,dx,dy,r}（信/书生就是实时跟踪的）
+    //   type:'night' 只要月亮挂得够高、白布变黑即算对（横向不限）
+    // ==========================================================
+    POSITION_RULES: {
+        'act1_scene1': {
+            tree:    { type:'abs',   cx:0.80, cy:0.72, r:0.20, label:'槐树·右下角' },
+            moon:    { type:'night',                        label:'月亮·天空(变黑即可)' },
+            scholar: { type:'rel', to:'tree',    dx:0.00, dy:0.06, r:0.22, label:'书生·槐树底下' },
+            letter:  { type:'rel', to:'scholar', dx:0.05, dy:0.00, r:0.16, label:'信·书生手里' }
+        }
+    },
+
+    // 把一条规则解析成绝对归一化目标 {cx,cy,r}；rel 依赖参照物当前坐标；night/无法解析返回 null
+    _resolveTarget(rule, byId) {
+        if (!rule) return null;
+        if (rule.type === 'abs') return { cx:rule.cx, cy:rule.cy, r:rule.r };
+        if (rule.type === 'rel') {
+            var base = byId[rule.to];
+            if (!base) return null;   // 参照物还没摆 → 无法解析（数量判定会先拦住）
+            return { cx: base.x + (rule.dx||0), cy: base.y + (rule.dy||0), r: rule.r };
+        }
+        return null; // night 单独判定
+    },
+
+    // 判定所有在场皮影是否都落在各自目标内，返回 {ok, wrong:[{id,name,msg}]}
+    _checkPositions(stagedPuppets, sceneId) {
+        var rules = this.POSITION_RULES[sceneId];
+        if (!rules) return { ok:true, wrong:[] };   // 没定义位置规则的场次 → 只看数量
+        var byId = {};
+        stagedPuppets.forEach(function(p){ byId[p.puppetId] = p; });
+        var nightOn = false;
+        try { var st = document.getElementById('stage'); nightOn = !!(st && st.classList.contains('night')); } catch(e){}
+        var wrong = [];
+        Object.keys(rules).forEach(function(pid){
+            var rule = rules[pid];
+            var p = byId[pid];
+            if (!p) return;                          // 缺皮影由数量判定负责，这里只管在场的
+            if (rule.type === 'night') {
+                if (!nightOn) wrong.push({ id:pid, name:ShadowJudge._puppetName(pid), msg:'（师傅抬头）月亮得挂到天上去——挂高些，让白布暗下来。' });
+                return;
+            }
+            var t = ShadowJudge._resolveTarget(rule, byId);
+            if (!t) return;                          // 参照物缺失，交给数量判定
+            var dx = p.x - t.cx, dy = p.y - t.cy;
+            if (Math.sqrt(dx*dx + dy*dy) > t.r) {
+                wrong.push({ id:pid, name:ShadowJudge._puppetName(pid), msg: ShadowJudge._posHint(pid, rule, dx, dy) });
+            }
+        });
+        return { ok: wrong.length===0, wrong: wrong };
+    },
+
+    // 错了才提示：指出该皮影往哪个方向挪（dx>0=偏右→往左；dy>0=偏下→往上）
+    _posHint(pid, rule, dx, dy) {
+        var name = ShadowJudge._puppetName(pid);
+        var dirs = [];
+        if (Math.abs(dx) > 0.05) dirs.push(dx > 0 ? '往左' : '往右');
+        if (Math.abs(dy) > 0.05) dirs.push(dy > 0 ? '往上' : '往下');
+        var move = dirs.length ? dirs.join('、') + '挪挪' : '再挪挪';
+        if (rule.type === 'rel' && rule.to === 'tree')    return '（师傅摇头）' + name + '该在槐树底下——' + move + '。';
+        if (rule.type === 'rel' && rule.to === 'scholar') return '（师傅摇头）这封信，得攥在书生手里——' + move + '，贴着书生。';
+        var where = (rule.label && rule.label.indexOf('·')>=0) ? rule.label.split('·')[1] : '';
+        return '（师傅摇头）' + name + (where ? ('该在' + where + '——') : '位置不对——') + move + '。';
+    },
+
     quickJudge(stagedPuppets, currentSceneId) {
         var scene = this._getSceneData(currentSceneId);
         if (!scene||!scene.standard_puppets) return {score:50,correct:true,comment:'……（灯太暗了，看不清影面）'};
@@ -2237,13 +2315,24 @@ const ShadowJudge = {
         var correct = (missing.length===0) && (extra.length===0);
         var missNames = missing.map(function(id){return ShadowJudge._puppetName(id);}).join('、');
         var extraNames = extra.map(function(id){return ShadowJudge._puppetName(id);}).join('、');
+        // 数量对了，再看位置（方案D：位置不对不通过，且只在此时才提示往哪挪）
+        var posFail = false, posComment = '', posHint = '';
+        if (correct) {
+            var pc = ShadowJudge._checkPositions(stagedPuppets, currentSceneId);
+            if (!pc.ok) {
+                correct = false; posFail = true;
+                posComment = '（师傅凑近白布）影儿是齐了，可位置——不对。';
+                posHint = pc.wrong.map(function(w){ return w.msg; }).join('\n');
+            }
+        }
         return {
-            score: score, correct: correct,
+            score: score, correct: correct, posFail: posFail,
             character_match:{score:Math.round(coverage*30),comment:''},
             spatial:{score:Math.round(coverage*25*0.6),comment:''},
             plot_detail:{score:Math.round(coverage*25*0.6),comment:''},
             authenticity:{score:coverage>=0.8?16:6,comment:''},
-            comment: (missing.length===0&&extra.length===0)?'这一面，齐了。':((missing.length>0?'少摆了'+missNames+'。':'')+(extra.length>0?(missing.length>0?' ':'')+'多摆了'+extraNames+'。':'')+'要扣分。')
+            comment: posFail ? posComment : ((missing.length===0&&extra.length===0)?'这一面，齐了。':((missing.length>0?'少摆了'+missNames+'。':'')+(extra.length>0?(missing.length>0?' ':'')+'多摆了'+extraNames+'。':'')+'要扣分。')),
+            guiding_hint: posFail ? posHint : ''
         };
     },
 
@@ -3069,8 +3158,12 @@ const ShadowJudge = {
         if (OFFLINE_MODE) {
             setTimeout(function() {
                 var result = ShadowJudge.quickJudge(staged, sceneId);
-                result.comment = buildOfflineComment(staged, sceneId, result);
-                result.guiding_hint = buildOfflineHint(staged, sceneId);
+                if (result.posFail) {
+                    // 位置错（数量已对）：保留 quickJudge 的位置评语+方向提示（方案D：错了才提示位置）
+                } else {
+                    result.comment = buildOfflineComment(staged, sceneId, result);
+                    result.guiding_hint = buildOfflineHint(staged, sceneId);
+                }
                 displayJudgeResult(result);
                 emitSceneJudged(staged, sceneId, result);
                 btnConfirm.disabled=false; btnAsk.disabled=false;
@@ -3900,6 +3993,104 @@ const ShadowJudge = {
         var pb = document.getElementById('puppetBox'); if(pb) pb.scrollTop = 0;
         console.log('[main] 皮影箱已切换至第'+getActNum(actNum)+'幕（显示'+vc+'个角色）');
     }
+
+    // ==========================================================
+    // [DEV-ONLY 开发者框架] —— 发布前把 DEV_SHOW_FRAME 改为 false 或整段删除
+    // 在白布上叠加：0~1 归一化网格 + 每个皮影的目标容差区 + 每个已摆皮影的实时坐标读数。
+    // 用途：你对照网格读出坐标，直接告诉我"槐树该在 x=?, y=?"，我改 POSITION_RULES 即可。
+    // 快捷键 G 可随时开关。
+    // ==========================================================
+    var DEV_SHOW_FRAME = true;
+    (function initDevFrame(){
+        var devLayer = null, devTick = null;
+        function ensureLayer(){
+            var stage = document.getElementById('stage');
+            if (!stage) return null;
+            if (devLayer && devLayer.parentNode === stage) return devLayer;
+            devLayer = document.createElement('div');
+            devLayer.id = 'devFrame';
+            devLayer.style.cssText = 'position:absolute;inset:0;z-index:30;pointer-events:none;font-family:Consolas,monospace;';
+            stage.appendChild(devLayer);
+            // 网格（每 0.1 一格）+ 边缘刻度，只画一次放进底层
+            var grid = document.createElement('div');
+            grid.style.cssText = 'position:absolute;inset:0;';
+            var s = '';
+            for (var i=1;i<10;i++){
+                var pct=(i*10);
+                s += '<div style="position:absolute;left:'+pct+'%;top:0;bottom:0;width:1px;background:rgba(0,220,255,'+(i===5?0.5:0.18)+');"></div>';
+                s += '<div style="position:absolute;top:'+pct+'%;left:0;right:0;height:1px;background:rgba(0,220,255,'+(i===5?0.5:0.18)+');"></div>';
+                s += '<div style="position:absolute;left:'+pct+'%;top:1px;transform:translateX(-50%);font-size:9px;color:rgba(0,220,255,0.75);">'+(i/10).toFixed(1)+'</div>';
+                s += '<div style="position:absolute;top:'+pct+'%;left:1px;transform:translateY(-50%);font-size:9px;color:rgba(0,220,255,0.75);">'+(i/10).toFixed(1)+'</div>';
+            }
+            grid.innerHTML = s;
+            devLayer.appendChild(grid);
+            var dyn = document.createElement('div');
+            dyn.id = 'devFrameDyn';
+            dyn.style.cssText = 'position:absolute;inset:0;';
+            devLayer.appendChild(dyn);
+            return devLayer;
+        }
+        function draw(){
+            if (!DEV_SHOW_FRAME) { if (devLayer) devLayer.style.display='none'; return; }
+            var stage = document.getElementById('stage');
+            var layer = ensureLayer();
+            if (!layer || !stage) return;
+            // 聚焦"信"特效期间不画，避免干扰
+            layer.style.display = stage.classList.contains('letter-focus') ? 'none' : '';
+            var dyn = document.getElementById('devFrameDyn');
+            if (!dyn) return;
+            // getCurrentSceneId / collectStagedPuppets 定义在 theater IIFE 里，本 dev 层在 main IIFE，
+            // 跨作用域拿不到裸函数，必须经 window.TheaterSystem 桥接（带兜底）。
+            var TS = window.TheaterSystem || {};
+            var sid = TS.getCurrentSceneId ? TS.getCurrentSceneId()
+                      : ('act'+(window.gameState?gameState.currentAct:1)+'_scene'+((window.gameState?gameState.currentScene:0)+1));
+            // ShadowJudge 是全局 const（非 module 脚本共享词法环境），裸名可用；window.ShadowJudge 恒为 undefined，不能作判空。
+            var SJ = (typeof ShadowJudge !== 'undefined') ? ShadowJudge : (window.ShadowJudge || null);
+            var rules = (SJ && SJ.POSITION_RULES) ? SJ.POSITION_RULES[sid] : null;
+            var staged = TS.collectStagedPuppets ? TS.collectStagedPuppets() : [];
+            var byId = {}; staged.forEach(function(p){ byId[p.puppetId]=p; });
+            var html = '';
+            // 目标容差区
+            if (rules) Object.keys(rules).forEach(function(pid){
+                var rule = rules[pid];
+                if (rule.type === 'night') {
+                    html += '<div style="position:absolute;left:0;right:0;top:0;height:30%;border:1px dashed rgba(120,200,255,0.7);background:rgba(60,120,220,0.10);"></div>';
+                    html += '<div style="position:absolute;left:6px;top:4px;font-size:10px;color:#8fd0ff;background:rgba(0,0,0,0.45);padding:1px 4px;border-radius:2px;">'+rule.label+'</div>';
+                    return;
+                }
+                var t = SJ._resolveTarget(rule, byId);
+                if (!t) {
+                    html += '<div style="position:absolute;left:50%;top:'+(pid==='scholar'?'40%':'50%')+';transform:translate(-50%,-50%);font-size:10px;color:#ffcf6a;background:rgba(0,0,0,0.5);padding:2px 5px;border-radius:2px;">'+(rule.label||pid)+'（待'+SJ._puppetName(rule.to)+'就位）</div>';
+                    return;
+                }
+                var leftPct=t.cx*100, topPct=t.cy*100, wPct=t.r*200, hPct=t.r*200;
+                var placed = byId[pid];
+                var okNow = placed ? (Math.sqrt(Math.pow(placed.x-t.cx,2)+Math.pow(placed.y-t.cy,2))<=t.r) : false;
+                var col = okNow ? '90,230,140' : '255,180,90';
+                html += '<div style="position:absolute;left:'+leftPct+'%;top:'+topPct+'%;width:'+wPct+'%;height:'+hPct+'%;transform:translate(-50%,-50%);border:1.5px dashed rgba('+col+',0.9);border-radius:50%;background:rgba('+col+',0.08);"></div>';
+                html += '<div style="position:absolute;left:'+leftPct+'%;top:'+topPct+'%;transform:translate(-50%,-50%);font-size:10px;color:rgb('+col+');text-shadow:0 0 3px #000;white-space:nowrap;">'+rule.label+' ('+t.cx.toFixed(2)+','+t.cy.toFixed(2)+')</div>';
+            });
+            // 已摆皮影的实时坐标读数
+            staged.forEach(function(p){
+                html += '<div style="position:absolute;left:'+(p.x*100)+'%;top:'+(p.y*100)+'%;transform:translate(-50%,-50%);width:8px;height:8px;background:#ff3b6b;border-radius:50%;box-shadow:0 0 4px #ff3b6b;"></div>';
+                html += '<div style="position:absolute;left:'+(p.x*100)+'%;top:calc('+(p.y*100)+'% + 8px);transform:translateX(-50%);font-size:10px;color:#ff8fae;background:rgba(0,0,0,0.55);padding:1px 4px;border-radius:2px;white-space:nowrap;">'+p.name+' '+p.x.toFixed(2)+','+p.y.toFixed(2)+'</div>';
+            });
+            dyn.innerHTML = html;
+        }
+        // 事件驱动 + 轻量轮询（拖动过程实时刷新坐标）
+        try {
+            EventBus.on('puppet_placed', draw);
+            EventBus.on('puppet_moved', draw);
+            EventBus.on('puppet_removed', draw);
+        } catch(e){}
+        devTick = setInterval(draw, 150);
+        document.addEventListener('keydown', function(e){
+            if (e.key === 'g' || e.key === 'G') { DEV_SHOW_FRAME = !DEV_SHOW_FRAME; draw(); }
+        });
+        window.__toggleDevFrame = function(v){ DEV_SHOW_FRAME = (v===undefined)?!DEV_SHOW_FRAME:!!v; draw(); };
+        setTimeout(draw, 300);
+    })();
+    // ==========================================================
 
     if (document.readyState==='loading') { document.addEventListener('DOMContentLoaded',init); }
     else { init(); }
