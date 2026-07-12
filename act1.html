@@ -2235,7 +2235,7 @@ const ShadowJudge = {
             tree:    { type:'abs',   cx:0.80, cy:0.72, r:0.13, label:'槐树·右下角' },
             moon:    { type:'night',                        label:'月亮·天空(变黑即可)' },
             scholar: { type:'rel', to:'tree',    dx:-0.08, dy:0.08, r:0.09, label:'书生·槐树左下' },
-            letter:  { type:'rel', to:'scholar', dx:-0.05, dy:0.01, r:0.08, label:'信·书生手里' }
+            letter:  { type:'rel', to:'scholar', dx:-0.05, dy:0.01, r:0.055, label:'信·书生手里' }
         }
     },
 
@@ -2279,7 +2279,7 @@ const ShadowJudge = {
     },
 
     // 错了才提示：指出该皮影往哪个方向挪（dx>0=偏右→往左；dy>0=偏下→往上）
-    // 信特殊：离书生很远→"该在书生手上"(不给方向); 近但不在手→"对准他的手"+方向
+    // 信三级判定: 很远→"该在书生手上"(不给方向); 近身但没到手→"对准他的手"+方向+"别搁身上"; 到位→不触发
     _posHint(pid, rule, dx, dy) {
         var name = ShadowJudge._puppetName(pid);
         var dist = Math.sqrt(dx*dx + dy*dy);
@@ -2287,9 +2287,11 @@ const ShadowJudge = {
         if (Math.abs(dx) > 0.05) dirs.push(dx > 0 ? '往左' : '往右');
         if (Math.abs(dy) > 0.05) dirs.push(dy > 0 ? '往上' : '往下');
         var move = dirs.length ? dirs.join('、') + '挪挪' : '再挪挪';
-        // 信的两级判定
+        // 信的三级判定（阈值基于容差r的倍数，不写死绝对值）
         if (rule.type === 'rel' && rule.to === 'scholar') {
-            if (dist > 0.18) return '（师傅摇头）这封信——得攥在书生手里。';
+            var farLimit = Math.max(rule.r * 2.0, 0.11);   // 超过2倍容差=根本没挨着书生
+            if (dist > farLimit) return '（师傅摇头）这封信——得攥在书生手里。';
+            // 在farLimit内但超出r：贴着身子但没到手
             return '（师傅摇头）这封信，得攥在书生手里——' + move + '，对准他的手，别搁在身上。';
         }
         if (rule.type === 'rel' && rule.to === 'tree')    return '（师傅摇头）' + name + '该在槐树左下方——' + move + '。';
@@ -3228,9 +3230,12 @@ const ShadowJudge = {
             if (extra.length>0)   return '路师傅皱了皱眉：' + extra.map(getPuppetName).join('、') + '是多余的——戏里没这角儿，先拿下去。';
             if (missing.length>0) return '路师傅眯着眼看了看白布：还差——' + missing.map(getPuppetName).join('、') + '。你觉得，该摆在哪？';
         }
-        // —— ② 阵容齐了、位置不对：复用位置判定，点出往哪挪 ——
+        // —— ② 阵容齐了、位置不对：复用位置判定，逐条点出往哪挪 ——
         var pc = ShadowJudge._checkPositions(staged, sceneId);
-        if (pc && !pc.ok) return '路师傅凑近白布：影儿是齐了，可位置还差点——\n' + pc.wrong.map(function(w){return w.msg;}).join('\n');
+        if (pc && !pc.ok) {
+            var hints = pc.wrong.map(function(w){ return w.msg; });
+            return '路师傅凑近白布：影儿是齐了，可位置还差点——\n' + hints.join('\n');
+        }
         // —— ③ 全对（或即兴场无阵容要求）：念戏词，把线索点出来 ——
         if (placedIds.indexOf('elder')!==-1&&placedIds.indexOf('letter')!==-1) return '路师傅停了一下：这根杆——本来有三根的。我师父当年……算了。';
         if (placedIds.indexOf('frog')!==-1&&placedIds.indexOf('elder')!==-1) return '路师傅的声音变了：金蟾碎了。戏里是这么写的——但戏外——也碎了。';
