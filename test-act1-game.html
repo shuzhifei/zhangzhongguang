@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>掌中光 · 第一幕「琉璃厂·书生与鹤」</title>
+<style>
+:root{--bg:#0d0704;--panel:rgba(26,12,4,.95);--text:#c8b89a;--accent:#d4883a;--gold:#e8c97a;--border:#3a2010;--green:#5a9e6f;--red:#c44}
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:var(--bg);color:var(--text);font-family:'STKaiti','楷体',serif;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+/* 游戏容器 */
+#game{flex:1;display:flex;flex-direction:column;max-width:1200px;margin:0 auto;width:100%;padding:8px}
+/* 顶部信息栏 */
+#topBar{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:var(--panel);border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
+#topBar h1{font-size:20px;color:var(--gold);letter-spacing:4px}
+#oilDisplay{display:flex;align-items:center;gap:8px;font-size:14px}
+#oilBar{width:120px;height:10px;background:#1a0802;border:1px solid var(--border);border-radius:5px;overflow:hidden}
+#oilFill{height:100%;background:linear-gradient(90deg,#d4883a,#f0c060);transition:width .5s}
+#sceneLabel{font-size:12px;color:#8a7060}
+/* 主体三栏 */
+#main{flex:1;display:flex;gap:10px;min-height:0}
+/* 左侧皮影箱 */
+#puppetBox{width:140px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+#puppetBox h3{font-size:13px;color:var(--gold);text-align:center;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:4px}
+.puppet-card{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px;text-align:center;cursor:pointer;transition:all .2s;font-size:12px}
+.puppet-card:hover{border-color:var(--accent)}
+.puppet-card .emoji{font-size:24px;display:block}
+.puppet-card .name{font-size:11px;color:#8a7060;margin-top:2px}
+/* 中间白布舞台 */
+#stageWrap{flex:1;display:flex;flex-direction:column}
+#stage{flex:1;background:linear-gradient(180deg,#f5edd8 0%,#e8dcc0 50%,#d4c8a8 100%);border:6px solid #4a3020;border-radius:4px;position:relative;box-shadow:inset 0 0 60px rgba(0,0,0,.15),0 0 40px rgba(180,120,40,.2)}
+#stage .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#b8a080;font-size:16px;letter-spacing:3px;pointer-events:none}
+.stage-puppet{position:absolute;width:70px;height:100px;filter:brightness(0.15);cursor:grab;transition:filter .3s}
+.stage-puppet:hover{filter:brightness(0.3)}
+/* 右侧信息 */
+#infoPanel{width:160px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px}
+#btnStart{width:100%;padding:10px;background:var(--accent);color:var(--bg);border:none;border-radius:4px;font-family:inherit;font-size:14px;cursor:pointer;letter-spacing:2px;font-weight:bold}
+#btnStart:hover{opacity:.8}
+#btnStart:disabled{background:#555;cursor:not-allowed}
+/* 底部对话框 */
+#dialogueWrap{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin-top:8px;min-height:80px}
+#speaker{font-size:13px;color:var(--gold);margin-bottom:6px}
+#dialogueText{font-size:16px;line-height:2;min-height:50px;max-height:140px;overflow-y:auto}
+#dialogueText .continue-hint{color:var(--accent);font-size:12px;animation:blink 1.2s infinite;float:right;margin-top:8px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.btn-row{display:flex;gap:8px;margin-top:8px}
+.btn-row button{padding:6px 16px;background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px;letter-spacing:1px}
+.btn-row button:hover{background:var(--accent);color:var(--bg)}
+.btn-row button:disabled{opacity:.4;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div id="game">
+  <!-- 顶部栏 -->
+  <div id="topBar">
+    <div><h1>掌 中 光</h1></div>
+    <div><span id="sceneLabel">第一幕 · 琉璃厂·书生与鹤</span></div>
+    <div id="oilDisplay">🪔 灯油 <div id="oilBar"><div id="oilFill" style="width:100%"></div></div> <span id="oilNum">100</span>%</div>
+  </div>
+
+  <!-- 主体 -->
+  <div id="main">
+    <!-- 皮影箱 -->
+    <div id="puppetBox">
+      <h3>🏮 皮影箱</h3>
+    </div>
+
+    <!-- 白布舞台 -->
+    <div id="stageWrap">
+      <div id="stage"><div class="hint">将皮影拖到这里</div></div>
+    </div>
+
+    <!-- 右侧面板 -->
+    <div id="infoPanel">
+      <button id="btnStart" onclick="startScene()">🪔 起灯说戏</button>
+      <div style="font-size:11px;color:#6a5040;text-align:center;margin-top:4px">右键 = 下一段字幕</div>
+    </div>
+  </div>
+
+  <!-- 对话框 -->
+  <div id="dialogueWrap">
+    <div id="speaker">路师傅</div>
+    <div id="dialogueText">灯油备好了。把皮影拖到白布上，然后点「起灯说戏」——第一出戏，开场了。</div>
+    <div class="btn-row">
+      <button id="btnConfirm" onclick="confirmPuppets()">确认摆影</button>
+      <button id="btnAsk" onclick="askMaster()">追问师父</button>
+    </div>
+  </div>
+</div>
+
+<script src="data/prompts.json"></script>
+<script src="data/acts.json"></script>
+
+<script>
+// ========== API 配置 ==========
+var API_URL = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_API) ? API_CONFIG.BASE_API + '/llm/stream' : 'http://123.57.90.233:3000/api/llm/stream';
+
+// ========== 游戏状态 ==========
+var game = { oil:100, act:1, scene:0, staged:[], speaking:false };
+
+// ========== 皮影生成 ==========
+var PUPPETS = [
+  {id:'scholar',name:'书生',emoji:'🧑'},{id:'tree',name:'槐树',emoji:'🌳'},
+  {id:'moon',name:'月亮',emoji:'🌙'},{id:'elder',name:'老者',emoji:'👴'},
+  {id:'frog',name:'金蟾',emoji:'🐸'},{id:'letter',name:'信',emoji:'✉️'},
+  {id:'lamp',name:'油灯',emoji:'🪔'},{id:'crane',name:'仙鹤',emoji:'🦢'}
+];
+
+(function(){
+  var box = document.getElementById('puppetBox');
+  PUPPETS.forEach(function(p){
+    var c = document.createElement('div');
+    c.className = 'puppet-card';
+    c.innerHTML = '<span class="emoji">'+p.emoji+'</span><span class="name">'+p.name+'</span>';
+    c.draggable = true;
+    c.addEventListener('dragstart',function(e){ e.dataTransfer.setData('text/plain',p.id); });
+    box.appendChild(c);
+  });
+})();
+
+// ========== 舞台拖放 ==========
+var stage = document.getElementById('stage');
+stage.addEventListener('dragover',function(e){e.preventDefault()});
+stage.addEventListener('drop',function(e){
+  e.preventDefault();
+  var pid = e.dataTransfer.getData('text/plain');
+  var p = PUPPETS.find(function(x){return x.id===pid}); if(!p) return;
+  var rect = stage.getBoundingClientRect();
+  var el = document.createElement('div');
+  el.className = 'stage-puppet';
+  el.dataset.puppet = pid;
+  el.textContent = p.emoji;
+  el.style.left = (e.clientX - rect.left - 35) + 'px';
+  el.style.top = (e.clientY - rect.top - 50) + 'px';
+  el.draggable = true;
+  el.addEventListener('dragstart',function(ev){ ev.dataTransfer.setData('text/plain','move:'+pid); el.style.opacity='0.5'; });
+  el.addEventListener('dragend',function(){ el.style.opacity='1'; });
+  stage.appendChild(el);
+  game.staged.push({id:pid,name:p.name,x:(e.clientX-rect.left-35)/rect.width,y:(e.clientY-rect.top-50)/rect.height});
+  var hint = stage.querySelector('.hint'); if(hint) hint.style.display='none';
+});
+
+stage.addEventListener('drop',function(e){
+  var d = e.dataTransfer.getData('text/plain');
+  if (!d.startsWith('move:')) return;
+  var pid = d.slice(5);
+  var el = stage.querySelector('[data-puppet="'+pid+'"]');
+  if (!el) return;
+  var rect = stage.getBoundingClientRect();
+  el.style.left = (e.clientX - rect.left - 35) + 'px';
+  el.style.top = (e.clientY - rect.top - 50) + 'px';
+});
+
+// ========== 字幕系统 ==========
+var twTimer = null, subQueue = [], subActive = false;
+function typewriter(text, speed, onDone){
+  speed = speed||50;
+  var el = document.getElementById('dialogueText');
+  if(twTimer) clearInterval(twTimer);
+  el.innerHTML = ''; var i = 0;
+  twTimer = setInterval(function(){
+    if(i < text.length){ var ch=text[i]; el.innerHTML += ch==='\n'?'<br>':ch; i++; }
+    else { clearInterval(twTimer); twTimer=null; if(onDone) onDone(); }
+  }, speed);
+}
+
+function enqueueSubtitle(text, speed){
+  subQueue.push({text:text,speed:speed||50});
+  if(!subActive) processQueue();
+}
+
+function processQueue(){
+  if(subActive || subQueue.length===0) return;
+  subActive = true;
+  var item = subQueue.shift();
+  typewriter(item.text, item.speed, function(){
+    subActive = false;
+    if(subQueue.length > 0){
+      var el = document.getElementById('dialogueText');
+      el.innerHTML += '<span class="continue-hint">右键继续 ▸</span>';
+    } else {
+      document.getElementById('btnConfirm').disabled = false;
+      document.getElementById('btnAsk').disabled = false;
+    }
+  });
+}
+
+document.addEventListener('contextmenu',function(e){
+  e.preventDefault();
+  if(subActive) return;
+  if(subQueue.length === 0) return;
+  processQueue();
+});
+
+// ========== AI 流式调用 ==========
+async function aiStream(sysPrompt, userMsg, onText){
+  var r = await fetch(API_URL, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'qwen-max',messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}],max_tokens:400,temperature:0.8,stream:true})
+  });
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  var reader = r.body.getReader(), dec = new TextDecoder(), buf='',full='';
+  while(true){var v=await reader.read();if(v.done)break;buf+=dec.decode(v.value,{stream:true});var ls=buf.split('\n');buf=ls.pop()||'';
+    for(var i=0;i<ls.length;i++){var l=ls[i].trim();if(!l||!l.startsWith('data:')||l==='data:[DONE]')continue;
+      try{var c=JSON.parse(l.slice(5)).choices?.[0]?.delta?.content;if(c){full+=c;if(onText)onText(full);}}catch(e){}
+    }
+  }
+  return full;
+}
+
+// ========== 游戏逻辑 ==========
+function buildSystemPrompt(){
+  var act = ACTS_DATA.acts[game.act-1];
+  var scene = act.scenes[game.scene];
+  var stagedList = game.staged.map(function(s){return s.name}).join('、') || '空无一物';
+  return PROMPTS_DATA.baseSystemPrompt + '\n\n' +
+    '【当前剧目】第'+game.act+'幕：'+act.name+'\n' +
+    '背景：'+act.intro+'\n' +
+    '场景：'+scene.description+'\n' +
+    '灯油：'+game.oil+'%\n' +
+    '学徒在白布上摆了：'+stagedList+'\n\n' +
+    '你正在说第一段戏。请以路师傅苍老从容的口吻开场。先说戏，然后引导学徒摆皮影。120-250字。';
+}
+
+async function startScene(){
+  var btn = document.getElementById('btnStart');
+  btn.disabled = true; btn.textContent = '⏳ 路师傅在说戏...';
+  document.getElementById('dialogueText').textContent = '';
+  document.getElementById('speaker').textContent = '路师傅';
+  game.speaking = true;
+
+  try {
+    var sys = buildSystemPrompt();
+    var msg = '这是第一幕的开场。学徒刚刚坐下。请路师傅说第一段戏。';
+    var full = await aiStream(sys, msg, function(text){
+      document.getElementById('dialogueText').textContent = text;
+    });
+    // 将完整文本按句号分段
+    var segs = full.split(/(?<=。)(?=\S)/);
+    segs.forEach(function(s){ enqueueSubtitle(s.trim(), 45); });
+    // 消耗灯油
+    game.oil = Math.max(0, game.oil - 2);
+    updateOil();
+  } catch(e) {
+    enqueueSubtitle('……（灯火晃了一下）师傅的声音传不过来了。再点一次「起灯说戏」吧。', 50);
+  }
+  game.speaking = false;
+  btn.disabled = false; btn.textContent = '🪔 起灯说戏';
+}
+
+async function confirmPuppets(){
+  if(game.staged.length === 0){ enqueueSubtitle('白布上还空着呢——先拖几个影儿上去。',45); return; }
+  var btnConfirm = document.getElementById('btnConfirm');
+  var btnAsk = document.getElementById('btnAsk');
+  btnConfirm.disabled = true; btnAsk.disabled = true;
+  document.getElementById('speaker').textContent = '路师傅';
+  enqueueSubtitle('（师傅凑近白布，眯着眼细细端详……）', 30);
+
+  var act = ACTS_DATA.acts[game.act-1];
+  var scene = act.scenes[game.scene];
+  var desc = game.staged.map(function(s){return s.name+'在('+s.x.toFixed(2)+','+s.y.toFixed(2)+')'}).join('；');
+
+  try {
+    var sys = PROMPTS_DATA.judgeSystemPrompt;
+    var msg = '【场景】'+scene.description+'\n【期望】'+(scene.standard_puppets||[]).join('、')+'\n【学徒摆了】'+desc+'\n请评判，返回JSON。';
+    var raw = await fetch(API_URL.replace('/stream',''), {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'qwen-turbo',messages:[{role:'system',content:sys},{role:'user',content:msg}],max_tokens:300,temperature:0.3,stream:false})
+    }).then(function(r){return r.json()});
+    var reply = raw.choices?.[0]?.message?.content || '{}';
+    var data = JSON.parse((reply.match(/\{[\s\S]*\}/)||[])[0]||reply);
+    var text = '【评分：'+(data.score||'?')+'分】\n'+(data.comment||'')+'\n\n'+(data.guiding_hint||'');
+    enqueueSubtitle(text, 50);
+  } catch(e) {
+    enqueueSubtitle('……（师傅点了点头，没说话。）', 55);
+  }
+  btnConfirm.disabled = false; btnAsk.disabled = false;
+  // 消耗灯油
+  game.oil = Math.max(0, game.oil - 3);
+  updateOil();
+}
+
+async function askMaster(){
+  var btnConfirm = document.getElementById('btnConfirm');
+  var btnAsk = document.getElementById('btnAsk');
+  btnConfirm.disabled = true; btnAsk.disabled = true;
+  enqueueSubtitle('（你向师傅请教——师傅沉吟片刻……）', 40);
+
+  var act = ACTS_DATA.acts[game.act-1];
+  var scene = act.scenes[game.scene];
+  var desc = game.staged.length ? game.staged.map(function(s){return s.name}).join('、') : '空无一物';
+
+  try {
+    var sys = PROMPTS_DATA.baseSystemPrompt + '\n\n第1幕：'+act.name+'。灯油'+game.oil+'%。学徒影面：'+desc+'。学徒在追问。请简短回答（40-100字），保持老北京腔。';
+    var full = await aiStream(sys, '学徒问：师傅，您能看看我摆的影儿，给我讲讲这出戏的门道吗？', function(text){
+      document.getElementById('dialogueText').textContent = text;
+    });
+    enqueueSubtitle(full, 45);
+  } catch(e) {
+    enqueueSubtitle('……（师傅张了张嘴，声音被灯花吞了）再问一次吧。', 45);
+  }
+  btnConfirm.disabled = false; btnAsk.disabled = false;
+}
+
+function updateOil(){
+  document.getElementById('oilFill').style.width = game.oil + '%';
+  document.getElementById('oilNum').textContent = game.oil;
+  if(game.oil < 20){
+    document.getElementById('oilFill').style.background = 'linear-gradient(90deg,#c44,#d4883a)';
+  }
+}
+</script>
+</body>
+</html>
