@@ -3150,15 +3150,20 @@ const ShadowJudge = {
     var flame       = document.getElementById('flame');
 
     var OFFLINE_MODE = (function() {
-        if (typeof API_CONFIG === 'undefined') return true;
+        if (typeof API_CONFIG === 'undefined') return false; // 有config就尝试在线
         var key = API_CONFIG.API_KEY || '';
-        if (!key || key.indexOf('请在这里') !== -1 || key === 'sk-未配置') return true;
-        return false;
+        var proxy = API_CONFIG.BASE_API || '';
+        // 有Key或走代理 = 在线模式
+        if ((key && key.startsWith('sk-')) || proxy) return false;
+        return true; // 都没配才是离线
     })();
 
     if (OFFLINE_MODE) {
         var infoPanel = document.querySelector('.info-panel');
         if (infoPanel) { var badge = document.createElement('div'); badge.style.cssText='margin-top:16px;padding:4px 8px;font-size:11px;color:#c48a3e;border:1px solid #5a2d15;border-radius:2px;letter-spacing:1px;'; badge.textContent='离 线 模 式'; infoPanel.appendChild(badge); }
+    } else {
+        var infoPanel2 = document.querySelector('.info-panel');
+        if (infoPanel2) { var badge2 = document.createElement('div'); badge2.style.cssText='margin-top:16px;padding:4px 8px;font-size:11px;color:#5a9e6f;border:1px solid #2a5a35;border-radius:2px;letter-spacing:1px;'; badge2.textContent='在 线 模 式'; infoPanel2.appendChild(badge2); }
     }
 
     // —— 调试：跳场入口（开发测试用，发布前删除）——
