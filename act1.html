@@ -3239,6 +3239,7 @@ const ShadowJudge = {
 
             var reply = await AI.call(sysPrompt, userMsg, { temperature: 0.7, maxTokens: 200 });
             typewriter(dialogueText, reply, 45);
+            playTTS(reply); // 语音同步
         } catch(e) {
             console.error('[ask_master] AI调用失败:', e.message);
             typewriter(dialogueText, '……（师傅张了张嘴，声音被灯花吞了）再问一次吧。', 45);
@@ -3357,12 +3358,23 @@ const ShadowJudge = {
             gameState.triggeredClues.push(clue.id);
             (clue.cipher_link || []).forEach(function(c) { if (gameState.unlockedCiphers.indexOf(c) === -1) gameState.unlockedCiphers.push(c); });
             speaker.textContent = '路师傅';
-            // 摆对/追问时，路师傅把谜底戏词正经念出来（带 layer 前缀，与第一场同款口吻），再补暗语解锁确认
-            var prefix = clue.layer === 3 ? '（师傅的声音低了下去）' : (clue.layer === 2 ? '（师傅顿了顿）' : '');
-            var msg = '';
-            if (clue.reveal_content) msg += prefix + clue.reveal_content;
-            if (clue.cipher_link && clue.cipher_link.length > 0) msg += '\n\n【暗语解锁】你听懂了——' + clue.cipher_link.join('、') + '。';
-            if (msg) typewriter(dialogueText, msg, 46);
+
+            // 在线模式：AI生成揭示语+语音
+            if (!OFFLINE_MODE && typeof AI !== 'undefined') {
+                var sys = PROMPTS_DATA.baseSystemPrompt + '\n\n学徒触发了隐藏线索：'+clue.name+'（第'+clue.layer+'层）。线索含义：'+clue.reveal_content+'。关联暗语：'+(clue.cipher_link||[]).join('、')+'。请以路师傅口吻说一段话（40-80字），自然揭示这个线索，但不直接说破。';
+                AI.call(sys, '触发线索。请路师傅给学徒一点暗示。', {temperature:0.7, maxTokens:200, model:AI.MODEL_DEFAULT}).then(function(reply){
+                    typewriter(dialogueText, reply, 46);
+                    playTTS(reply); // 语音同步
+                }).catch(function(){
+                    typewriter(dialogueText, clue.reveal_content || '', 46);
+                });
+            } else {
+                var prefix = clue.layer === 3 ? '（师傅的声音低了下去）' : (clue.layer === 2 ? '（师傅顿了顿）' : '');
+                var msg = '';
+                if (clue.reveal_content) msg += prefix + clue.reveal_content;
+                if (clue.cipher_link && clue.cipher_link.length > 0) msg += '\n\n【暗语解锁】你听懂了——' + clue.cipher_link.join('、') + '。';
+                if (msg) typewriter(dialogueText, msg, 46);
+            }
         } catch (e) {}
     }
     // 每一个皮影摆放完，路师傅都要有一次互动；若本次摆放未触发隐藏线索，则给出针对该皮影的即时反应
@@ -3374,7 +3386,6 @@ const ShadowJudge = {
     // 路师傅对"刚摆上来的那个皮影"的即时反应（每次摆放必有一次互动，且说话期间锁定操作）
     function masterReactToPlacement(pid) {
         if (!pid) return;
-        // 油灯由 lamp_placed_on_stage 专用事件接管台词，此处跳过
         if (pid === 'lamp') return;
         var scene = ShadowJudge._getSceneData(getCurrentSceneId());
         var name = getPuppetName(pid);
@@ -3382,16 +3393,28 @@ const ShadowJudge = {
         var acceptable = (scene && scene.acceptable_extras) || [];
         var isRequired = required.indexOf(pid) !== -1;
         var isAcceptable = acceptable.indexOf(pid) !== -1;
-        var line;
-        if (isRequired) {
-            line = '（路师傅眯眼看了看）这' + name + '——是该有的。';
-        } else if (isAcceptable) {
-            line = '这' + name + '……搁在边上，也说得通。';
+
+        // 在线模式：AI即时反应
+        if (!OFFLINE_MODE && typeof AI !== 'undefined') {
+            var role = isRequired ? '必需的' : (isAcceptable ? '可以接受的' : '不太对路的');
+            var sys = PROMPTS_DATA.baseSystemPrompt + '\n\n学徒刚把「'+name+'」摆上白布。这个皮影在当前场景是'+role+'。请以路师傅口吻给一个简短点评（15-30字），不要超过一句话。';
+            AI.call(sys, '点评一下这个皮影。', {temperature:0.8, maxTokens:80, model:AI.MODEL_DEFAULT}).then(function(reply){
+                speaker.textContent = '路师傅';
+                typewriter(dialogueText, reply, 45);
+                playTTS(reply); // 语音同步
+            }).catch(function(){
+                var line = isRequired ? '这'+name+'——是该有的。' : (isAcceptable ? '这'+name+'……也说得通。' : '这'+name+'？先拿下去吧。');
+                speaker.textContent = '路师傅';
+                typewriter(dialogueText, line, 45);
+            });
         } else {
-            line = '这' + name + '？戏里没这角儿啊。多摆一个，先拿下去吧。';
+            var line;
+            if (isRequired) { line = '（路师傅眯眼看了看）这' + name + '——是该有的。'; }
+            else if (isAcceptable) { line = '这' + name + '……搁在边上，也说得通。'; }
+            else { line = '这' + name + '？戏里没这角儿啊。多摆一个，先拿下去吧。'; }
+            speaker.textContent = '路师傅';
+            typewriter(dialogueText, line, 45);
         }
-        speaker.textContent = '路师傅';
-        typewriter(dialogueText, line, 45);
     }
     EventBus.on('ask_master', function() { setTimeout(function() { checkClues(true); }, 700); });
 
@@ -3829,6 +3852,23 @@ const ShadowJudge = {
         var dist = el.scrollHeight - el.scrollTop - el.clientHeight;
         if (dist < 48) el.scrollTop = el.scrollHeight;
     }
+    // ===== TTS语音合成（与字幕同步） =====
+    var _ttsAudio = null;
+    function playTTS(text) {
+        if (!text || OFFLINE_MODE) return;
+        try {
+            var apiBase = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_API) ? API_CONFIG.BASE_API : 'http://123.57.90.233:3000/api';
+            fetch(apiBase + '/tts', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({model:'cosyvoice-v3.5-plus',input:{text:text},parameters:{voice:'longcheng',rate:1.0,volume:50,format:'mp3',sample_rate:24000}})
+            }).then(function(r){return r.json();}).then(function(d){
+                var b64 = d.output?.audio?.data || d.output?.results?.[0]?.audio?.data || '';
+                if (b64) { stopTTS(); var nums=new Uint8Array(atob(b64).length); for(var i=0;i<nums.length;i++)nums[i]=atob(b64).charCodeAt(i); _ttsAudio=new Audio(URL.createObjectURL(new Blob([nums],{type:'audio/mpeg'}))); _ttsAudio.volume=0.8; _ttsAudio.play().catch(function(){}); }
+            }).catch(function(){});
+        } catch(e) {}
+    }
+    function stopTTS() { if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio=null; } }
+
     function typewriter(el, text, speed) {
         if (el==null) return;
         speed = speed||50;
@@ -3979,6 +4019,7 @@ const ShadowJudge = {
                 {temperature:0.8, maxTokens:250, model:AI.MODEL_DEFAULT}
             ).then(function(reply){
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:reply, speed:48 });
+                playTTS(reply); // 语音同步
                 if (callback && window.NarrationCtl) window.NarrationCtl.enqueueAction(callback);
             }).catch(function(){
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:act.intro, speed:62 });
@@ -4009,6 +4050,7 @@ const ShadowJudge = {
                     {temperature:0.8, maxTokens:300, model:AI.MODEL_DEFAULT}
                 ).then(function(reply){
                     EventBus.emit('narration_chunk', { speaker:'路师傅', text:reply, speed:48 });
+                    playTTS(reply); // 语音同步
                 }).catch(function(){
                     EventBus.emit('narration_chunk', { speaker:'路师傅', text:scene.description, speed:80 });
                 });
