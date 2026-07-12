@@ -3062,7 +3062,17 @@ const ShadowJudge = {
     var speaker     = document.getElementById('speaker');
     var flame       = document.getElementById('flame');
 
-    var OFFLINE_MODE = false; // 强制在线模式——路师傅对话全部由AI生成
+    var OFFLINE_MODE = (function() {
+        if (typeof API_CONFIG === 'undefined') return true;
+        var key = API_CONFIG.API_KEY || '';
+        if (!key || key.indexOf('请在这里') !== -1 || key === 'sk-未配置') return true;
+        return false;
+    })();
+
+    if (OFFLINE_MODE) {
+        var infoPanel = document.querySelector('.info-panel');
+        if (infoPanel) { var badge = document.createElement('div'); badge.style.cssText='margin-top:16px;padding:4px 8px;font-size:11px;color:#c48a3e;border:1px solid #5a2d15;border-radius:2px;letter-spacing:1px;'; badge.textContent='离 线 模 式'; infoPanel.appendChild(badge); }
+    }
 
     // 注意：舞台皮影的拖拽和放置已由 puppets.js 统一接管
     // 这里不再注册 stage.addEventListener('mousedown', ...) 
@@ -3077,16 +3087,26 @@ const ShadowJudge = {
         EventBus.emit('stage_confirmed', { puppets: staged });
         var sceneId = getCurrentSceneId();
         var isImprov = (gameState.currentAct===3);
-        // AI评判影面（在线模式）
-        if (window.ShadowJudge) {
-            ShadowJudge.judge(staged, sceneId, isImprov).then(function(result) {
+        if (OFFLINE_MODE) {
+            setTimeout(function() {
+                var result = ShadowJudge.quickJudge(staged, sceneId);
+                result.comment = buildOfflineComment(staged, sceneId, result);
+                result.guiding_hint = buildOfflineHint(staged, sceneId);
                 displayJudgeResult(result);
                 emitSceneJudged(staged, sceneId, result);
-            }).catch(function() {
-                var r = ShadowJudge.quickJudge(staged, sceneId);
-                displayJudgeResult(r);
-                emitSceneJudged(staged, sceneId, r);
-            }).finally(function() { btnConfirm.disabled=false; btnAsk.disabled=false; });
+                btnConfirm.disabled=false; btnAsk.disabled=false;
+            }, 800);
+        } else {
+            if (window.ShadowJudge) {
+                ShadowJudge.judge(staged, sceneId, isImprov).then(function(result) {
+                    displayJudgeResult(result);
+                    emitSceneJudged(staged, sceneId, result);
+                }).catch(function() {
+                    var r = ShadowJudge.quickJudge(staged, sceneId);
+                    displayJudgeResult(r);
+                    emitSceneJudged(staged, sceneId, r);
+                }).finally(function() { btnConfirm.disabled=false; btnAsk.disabled=false; });
+            }
         }
     });
 
@@ -3095,7 +3115,8 @@ const ShadowJudge = {
         if (window.TheaterSystem && window.TheaterSystem.isSpeaking && window.TheaterSystem.isSpeaking()) return; // 说戏中，等路师傅说完
         EventBus.emit('ask_master', { puppets: collectStagedPuppets(), sceneId: getCurrentSceneId() });
         speaker.textContent='路师傅';
-        enqueueSubtitle('路师傅', '（你向师傅请教——师傅沉吟片刻……）', 40);
+        if (OFFLINE_MODE) { var h = buildOfflineHint(collectStagedPuppets(), getCurrentSceneId()); typewriter(dialogueText, h, 45); }
+        else { typewriter(dialogueText, '（你向师傅请教——师傅沉吟片刻……）', 40); }
     });
 
     // 点击字幕区 → 若正在生成语句则瞬间补全；否则推进下一条脚本旁白（点击继续）
@@ -3111,8 +3132,7 @@ const ShadowJudge = {
     var spBtn = document.getElementById('showPlayBtn');
     if (spBtn) spBtn.addEventListener('click', function(e) { e.stopPropagation(); onShowPlayClick(); });
 
-    // 离线函数已废弃——全部由AI生成
-    function _DEPRECATED_buildOfflineComment(staged, sceneId, result) {
+    function buildOfflineComment(staged, sceneId, result) {
         var scene = ShadowJudge._getSceneData(sceneId);
         if (!scene) return '师傅看了看书生，又看了看月亮。';
         var placedIds = staged.map(function(p){return p.puppetId;});
