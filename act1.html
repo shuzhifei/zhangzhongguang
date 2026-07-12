@@ -2027,19 +2027,18 @@ const ACTS_DATA = {
             "setting": "月夜，槐树下，琉璃厂东街第三个旧书摊后面的巷口。煤油灯的气味混着旧书纸的霉味。",
             "embedded_play": "刘海戏金蟾",
             "mood": "初见的温和与试探——路师傅在观察这个学徒，看他/她有没有'影感'",
-            "master_backstory": "路春福七岁进皮影作坊学艺。师父姓颜，收了三个徒弟：大师兄贺云亭（'鹤'）、二师兄刘玉山、小师弟路春福。民国二十六年，贺云亭失踪。民国三十四年，刘玉山病故。此后路春福独自撑了六十一年。师父留下一份手抄戏谱——但从未完整交给任何一个人。这份戏谱，就是书生手里那封'信'。",
+            "master_backstory": "路春福七岁进皮影作坊学艺。师父姓颜，收了三个徒弟：大师兄贺云亭、二师兄刘玉山、小师弟路春福。民国二十六年，贺云亭失踪。民国三十四年，刘玉山病故。此后路春福独自撑了六十一年。师父留下一份手抄戏谱——但从未完整交给任何一个人。这份戏谱，就是书生手里那封'信'。",
             "hidden_clues": [
                 {"id":"clue_1","name":"槐树与地名","layer":1,"scene_id":"act1_scene1","trigger":"学徒在Scene1中摆放了槐树（tree）","trigger_puppets":["tree"],"reveal_content":"路师傅说戏时不经意提到'琉璃厂东街第三个书摊后面有棵老槐树'——这不是戏词，是他真实的记忆坐标。","cipher_link":["槐树","琉璃厂东街"],"game_impact":"解锁暗语'槐树'和'琉璃厂东街'","difficulty":"easy"},
                 {"id":"clue_2","name":"信不是情书","layer":1,"scene_id":"act1_scene1","trigger":"学徒在Scene1中摆了信（letter）且书生面朝信的方向","trigger_puppets":["scholar","letter"],"reveal_content":"路师傅看着影面，轻声说：'那封信——写了三年。不是情话，是比命还重的东西。'","cipher_link":["信"],"game_impact":"解锁暗语'信'的使用权限","difficulty":"easy"},
-                {"id":"clue_3","name":"三根线的秘密","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中同时摆了老者（elder）和信（letter）","trigger_puppets":["elder","letter"],"reveal_content":"路师傅说到老者手中的操纵杆时停了下来：'这根杆——本来有三根的。我师父当年——算了。'","cipher_link":["三根线"],"game_impact":"解锁暗语'三根线'","difficulty":"medium"},
-                {"id":"clue_4","name":"两个师兄弟","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了全部必需皮影且追问了'老者是谁'","trigger_puppets":["scholar","elder","letter"],"reveal_content":"路师傅被追问后：'我有两个师兄弟。一个飞走了——那年秋天的事。另一个病在床上，临走前拉着我的手说：老三，线不能断。'","cipher_link":["鹤","三根线"],"game_impact":"大师兄贺云亭和二师兄刘玉山线索首次出现","difficulty":"hard"},
-                {"id":"clue_5","name":"金蟾为什么碎了","layer":3,"scene_id":"act1_scene3","trigger":"学徒在Scene3中摆了金蟾（frog）和老者（elder）","trigger_puppets":["frog","elder"],"reveal_content":"这是路春福师傅最后一次在琉璃厂演出时，临时改的词。他那天回来，放下操纵杆，说：\"手不听使唤了。\" 从此，再没演过。\n白布上的老者影，慢慢淡去，和台下看戏人的影子叠在了一起——戏，得有人接着演。","cipher_link":["金蟾碎了"],"game_impact":"解锁暗语'金蟾碎了'；学徒第一次意识到'戏=现实'","difficulty":"medium"},
-                {"id":"clue_6","name":"最后一根线","layer":3,"scene_id":"act1_scene3","trigger":"学徒在Scene3中摆了全部必需皮影且灯油≤50%","trigger_puppets":["frog","elder","scholar"],"reveal_content":"老者手上只有两根线——第三根断了。路师傅的声音低到几乎听不见：'线不能断。断了——戏就散了。我手上——只剩这一根了。'","cipher_link":["三根线","鹤","金蟾碎了"],"game_impact":"第一幕暗语链闭环","difficulty":"hard"}
+                {"id":"clue_3","name":"三根线的秘密","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中同时摆了老者（elder）和金蟾（frog）","trigger_puppets":["elder","frog"],"reveal_content":"路师傅说到老者手中的操纵杆时停了下来：'这根杆——本来有三根的。我师父当年——算了。'","cipher_link":["三根线"],"game_impact":"解锁暗语'三根线'","difficulty":"medium"},
+                {"id":"clue_4","name":"两个师兄弟","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了全部必需皮影且追问了'老者是谁'","trigger_puppets":["scholar","elder","frog"],"reveal_content":"路师傅被追问后：'我有两个师兄弟。一个远走他乡——那年秋天的事。另一个病在床上，临走前拉着我的手说：老三，线不能断。'","cipher_link":["三根线"],"game_impact":"大师兄贺云亭和二师兄刘玉山线索首次出现","difficulty":"hard"},
+                {"id":"clue_5","name":"金蟾为什么碎了","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了金蟾（frog）、老者（elder）和书生（scholar）","trigger_puppets":["frog","elder","scholar"],"reveal_content":"这是路春福师傅最后一次在琉璃厂演出时，临时改的词。他那天回来，放下操纵杆，说：\"手不听使唤了。\" 从此，再没演过。\n白布上的老者影，慢慢淡去，和台下看戏人的影子叠在了一起——戏，得有人接着演。","cipher_link":["金蟾碎了"],"game_impact":"解锁暗语'金蟾碎了'；学徒第一次意识到'戏=现实'","difficulty":"medium"},
+                {"id":"clue_6","name":"最后一根线","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了全部必需皮影且灯油≤50%","trigger_puppets":["frog","elder","scholar"],"reveal_content":"老者手上只有两根线——第三根断了。路师傅的声音低到几乎听不见：'线不能断。断了——戏就散了。我手上——只剩这一根了。'","cipher_link":["三根线","金蟾碎了"],"game_impact":"第一幕暗语链闭环","difficulty":"hard"}
             ],
             "scenes": [
                 {"id":"act1_scene1","name":"月夜等人","description":"琉璃厂旧书铺的后院，一方白布戏台。月色斜照，槐树影静。木箱里睡着几枚皮影：书生、老者、金蟾、槐树、月亮。\n书生是读书人，他总在等人——可戏台前空着一座，他等的不是戏里的人，是台下能接住这出戏的人。","standard_puppets":["scholar","tree","moon","letter"],"acceptable_extras":["lamp"],"perfect_score":40,"hidden_clue":"琉璃厂的记忆坐标","hidden_clue_ids":["clue_1","clue_2"],"cipher_triggers":["槐树","信","琉璃厂东街"],"cipher_guidance":"学徒摆了槐树→路师傅提到'我认得一棵槐树，在东街第三个书摊后面'；学徒摆了信→路师傅说'那封信写了三年——不是我写的，是我师父'"},
-                {"id":"act1_scene2","name":"信中之秘","description":"书生打开了手中的旧信，边角烧焦。信上不是家书，而是一段残缺的戏词：\n老者三根线，不是吊人吊金蟾；琉璃厂里，谁人坐门前。\n这话和《刘海戏金蟾》对不上——原戏里没有琉璃厂，也没有\"老者三根线\"。像是有人，趁人不注意，把暗语塞进了戏里。","standard_puppets":["scholar","elder","letter"],"acceptable_extras":["tree","lamp"],"perfect_score":30,"hidden_clue":"三根操纵杆=三位传承人","hidden_clue_ids":["clue_3","clue_4"],"cipher_triggers":["三根线","信","槐树"],"cipher_guidance":"学徒摆了老者+信→触发'三根线的秘密'；学徒追问'老者是谁'→触发'两个师兄弟'"},
-                {"id":"act1_scene3","name":"断线","description":"顺着信里的词，戏真的演了下去：\n刘海本是穷书生，那日来到琉璃厂，见一老者坐门前。老者手上三根线，不是吊人吊金蟾。刘海上前问端详，老者不答只摇头——手上一松，线断了，金蟾落地碎了。\n戏停了。原来这根本不是《刘海戏金蟾》。","standard_puppets":["frog","elder","scholar"],"acceptable_extras":["moon","lamp","master"],"perfect_score":30,"hidden_clue":"金蟾碎了=传承断了","hidden_clue_ids":["clue_5","clue_6"],"cipher_triggers":["金蟾碎了","三根线","鹤"],"cipher_guidance":"金蟾碎的瞬间是第一幕暗语密度最高的时刻"}
+                {"id":"act1_scene2","name":"信中之秘","description":"书生打开了手中的旧信，边角烧焦。信上不是家书，而是一段残缺的戏词：\n老者三根线，不是吊人吊金蟾；琉璃厂里，谁人坐门前。\n这话和《刘海戏金蟾》对不上——原戏里没有琉璃厂，也没有\"老者三根线\"。像是有人，趁人不注意，把暗语塞进了戏里。","standard_puppets":["scholar","elder","frog"],"acceptable_extras":["tree","lamp"],"perfect_score":30,"hidden_clue":"三根操纵杆=三位传承人","hidden_clue_ids":["clue_3","clue_4","clue_5","clue_6"],"cipher_triggers":["三根线","金蟾碎了","槐树"],"cipher_guidance":"学徒摆了老者+金蟾→触发'三根线的秘密'；摆齐全套（老者+金蟾+书生）→触发'金蟾为什么碎了'；学徒追问'老者是谁'→触发'两个师兄弟'"}
             ]
         },
         {
@@ -2096,7 +2095,6 @@ const PROMPTS_DATA = {
     },
 
     cipherLexicon: {
-        "鹤":{"surface":"戏里的仙鹤","hidden":"失踪的大师兄","usage":"在戏词中不经意地提到'鹤'——不是在说动物，是在说人。"},
         "三根线":{"surface":"操纵皮影的线","hidden":"三位传承人","usage":"提到操纵杆时数字永远有含义。"},
         "信":{"surface":"书生手里的信","hidden":"未传下去的戏谱","usage":"提到'信'时不是在说书生——是在说师父留下的东西。"},
         "琉璃厂东街":{"surface":"地名","hidden":"路师傅年轻时学艺的地方","usage":"每次提到具体地名都是路师傅真实记忆的坐标。"},
@@ -3203,13 +3201,13 @@ const ShadowJudge = {
         try {
             gameState.triggeredClues.push(clue.id);
             (clue.cipher_link || []).forEach(function(c) { if (gameState.unlockedCiphers.indexOf(c) === -1) gameState.unlockedCiphers.push(c); });
-            // reveal_content 已在 startCurrentScene 开场时作为提示语提前说过了；
-            // 此处摆放触发只补「暗语解锁」确认，不再重复提示语
-            if (clue.cipher_link && clue.cipher_link.length > 0) {
-                var text = '\n\n【暗语解锁】你听懂了——' + clue.cipher_link.join('、') + '。';
-                speaker.textContent = '路师傅';
-                typewriter(dialogueText, text, 46);
-            }
+            speaker.textContent = '路师傅';
+            // 摆对/追问时，路师傅把谜底戏词正经念出来（带 layer 前缀，与第一场同款口吻），再补暗语解锁确认
+            var prefix = clue.layer === 3 ? '（师傅的声音低了下去）' : (clue.layer === 2 ? '（师傅顿了顿）' : '');
+            var msg = '';
+            if (clue.reveal_content) msg += prefix + clue.reveal_content;
+            if (clue.cipher_link && clue.cipher_link.length > 0) msg += '\n\n【暗语解锁】你听懂了——' + clue.cipher_link.join('、') + '。';
+            if (msg) typewriter(dialogueText, msg, 46);
         } catch (e) {}
     }
     // 每一个皮影摆放完，路师傅都要有一次互动；若本次摆放未触发隐藏线索，则给出针对该皮影的即时反应
@@ -3516,43 +3514,8 @@ const ShadowJudge = {
             // ① 固定场名标题（和第一场「月夜等人」完全同款格式）
             EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+sceneName+'」', speed:80 });
 
-            // ② 尝试 AI 生成说戏内容；失败则用静态场景描述兜底（和第一场 scene.description 同款）
-            var systemPrompt = (typeof PROMPTS_DATA !== 'undefined' && PROMPTS_DATA.baseSystemPrompt) ? PROMPTS_DATA.baseSystemPrompt : '';
-
-            if (systemPrompt) {
-                // 有 AI 能力：先锁住推进，等 AI 返回后发下一条
-                setNarrationLock(true);
-                var aiUserMessage = ''
-                    + '现在进入第二场——「' + sceneName + '」。开场已经报过幕了。\n\n'
-                    + '场景背景：' + sceneDesc + '\n\n'
-                    + '请你作为路师傅，接着报幕后开始你的正式说戏。要求：\n'
-                    + '1. 不要重复念"' + sceneName + '"，直接从场景描述或点评开始\n'
-                    + '2. 点评上一场（书生等人月夜下等信、信终于打开了）\n'
-                    + '3. 引出信里的秘密——信上不是家书，是一段残缺的戏词\n'
-                    + '4. 暗示学徒接下来该摆什么皮影（需要：书生、老者、信）\n'
-                    + '5. 自然收尾，引导学徒从皮影箱里选合适的皮影，把这出戏接着演下去\n'
-                    + '语气要像路师傅——话少、有分量、用皮影术语。200字以内。\n'
-                    + '直接输出路师傅要说的话，不要加任何标记或说明。';
-
-                AI.call(systemPrompt, aiUserMessage, { temperature:0.35, maxTokens:500, model:AI.MODEL_DEFAULT })
-                    .then(function(aiText) {
-                        if (!aiText || !aiText.trim()) aiText = sceneDesc;
-                        // 通过 EventBus 发出，和第一场完全同一条管道路径
-                        EventBus.emit('narration_chunk', { speaker:'路师傅', text: '\n\n'+aiText.trim(), speed:55 });
-                        // 解锁并驱动
-                        setNarrationLock(false);
-                        if (window.NarrationCtl && !window.NarrationCtl.isActive()) window.NarrationCtl.pump();
-                    })
-                    .catch(function(err) {
-                        console.warn('[enterAct2] AI 生成失败，使用静态描述:', err);
-                        EventBus.emit('narration_chunk', { speaker:'路师傅', text: '\n\n'+sceneDesc, speed:80 });
-                        setNarrationLock(false);
-                        if (window.NarrationCtl && !window.NarrationCtl.isActive()) window.NarrationCtl.pump();
-                    });
-            } else {
-                // 离线/无 prompt：直接用静态描述（和第一场的 scene.description 走法一致）
-                EventBus.emit('narration_chunk', { speaker:'路师傅', text: '\n\n'+sceneDesc, speed:80 });
-            }
+            // ② 固定场景描述（按需求不使用 AI 动态生成，直接念脚本台词）
+            EventBus.emit('narration_chunk', { speaker:'路师傅', text: '\n\n'+sceneDesc, speed:80 });
 
             // ③ 摆影引导（和第一场完全同款）
             EventBus.emit('narration_chunk', { speaker:'路师傅', text:
@@ -3774,7 +3737,7 @@ const ShadowJudge = {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
                     '（从皮影箱里，选合适的皮影，把这出戏接着演下去。）', speed:68 });
             }
-            if (gameState.currentAct===1 && gameState.currentScene===2) {
+            if (gameState.currentAct===1 && gameState.currentScene===1) {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
                     '（戏词里夹着不属于这个故事的东西……你听出来了吗？）\n'+
                     '摆出你理解的那一幕——老者、三根线、金蟾——让我看看你听懂了没有。', speed:56 });
@@ -3784,24 +3747,8 @@ const ShadowJudge = {
             }
             if (scene.time_limit&&window.LampSystem) { setTimeout(function(){LampSystem.startCountdown();},5000); }
 
-            // —— 场景线索提前提示：把 reveal_content 作为暗示先说出来，
-            //    玩家摆对后再 triggerClue 只补「暗语解锁」确认，不再重复提示语 ——
-            (function() {
-                var cid = getCurrentSceneId();
-                var clues = getActClues(gameState.currentAct - 1).filter(function(c) {
-                    return c.scene_id === cid && gameState.triggeredClues.indexOf(c.id) === -1;
-                });
-                clues.forEach(function(clue) {
-                    if (!clue.reveal_content) return;
-                    var prefix = clue.layer === 3 ? '（师傅的声音低了下去）' : (clue.layer === 2 ? '（师傅顿了顿）' : '');
-                    if (window.NarrationCtl) {
-                        window.NarrationCtl.enqueue(function() {
-                            speaker.textContent = '路师傅';
-                            typewriter(dialogueText, prefix + clue.reveal_content, 46);
-                        });
-                    }
-                });
-            })();
+            // 线索谜底改为「摆对/追问才揭晓」：由 triggerClue 在触发时正经念出 reveal_content，
+            // 不再于开场剧透（保持两场一致、保留悬念）
         } catch(e) { showDialogue('路师傅','（……灯晃了一下。刚才说到哪了？——请刷新页面。）'); }
     }
 
@@ -3887,9 +3834,9 @@ const ShadowJudge = {
             var ot=document.getElementById('oilText'); if(ot)ot.textContent='80 / 100';
             var ob=document.getElementById('oilBar'); if(ob)ob.style.width='80%';
             var text = ['—— 幕 间 休 息 ——','','师傅去添灯油了。',
-                '你打开皮影箱，发现多了两个皮影——一只鹤，一条船。',
-                '「鹤能带你去高处看。船能带你走水路。」',
-                '师傅望着那只鹤，轻声说：「这只鹤，是飞走的大师兄。那年秋天，他走了，再没回来。」',
+                '你打开皮影箱，发现多了一个皮影——一条船。',
+                '「船能带你走水路。」',
+                '师傅望着远方，轻声说：「我那大师兄，民国二十六年就失踪了，再没回来。」',
                 '他顿了顿：「你方才摆的每一个影，我都认得——槐树是东街的老地方，信是师父留下的戏谱，三根线是我和两位师兄，金蟾碎了……是传承断了。」',
                 '「信的最后一笔，指向大栅栏。听说，那儿有人打着我的名号。」',
                 '','灯油已补至 80%。'].join('\n');
