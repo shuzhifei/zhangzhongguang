@@ -258,7 +258,7 @@ async function confirmPuppets(){
 
   var act = ACTS_DATA.acts[game.act-1];
   var scene = act.scenes[game.scene];
-  var desc = game.staged.map(function(s){return s.name+'在('+s.x.toFixed(2)+','+s.y.toFixed(2)+')'}).join('；');
+  var desc = game.staged.map(function(s){var h=s.x<0.33?'左':s.x>0.66?'右':'中';var v=s.y<0.33?'上':s.y>0.66?'下':'';return s.name+'在'+(h+v||'中央');}).join('，');
 
   try {
     var sys = PROMPTS_DATA.judgeSystemPrompt;
