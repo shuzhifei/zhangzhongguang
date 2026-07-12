@@ -2235,7 +2235,7 @@ const ShadowJudge = {
             tree:    { type:'abs',   cx:0.80, cy:0.72, r:0.13, label:'槐树·右下角' },
             moon:    { type:'night',                        label:'月亮·天空(变黑即可)' },
             scholar: { type:'rel', to:'tree',    dx:-0.08, dy:0.08, r:0.09, label:'书生·槐树左下' },
-            letter:  { type:'rel', to:'scholar', dx:-0.05, dy:0.01, r:0.055, label:'信·书生手里' }
+            letter:  { type:'rel', to:'scholar', dx:-0.05, dy:0.01, r:0.04, label:'信·书生手里' }
         }
     },
 
@@ -2675,7 +2675,7 @@ const ShadowJudge = {
         var isNight = false;
         for (var i = 0; i < moons.length; i++) {
             var top = parseInt(moons[i].style.top) || 0;
-            if (top < stageH * 0.2) { isNight = true; break; }
+            if (top < stageH * 0.12) { isNight = true; break; }
         }
         if (isNight) {
             // 第二场使用大栅栏街景背景，不切换为夜色
