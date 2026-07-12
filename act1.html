@@ -2235,7 +2235,7 @@ const ShadowJudge = {
             tree:    { type:'abs',   cx:0.80, cy:0.72, r:0.13, label:'槐树·右下角' },
             moon:    { type:'night',                        label:'月亮·天空(变黑即可)' },
             scholar: { type:'rel', to:'tree',    dx:-0.08, dy:0.08, r:0.09, label:'书生·槐树左下' },
-            letter:  { type:'rel', to:'scholar', dx:0.04, dy:-0.03, r:0.07, label:'信·书生手里' }
+            letter:  { type:'rel', to:'scholar', dx:-0.05, dy:0.01, r:0.08, label:'信·书生手里' }
         }
     },
 
@@ -3861,8 +3861,7 @@ const ShadowJudge = {
                 // 通关：等路师傅台词（如"那棵树——比我还老"）打完后，玩家点击对话框 → 显示「展示皮影戏」按钮
                 window._showPlayPending = true;
             } else {
-                // 摆错了：不再扣分，只提示玩家重试（评分机制已移除）
-                showDialogue('路师傅','（摇了摇头）不对。这出戏——不是这么摆的。再想想。');
+                // 摆错了：displayJudgeResult 已通过 typewriter 给出"不对"提示，此处不再重复显示
             }
         } catch(e) { scenePassed=false; advancing=false; }
     });
