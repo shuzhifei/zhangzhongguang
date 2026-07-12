@@ -2236,10 +2236,10 @@ const ShadowJudge = {
     // ==========================================================
     POSITION_RULES: {
         'act1_scene1': {
-            tree:    { type:'abs',   cx:0.80, cy:0.72, r:0.20, label:'槐树·右下角' },
+            tree:    { type:'abs',   cx:0.80, cy:0.72, r:0.13, label:'槐树·右下角' },
             moon:    { type:'night',                        label:'月亮·天空(变黑即可)' },
-            scholar: { type:'rel', to:'tree',    dx:0.00, dy:0.06, r:0.22, label:'书生·槐树底下' },
-            letter:  { type:'rel', to:'scholar', dx:0.05, dy:0.00, r:0.16, label:'信·书生手里' }
+            scholar: { type:'rel', to:'tree',    dx:-0.12, dy:0.10, r:0.13, label:'书生·槐树左下' },
+            letter:  { type:'rel', to:'scholar', dx:0.04, dy:-0.03, r:0.07, label:'信·书生手里' }
         }
     },
 
@@ -2289,8 +2289,8 @@ const ShadowJudge = {
         if (Math.abs(dx) > 0.05) dirs.push(dx > 0 ? '往左' : '往右');
         if (Math.abs(dy) > 0.05) dirs.push(dy > 0 ? '往上' : '往下');
         var move = dirs.length ? dirs.join('、') + '挪挪' : '再挪挪';
-        if (rule.type === 'rel' && rule.to === 'tree')    return '（师傅摇头）' + name + '该在槐树底下——' + move + '。';
-        if (rule.type === 'rel' && rule.to === 'scholar') return '（师傅摇头）这封信，得攥在书生手里——' + move + '，贴着书生。';
+        if (rule.type === 'rel' && rule.to === 'tree')    return '（师傅摇头）' + name + '该在槐树左下方——' + move + '。';
+        if (rule.type === 'rel' && rule.to === 'scholar') return '（师傅摇头）这封信，得攥在书生手里——' + move + '，对准他的手，别搁在身上。';
         var where = (rule.label && rule.label.indexOf('·')>=0) ? rule.label.split('·')[1] : '';
         return '（师傅摇头）' + name + (where ? ('该在' + where + '——') : '位置不对——') + move + '。';
     },
@@ -2331,7 +2331,7 @@ const ShadowJudge = {
             spatial:{score:Math.round(coverage*25*0.6),comment:''},
             plot_detail:{score:Math.round(coverage*25*0.6),comment:''},
             authenticity:{score:coverage>=0.8?16:6,comment:''},
-            comment: posFail ? posComment : ((missing.length===0&&extra.length===0)?'这一面，齐了。':((missing.length>0?'少摆了'+missNames+'。':'')+(extra.length>0?(missing.length>0?' ':'')+'多摆了'+extraNames+'。':'')+'要扣分。')),
+            comment: posFail ? posComment : ((missing.length===0&&extra.length===0)?'这一面，齐了。':((missing.length>0?'少摆了'+missNames+'。':'')+(extra.length>0?(missing.length>0?' ':'')+'多摆了'+extraNames+'。':'')+'这出戏，还不齐。')),
             guiding_hint: posFail ? posHint : ''
         };
     },
@@ -3218,8 +3218,8 @@ const ShadowJudge = {
             return '这一面，齐了。' + (scene.name ? ('《' + scene.name + '》的意思到了。') : '');
         }
         var parts = [];
-        if (missing.length>0) parts.push('少了' + missing.map(getPuppetName).join('、') + '——这出戏缺了角儿，要扣分。');
-        if (extra.length>0)   parts.push('多了' + extra.map(getPuppetName).join('、') + '——戏里没这角儿，多摆也要扣分。');
+        if (missing.length>0) parts.push('少了' + missing.map(getPuppetName).join('、') + '——这出戏，缺了角儿。');
+        if (extra.length>0)   parts.push('多了' + extra.map(getPuppetName).join('、') + '——戏里没这角儿，得拿下去。');
         return parts.join('\n');
     }
 
@@ -3227,21 +3227,26 @@ const ShadowJudge = {
         var scene = ShadowJudge._getSceneData(sceneId);
         if (!scene) return '师傅没说话，手指敲了敲操纵杆。';
         var placedIds = staged.map(function(p){return p.puppetId;});
-        // —— 戏词式专属提示（保持路师傅叙事口吻，仅在对应皮影在场时触发）——
-        if (placedIds.indexOf('tree')!==-1) return '路师傅说：我认得一棵槐树，在东街第三个书摊后面。那棵树——比我还老。';
-        if (placedIds.indexOf('letter')!==-1) return '路师傅低声说：那封信——写了三年。不是我写的，是我师父。颜体，一笔一画。';
-        if (placedIds.indexOf('elder')!==-1&&placedIds.indexOf('letter')!==-1) return '路师傅停了一下：这根杆——本来有三根的。我师父当年……算了。';
-        if (placedIds.indexOf('frog')!==-1&&placedIds.indexOf('elder')!==-1) return '路师傅的声音变了：金蟾碎了。戏里是这么写的——但戏外——也碎了。';
-        if (placedIds.indexOf('scholar')!==-1) return '路师傅说：书生等的那封信——不是情书。比命还重的东西。';
-        // —— 阵容校验提示（多放/少放都会明确提示扣分）——
         var required = scene.standard_puppets||[];
         var acceptable = scene.acceptable_extras||[];
         var allowedSet = required.concat(acceptable);
         var missing = required.filter(function(id){return placedIds.indexOf(id)===-1;});
         var extra = placedIds.filter(function(id){return allowedSet.indexOf(id)===-1;});
-        if (extra.length>0) return '路师傅皱了皱眉：' + extra.map(getPuppetName).join('、') + '是多余的——拿下去吧，评判要扣分的。';
-        if (missing.length>0) return '路师傅眯着眼看了看白布：还差——' + missing.map(getPuppetName).join('、') + '。你觉得该摆在哪？';
-        return '路师傅点了点头：影面齐了。不过——摆的位置，还要再想想。';
+        // —— ① 阵容不对：追问师傅优先点破多摆/少摆（用户要求：多摆少摆不通过时，追问必须给提示）——
+        if (required.length>0) {
+            if (extra.length>0)   return '路师傅皱了皱眉：' + extra.map(getPuppetName).join('、') + '是多余的——戏里没这角儿，先拿下去。';
+            if (missing.length>0) return '路师傅眯着眼看了看白布：还差——' + missing.map(getPuppetName).join('、') + '。你觉得，该摆在哪？';
+        }
+        // —— ② 阵容齐了、位置不对：复用位置判定，点出往哪挪 ——
+        var pc = ShadowJudge._checkPositions(staged, sceneId);
+        if (pc && !pc.ok) return '路师傅凑近白布：影儿是齐了，可位置还差点——\n' + pc.wrong.map(function(w){return w.msg;}).join('\n');
+        // —— ③ 全对（或即兴场无阵容要求）：念戏词，把线索点出来 ——
+        if (placedIds.indexOf('elder')!==-1&&placedIds.indexOf('letter')!==-1) return '路师傅停了一下：这根杆——本来有三根的。我师父当年……算了。';
+        if (placedIds.indexOf('frog')!==-1&&placedIds.indexOf('elder')!==-1) return '路师傅的声音变了：金蟾碎了。戏里是这么写的——但戏外——也碎了。';
+        if (placedIds.indexOf('letter')!==-1) return '路师傅低声说：那封信——写了三年。不是我写的，是我师父。颜体，一笔一画。';
+        if (placedIds.indexOf('tree')!==-1) return '路师傅说：我认得一棵槐树，在东街第三个书摊后面。那棵树——比我还老。';
+        if (placedIds.indexOf('scholar')!==-1) return '路师傅说：书生等的那封信——不是情书。比命还重的东西。';
+        return '路师傅点了点头：影面齐了，位置也对了。';
     }
 
     function collectStagedPuppets() {
@@ -3326,7 +3331,7 @@ const ShadowJudge = {
         } else if (isAcceptable) {
             line = '这' + name + '……搁在边上，也说得通。';
         } else {
-            line = '这' + name + '？戏里没这角儿啊。多摆一个，评判要扣分的。';
+            line = '这' + name + '？戏里没这角儿啊。多摆一个，先拿下去吧。';
         }
         speaker.textContent = '路师傅';
         typewriter(dialogueText, line, 45);
