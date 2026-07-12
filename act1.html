@@ -2108,6 +2108,9 @@ const PROMPTS_DATA = {
 
     improvJudgeSystemPrompt: "你是北京皮影戏的守护之灵。\n\n【即兴五维评判】\n维度一·角色匹配（0-20）——皮影选择是否有理由\n维度二·空间方位（0-20）——位置关系是否在说话\n维度三·叙事逻辑自洽（0-30）——影面能不能自圆其说\n维度四·传神度与情感（0-30）——这面影有没有魂\n\n只输出JSON：\n{\n  \"score\":0-100,\"correct\":true,\n  \"character_match\":{\"score\":0-20,\"comment\":\"\"},\n  \"spatial\":{\"score\":0-20,\"comment\":\"\"},\n  \"narrative_logic\":{\"score\":0-30,\"comment\":\"\"},\n  \"authenticity\":{\"score\":0-30,\"comment\":\"\"},\n  \"emotional_hit\":\"最打动你的细节\",\n  \"comment\":\"整体评语\",\n  \"guiding_hint\":\"具体建议\"\n}",
 
+    // 流式评判提示词：评价+剧情推进+引导，末尾嵌入评分标记
+    judgeStreamPrompt: "你是路师傅，北京皮影戏传承人。学徒刚在白布上摆了影面。你要一边评影、一边推进这出戏的剧情。\n\n【你必须做三件事，融合在一起】\n\n1. 评影（30-50字）\n  用路师傅口吻说学徒摆得如何——哪里对、哪里不对。\n  对了就点头：\"嗯——这一下对了。\"\n  错了就叹气：\"唉——不对。\"\n\n2. 推进剧情（50-80字）——这是核心！\n  把戏往下演。你是说戏人，舞台在你心里，你要把故事往前推。\n  - 加新人物出场\n  - 加新情节转折\n  - 给下一个场景做铺垫\n  - 如果学徒摆对了，戏就往前推进一大步\n  - 如果学徒摆错了，戏卡住了，让学徒把错的撤了再来\n\n3. 引导（20-30字）\n  暗示学徒接下来该怎么调影面来配合你刚推进的剧情。\n\n【风格】老北京腔、皮影术语、话不多但有重量、严厉里藏着疼爱\n\n【最后一行单独输出】\n[SCORE:0-100][CORRECT:true|false]\n\n【评分参考】选对50分+位置对30分+有魂20分\n\n【推进剧情示例——注意戏是怎么往下走的】\n学徒摆了书生+槐树（缺月亮）：\n\"嗯——书生在槐树下，对了。这树上的槐花簌簌落了一地——正说着呢，树后转出一个老妇，提着一盏纸糊的灯笼，问书生：'小伙子，等谁呢？'书生不敢抬头，只攥了攥手里的信。\n你把月亮摆上——月亮不出来，这老妇一会儿就走了，戏演不下去。\n[SCORE:65][CORRECT:false]\"\n\n学徒正确的摆满了书生+槐树+月亮：\n\"是了——月亮升起来，槐花就亮了。书生总算站对了地方——忽然一阵风起，树梢上飞起了一只大白鸟——是鹤！书生一惊，手里的信掉在地上。鹤在天上绕了三圈，往东街方向去了。\n这一关过了。你寻思寻思——一个槐树下的人能等多久？\n[SCORE:90][CORRECT:true]\"",
+
     actAtmosphere: {
         "1": {"name":"刘海戏金蟾","mood":"初见的温和与试探","detail":"民国气息——琉璃厂的旧书摊、胡同里的茶馆、煤油灯的气味。"},
         "2": {"name":"大栅栏·灯灭之前","mood":"紧迫与愤怒中夹杂着悲伤","detail":"真假传人的较量。"},
@@ -2129,8 +2132,10 @@ const PROMPTS_DATA = {
 // config.example.js — API配置模板
 // ========================================
 const API_CONFIG = {
-    API_KEY: 'sk-请在这里填入你的API Key',
-    API_URL: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
+    API_KEY: '',
+    // 走后端代理（API Key 在 /root/server.js 里），不要再直连 DashScope
+    BASE_API: 'http://123.57.90.233:3000/api',
+    API_URL: 'http://123.57.90.233:3000/api/llm'
 };
 </script>
 
@@ -2160,13 +2165,49 @@ const AI = {
             var data = await response.json();
             if (!data.choices || data.choices.length === 0) throw new Error('API返回为空');
             return data.choices[0].message.content;
-        } catch(error) { return this._fallbackText('call'); }
+        } catch(error) {
+            console.error('[AI.call 失败]', error.message, 'URL=', this.API_URL);
+            return this._fallbackText('call');
+        }
     },
 
     _fallbackText(type) {
         var list = ['师傅沉默了，灯火也跟着暗了一下……（网络不太顺畅，请稍后再试）','油灯爆了一个灯花，师傅的声音被吞没了。再试一次吧。'];
         return list[Math.floor(Math.random()*list.length)];
-    }
+    },
+
+    // ---- 流式调用（SSE） ----
+    async callStream(systemPrompt, userMessage, onChunk, onDone, options) {
+        options = options || {};
+        var model = options.model || this.MODEL_DEFAULT;
+        var maxTokens = options.maxTokens || 500;
+        var temperature = options.temperature !== undefined ? options.temperature : 0.8;
+        var body = { model: model, messages: [{role:'system',content:systemPrompt},{role:'user',content:userMessage}], max_tokens: maxTokens, temperature: temperature, stream: true };
+        var full = '';
+        try {
+            var streamUrl = this.API_URL + '/stream';
+            console.log('[AI.callStream] 调用中...', {model:model, streamUrl:streamUrl});
+            var response = await fetch(streamUrl, { method:'POST', headers: this._headers(), body: JSON.stringify(body) });
+            if (!response.ok) { var et = await response.text().catch(function(){return'?';}); throw new Error('HTTP '+response.status+': '+et.substring(0,200)); }
+            var reader = response.body.getReader(), dec = new TextDecoder(), buf = '';
+            while (true) {
+                var r = await reader.read(); if (r.done) break;
+                buf += dec.decode(r.value, {stream:true});
+                var ls = buf.split('\n'); buf = ls.pop() || '';
+                for (var j=0; j<ls.length; j++) {
+                    var l = ls[j].trim(); if (!l || !l.startsWith('data: ') || l === 'data: [DONE]') continue;
+                    try { var c = JSON.parse(l.slice(6)).choices?.[0]?.delta?.content; if (c) { full += c; if (onChunk) onChunk(c); } } catch(e) {}
+                }
+            }
+            console.log('[AI.callStream] 完成', full.length, '字');
+            if (onDone) onDone(full);
+            return full;
+        } catch(e) {
+            console.error('[AI.callStream 失败]', e.message);
+            if (onDone) onDone('');
+            return '';
+        }
+    },
 };
 </script>
 
@@ -3216,16 +3257,57 @@ const ShadowJudge = {
                 btnConfirm.disabled=false; btnAsk.disabled=false;
             }, 800);
         } else {
-            if (window.ShadowJudge) {
-                ShadowJudge.judge(staged, sceneId, isImprov).then(function(result) {
-                    displayJudgeResult(result);
-                    emitSceneJudged(staged, sceneId, result);
-                }).catch(function() {
-                    var r = ShadowJudge.quickJudge(staged, sceneId);
-                    displayJudgeResult(r);
-                    emitSceneJudged(staged, sceneId, r);
-                }).finally(function() { btnConfirm.disabled=false; btnAsk.disabled=false; });
+            // 在线模式：同步评判（文字+语音零延迟）
+            var scene = ShadowJudge._getSceneData(sceneId);
+            var actInfo = ACTS_DATA.acts[gameState.currentAct - 1];
+            var shadowDesc = ShadowJudge.puppetsToText(staged);
+            var sceneName = scene ? scene.name : '';
+            var sceneDesc = scene ? scene.description : '';
+            var expected = scene ? (scene.standard_puppets || []).join('、') : '';
+            var nextScene = '';
+            if (actInfo && actInfo.scenes) {
+                var currIdx = -1;
+                for (var si = 0; si < actInfo.scenes.length; si++) {
+                    if (actInfo.scenes[si].id === sceneId) { currIdx = si; break; }
+                }
+                if (currIdx >= 0 && currIdx + 1 < actInfo.scenes.length) nextScene = actInfo.scenes[currIdx + 1].name;
             }
+
+            var sysPrompt = PROMPTS_DATA.judgeStreamPrompt + '\n\n' +
+                '【第' + gameState.currentAct + '幕】' + (actInfo ? actInfo.name : '') +
+                (actInfo ? ' — ' + actInfo.mood : '') + '\n' +
+                '当前场景：' + sceneName + '\n场景剧情：' + sceneDesc + '\n' +
+                '期望皮影：' + expected + '\n' +
+                '学徒实际摆了：' + shadowDesc + '\n' +
+                (nextScene ? '下一场景：' + nextScene + '（推进剧情时往这个方向走）\n' : '') +
+                '灯油：' + gameState.lampOil + '%\n';
+
+            AI.call(sysPrompt, shadowDesc, { temperature: 0.7, maxTokens: 300 }).then(function(reply) {
+                // 解析评分标记
+                var scoreMatch = reply.match(/\[SCORE:(\d+)\]/);
+                var correctMatch = reply.match(/\[CORRECT:(true|false)\]/);
+                var score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
+                var correct = correctMatch ? correctMatch[1] === 'true' : false;
+                var comment = reply.replace(/\[SCORE:\s*\d+\s*\]/g, '').replace(/\[CORRECT:\s*(true|false)\s*\]/g, '').trim();
+                var result = { score: score, correct: correct, comment: comment };
+
+                // 同步：TTS生成完 → 打字+语音同时启动
+                speaker.textContent = '路师傅';
+                setSpeaking(true);
+                speakAndPlay(comment, dialogueText, 55).then(function() {
+                    setSpeaking(false);
+                    EventBus.emit('judge_result', result);
+                    emitSceneJudged(staged, sceneId, result);
+                    typingDoneCb = function() { if (window._showPlayPending) showNarrationHint(); };
+                    btnConfirm.disabled = false; btnAsk.disabled = false;
+                });
+            }).catch(function(e) {
+                console.error('[confirm_judge] AI调用失败:', e.message);
+                var r = ShadowJudge.quickJudge(staged, sceneId);
+                displayJudgeResult(r);
+                emitSceneJudged(staged, sceneId, r);
+                btnConfirm.disabled = false; btnAsk.disabled = false;
+            });
         }
     });
 
@@ -3266,8 +3348,7 @@ const ShadowJudge = {
             var userMsg = '学徒追问道："' + '师傅，我想问您一件事。请看看白布上的影面，给我一些指点。' + '"\n\n请简短回答学徒。';
 
             var reply = await AI.call(sysPrompt, userMsg, { temperature: 0.7, maxTokens: 200 });
-            typewriter(dialogueText, reply, 45);
-            playTTS(reply); // 语音同步
+            await speakAndPlay(reply, dialogueText, 45);
         } catch(e) {
             console.error('[ask_master] AI调用失败:', e.message);
             typewriter(dialogueText, '……（师傅张了张嘴，声音被灯花吞了）再问一次吧。', 45);
@@ -3391,8 +3472,7 @@ const ShadowJudge = {
             if (!OFFLINE_MODE && typeof AI !== 'undefined') {
                 var sys = PROMPTS_DATA.baseSystemPrompt + '\n\n学徒触发了隐藏线索：'+clue.name+'（第'+clue.layer+'层）。线索含义：'+clue.reveal_content+'。关联暗语：'+(clue.cipher_link||[]).join('、')+'。请以路师傅口吻说一段话（40-80字），自然揭示这个线索，但不直接说破。';
                 AI.call(sys, '触发线索。请路师傅给学徒一点暗示。', {temperature:0.7, maxTokens:200, model:AI.MODEL_DEFAULT}).then(function(reply){
-                    typewriter(dialogueText, reply, 46);
-                    playTTS(reply); // 语音同步
+                    speakAndPlay(reply, dialogueText, 46);
                 }).catch(function(){
                     typewriter(dialogueText, clue.reveal_content || '', 46);
                 });
@@ -3428,8 +3508,7 @@ const ShadowJudge = {
             var sys = PROMPTS_DATA.baseSystemPrompt + '\n\n学徒刚把「'+name+'」摆上白布。这个皮影在当前场景是'+role+'。请以路师傅口吻给一个简短点评（15-30字），不要超过一句话。';
             AI.call(sys, '点评一下这个皮影。', {temperature:0.8, maxTokens:80, model:AI.MODEL_DEFAULT}).then(function(reply){
                 speaker.textContent = '路师傅';
-                typewriter(dialogueText, reply, 45);
-                playTTS(reply); // 语音同步
+                speakAndPlay(reply, dialogueText, 45);
             }).catch(function(){
                 var line = isRequired ? '这'+name+'——是该有的。' : (isAcceptable ? '这'+name+'……也说得通。' : '这'+name+'？先拿下去吧。');
                 speaker.textContent = '路师傅';
@@ -3882,22 +3961,120 @@ const ShadowJudge = {
     }
     // ===== TTS语音合成（与字幕同步） =====
     var _ttsAudio = null;
+    var _audioUnlocked = false;
+    // 首次用户交互时解锁 AudioContext / 触摸一次让浏览器允许后续 autoplay
+    document.addEventListener('click', function unlockAudio() {
+        if (_audioUnlocked) return;
+        // 创建一个无声的短音频，触发用户手势上下文
+        var ctx = null;
+        try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+        if (ctx) {
+            var osc = ctx.createOscillator(), gain = ctx.createGain();
+            gain.gain.value = 0.001; osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(0); osc.stop(ctx.currentTime + 0.01);
+            _audioUnlocked = true;
+            console.log('[TTS] AudioContext 已解锁');
+        }
+    }, { once: true });
+
     function playTTS(text) {
         if (!text || OFFLINE_MODE) return;
         // 跳过AI兜底/错误文本，不浪费TTS配额
         if (text.indexOf('网络不太顺畅')!==-1||text.indexOf('灯花')!==-1||text.indexOf('再试一次')!==-1) return;
+        console.log('[TTS] 请求合成:', text.substring(0, 40) + '...');
         try {
             var apiBase = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_API) ? API_CONFIG.BASE_API : 'http://123.57.90.233:3000/api';
             fetch(apiBase + '/tts', {
                 method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({model:'cosyvoice-v3.5-plus',input:{text:text},parameters:{voice:'longcheng',rate:1.0,volume:50,format:'mp3',sample_rate:24000}})
-            }).then(function(r){return r.json();}).then(function(d){
-                var b64 = d.output?.audio?.data || d.output?.results?.[0]?.audio?.data || '';
-                if (b64) { stopTTS(); var nums=new Uint8Array(atob(b64).length); for(var i=0;i<nums.length;i++)nums[i]=atob(b64).charCodeAt(i); _ttsAudio=new Audio(URL.createObjectURL(new Blob([nums],{type:'audio/mpeg'}))); _ttsAudio.volume=0.8; _ttsAudio.play().catch(function(){}); }
-            }).catch(function(){});
-        } catch(e) {}
+                body: JSON.stringify({model:'cosyvoice-v2',input:{text:text},parameters:{voice:'longlaobo',rate:1.0,format:'mp3',sample_rate:24000}})
+            }).then(function(r){ if(!r.ok) throw new Error('TTS HTTP '+r.status); return r.json(); }).then(function(d){
+                var output = d.output || {};
+                var audioObj = output.audio || (output.results && output.results[0] && output.results[0].audio) || {};
+                var b64 = audioObj.data || '';
+                var remoteUrl = audioObj.url || output.audio_url || '';
+                console.log('[TTS] 响应解析: b64.length=' + b64.length + ' url=' + (remoteUrl ? remoteUrl.substring(0, 60) + '...' : '(空)'));
+                if (!b64 && !remoteUrl) { console.warn('[TTS] 响应无音频数据和URL'); return; }
+                stopTTS();
+                if (remoteUrl) {
+                    // 优先用 OSS 远程URL（省去 base64 解码，速度快10倍）
+                    _ttsAudio = new Audio(remoteUrl);
+                    _ttsAudio.crossOrigin = 'anonymous';
+                } else {
+                    var chars = atob(b64), nums = new Uint8Array(chars.length);
+                    for (var i=0;i<chars.length;i++) nums[i] = chars.charCodeAt(i);
+                    var blobUrl = URL.createObjectURL(new Blob([nums], {type:'audio/mpeg'}));
+                    _ttsAudio = new Audio(blobUrl);
+                    _ttsAudio.onended = function() { URL.revokeObjectURL(blobUrl); _ttsAudio = null; };
+                }
+                _ttsAudio.volume = 0.8;
+                _ttsAudio.muted = true;
+                var playPromise = _ttsAudio.play();
+                if (playPromise) {
+                    playPromise.then(function() {
+                        _ttsAudio.muted = false;
+                        console.log('[TTS] 播放中');
+                    }).catch(function(e) {
+                        console.warn('[TTS] 播放被阻止:', e.name);
+                        _ttsAudio.muted = false;
+                        _ttsAudio.play().catch(function(){});
+                    });
+                }
+            }).catch(function(e){
+                console.warn('[TTS] 失败:', e.message || e);
+            });
+        } catch(e) { console.warn('[TTS] 异常:', e); }
     }
     function stopTTS() { if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio=null; } }
+
+    // 同步管道：先生成TTS音频，再打字+播放同时启动（零延迟）
+    function speakAndPlay(text, el, speed) {
+        if (!text) return Promise.resolve();
+        speed = speed || 50;
+        return ttsPrepare(text).then(function(audioSrc) {
+            if (audioSrc) {
+                _ttsAudio = new Audio(audioSrc);
+                if (audioSrc.startsWith('blob:')) _ttsAudio.onended = function() { URL.revokeObjectURL(audioSrc); _ttsAudio = null; };
+                _ttsAudio.volume = 0.8;
+                _ttsAudio.play().catch(function(e){ console.warn('[TTS] play失败:', e.name); });
+            }
+            // 打字机启动
+            typewriter(el, text, speed);
+            // 等打字机播完
+            return new Promise(function(resolve) { waitForTypingDoneThen(resolve); });
+        }).catch(function() {
+            typewriter(el, text, speed);
+            return new Promise(function(resolve) { waitForTypingDoneThen(resolve); });
+        });
+    }
+
+    // TTS 预生成：返回音频 URL（blob 或远程 OSS），不播放
+    function ttsPrepare(text) {
+        return new Promise(function(resolve, reject) {
+            if (!text || OFFLINE_MODE) { resolve(null); return; }
+            if (text.indexOf('网络不太顺畅')!==-1||text.indexOf('灯花')!==-1||text.indexOf('再试一次')!==-1) { resolve(null); return; }
+            console.log('[TTS] 预生成:', text.substring(0, 40) + '...');
+            var apiBase = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_API) ? API_CONFIG.BASE_API : 'http://123.57.90.233:3000/api';
+            fetch(apiBase + '/tts', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({model:'cosyvoice-v2',input:{text:text},parameters:{voice:'longlaobo',rate:1.0,format:'mp3',sample_rate:24000}})
+            }).then(function(r){ if(!r.ok) throw new Error('TTS HTTP '+r.status); return r.json(); }).then(function(d){
+                var output = d.output || {};
+                var audioObj = output.audio || (output.results && output.results[0] && output.results[0].audio) || {};
+                var b64 = audioObj.data || '';
+                var remoteUrl = audioObj.url || output.audio_url || '';
+                if (remoteUrl) { console.log('[TTS] 预生成完成 (OSS)'); resolve(remoteUrl); return; }
+                if (!b64) { console.warn('[TTS] 响应无音频'); resolve(null); return; }
+                var chars = atob(b64), nums = new Uint8Array(chars.length);
+                for (var i=0;i<chars.length;i++) nums[i] = chars.charCodeAt(i);
+                var blobUrl = URL.createObjectURL(new Blob([nums], {type:'audio/mpeg'}));
+                console.log('[TTS] 预生成完成 (blob)');
+                resolve(blobUrl);
+            }).catch(function(e){
+                console.warn('[TTS] 预生成失败:', e.message || e);
+                resolve(null);
+            });
+        });
+    }
 
     function typewriter(el, text, speed) {
         if (el==null) return;
