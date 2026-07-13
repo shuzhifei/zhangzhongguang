@@ -2384,13 +2384,17 @@ const ShadowJudge = {
             if (!pc.ok) correct = false;
         }
         // ===== 确认按钮只说简短判断（对/不对），具体提示留给"追问师傅" =====
+        var okComments = {
+            'act1_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，眯着眼细细打量了一番）\n月夜下等人——老者在左，金蟾在旁，书生远远候着。\n这出戏的味道，有了。',
+            'act1_scene2': '好！这一面，齐了。\n\n（师傅点了点头，嘴角微微上扬）\n信中之秘——老者、金蟾、书生，都在该在的位置。\n你听懂了那封信里的意思。',
+        };
         return {
             score: score, correct: correct,
             character_match:{score:Math.round(coverage*30),comment:''},
             spatial:{score:Math.round(coverage*25*0.6),comment:''},
             plot_detail:{score:Math.round(coverage*25*0.6),comment:''},
             authenticity:{score:coverage>=0.8?16:6,comment:''},
-            comment: correct ? '这一面，齐了。' : '（摇了摇头）不对。这出戏——不是这么摆的。再想想。',
+            comment: correct ? (okComments[currentSceneId] || ('这一面，齐了。\n\n（师傅微微点了点头）\n影儿都摆到了位子，戏味出来了。')) : '（摇了摇头）不对。这出戏——不是这么摆的。再想想。',
             guiding_hint: ''   // 不在此处给提示——追问师傅才给详情
         };
     },
@@ -3190,22 +3194,52 @@ const ShadowJudge = {
     var speaker     = document.getElementById('speaker');
     var flame       = document.getElementById('flame');
 
-    var OFFLINE_MODE = (function() {
-        if (typeof API_CONFIG === 'undefined') return false; // 有config就尝试在线
+    // 能否在线：取决于 API_CONFIG 是否配置（有 Key 或代理）
+    var CAN_ONLINE = (function() {
+        if (typeof API_CONFIG === 'undefined') return false;
         var key = API_CONFIG.API_KEY || '';
         var proxy = API_CONFIG.BASE_API || '';
-        // 有Key或走代理 = 在线模式
-        if ((key && key.startsWith('sk-')) || proxy) return false;
-        return true; // 都没配才是离线
+        return ((key && key.startsWith('sk-')) || proxy) ? true : false;
     })();
+    // 默认离线模式：玩家需主动点击面板里的切换按钮，才进入在线模式
+    var OFFLINE_MODE = true;
+    window.OFFLINE_MODE = true;
 
-    if (OFFLINE_MODE) {
+    // 模式徽标 + 可点击切换按钮（置于信息面板）
+    (function initModeToggle() {
         var infoPanel = document.querySelector('.info-panel');
-        if (infoPanel) { var badge = document.createElement('div'); badge.style.cssText='margin-top:16px;padding:4px 8px;font-size:11px;color:#c48a3e;border:1px solid #5a2d15;border-radius:2px;letter-spacing:1px;'; badge.textContent='离 线 模 式'; infoPanel.appendChild(badge); }
-    } else {
-        var infoPanel2 = document.querySelector('.info-panel');
-        if (infoPanel2) { var badge2 = document.createElement('div'); badge2.style.cssText='margin-top:16px;padding:4px 8px;font-size:11px;color:#5a9e6f;border:1px solid #2a5a35;border-radius:2px;letter-spacing:1px;'; badge2.textContent='在 线 模 式'; infoPanel2.appendChild(badge2); }
-    }
+        if (!infoPanel) return;
+        var modeBtn = document.createElement('button');
+        modeBtn.id = 'modeToggleBtn';
+        modeBtn.style.cssText = 'margin-top:16px;width:100%;padding:6px 8px;font-size:12px;letter-spacing:1px;border-radius:2px;cursor:pointer;font-family:inherit;';
+        function renderMode() {
+            if (OFFLINE_MODE) {
+                modeBtn.textContent = '● 离线模式（点击切换在线）';
+                modeBtn.style.color = '#c48a3e';
+                modeBtn.style.border = '1px solid #5a2d15';
+                modeBtn.style.background = 'rgba(90,45,21,0.15)';
+            } else {
+                modeBtn.textContent = '● 在线模式（点击切回离线）';
+                modeBtn.style.color = '#5a9e6f';
+                modeBtn.style.border = '1px solid #2a5a35';
+                modeBtn.style.background = 'rgba(42,90,53,0.15)';
+            }
+        }
+        renderMode();
+        modeBtn.addEventListener('click', function() {
+            if (OFFLINE_MODE) {
+                if (!CAN_ONLINE) { alert('当前未配置 API，无法切换到在线模式。'); return; }
+                OFFLINE_MODE = false;
+                window.OFFLINE_MODE = false;
+            } else {
+                OFFLINE_MODE = true;
+                window.OFFLINE_MODE = true;
+            }
+            renderMode();
+            console.log('[mode] 切换为' + (OFFLINE_MODE ? '离线' : '在线') + '模式');
+        });
+        infoPanel.appendChild(modeBtn);
+    })();
 
     // —— 调试：跳场入口（开发测试用，发布前删除）——
     (function addJumpButtons() {
@@ -3220,13 +3254,24 @@ const ShadowJudge = {
             btn.onmouseenter = function() { btn.style.background = 'rgba(100,45,18,0.9)'; };
             btn.onmouseleave = function() { btn.style.background = 'rgba(74,31,10,0.7)'; };
             btn.onclick = function() {
+                var doJump = function() {
+                    try {
+                        EventBus.emit('countdown_stop_request');
+                        gameState.currentAct = 1;
+                        gameState.currentScene = targetScene;
+                        if (window.resetSceneState) window.resetSceneState(); else resetSceneState();
+                        if (window.NarrationCtl) window.NarrationCtl.reset();
+                        if (window.startCurrentScene) window.startCurrentScene(); else startCurrentScene();
+                    } catch(e) { console.error('[jumpScene] 跳场失败:', e); }
+                };
+                // 跳到第二场：先拉上帘子 → 停1秒 → 拉开帘子 → 再呈现第二场场景
                 try {
-                    EventBus.emit('countdown_stop_request');
-                    gameState.currentScene = targetScene;
-                    resetSceneState();
-                    if (window.NarrationCtl) window.NarrationCtl.reset();
-                    startCurrentScene();
-                } catch(e) { console.error('[jumpScene] 跳场失败:', e); }
+                    if (window.playCurtainCloseThenOpen) {
+                        window.playCurtainCloseThenOpen(null, doJump);
+                    } else {
+                        doJump();
+                    }
+                } catch(e) { console.error('[jumpScene] 帘子过渡异常, 直接跳:', e); doJump(); }
             };
             return btn;
         }
@@ -3315,15 +3360,24 @@ const ShadowJudge = {
     btnAsk.addEventListener('click', async function() {
         if (window.TheaterSystem && window.TheaterSystem.isSpeaking && window.TheaterSystem.isSpeaking()) return;
         btnAsk.disabled = true; btnConfirm.disabled = true;
-        speaker.textContent = '路师傅';
-        typewriter(dialogueText, '（你向师傅请教——师傅沉吟片刻……）', 40);
+
+        // 追问师傅消耗灯油（COSTS.ask_master = 8）
+        if (typeof LampSystem !== 'undefined' && LampSystem.burn) {
+            LampSystem.burn('ask_master');
+        }
 
         if (OFFLINE_MODE) {
+            // 离线模式：直接用打字机逐字输出提示文本（不插中间过渡词，避免被第二次 typewriter 打断导致"直接闪现"）
             var h = buildOfflineHint(collectStagedPuppets(), getCurrentSceneId());
-            typewriter(dialogueText, h, 45);
+            speaker.textContent = '路师傅';
+            typewriter(dialogueText, h, 42);
             btnAsk.disabled = false; btnConfirm.disabled = false;
             return;
         }
+
+        // 在线模式：先显示过渡词（TTS准备期间给玩家反馈），再等AI回复
+        speaker.textContent = '路师傅';
+        typewriter(dialogueText, '（你向师傅请教——师傅沉吟片刻……）', 40);
 
         // 在线模式：调用AI生成师傅回答
         try {
@@ -3380,7 +3434,7 @@ const ShadowJudge = {
         var extra = placedIds.filter(function(id){return allowedSet.indexOf(id)===-1;});          // 多放
         if (required.length===0) return staged.length>0 ? '你摆的，我都看着。' : '白布上什么都没有。';
         if (missing.length===0 && extra.length===0) {
-            return '这一面，齐了。' + (scene.name ? ('《' + scene.name + '》的意思到了。') : '');
+            return '这一面，齐了。\n\n（师傅微微点了点头）\n影儿都摆到了位子，戏味出来了。' + (scene.name ? ('\n《' + scene.name + '》的意思到了。') : '');
         }
         var parts = [];
         if (missing.length>0) parts.push('少了' + missing.map(getPuppetName).join('、') + '——这出戏，缺了角儿。');
@@ -3644,7 +3698,17 @@ const ShadowJudge = {
     }
     function showShowPlayBtn() {
         if (!showPlayBtnEl) showPlayBtnEl = document.getElementById('showPlayBtn');
-        if (showPlayBtnEl) showPlayBtnEl.style.display = 'block';
+        if (showPlayBtnEl) {
+            showPlayBtnEl.style.display = 'block';
+            showPlayBtnEl.disabled = false;
+            // 每次显示时重新绑定点击事件（确保不会因作用域/时序问题丢失）
+            var newBtn = showPlayBtnEl;
+            newBtn.onclick = function(e) {
+                if (e) e.stopPropagation();
+                console.log('[showPlayBtn] 点击触发, 调用 onShowPlayClick');
+                onShowPlayClick();
+            };
+        }
         // 出现「展示皮影戏」按钮时，左侧皮影箱卡片设为不可按
         document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.add('locked'); });
     }
@@ -3655,18 +3719,24 @@ const ShadowJudge = {
         document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.remove('locked'); });
     }
     // 第一场展示皮影戏：帘子合上 → 停1秒 → 帘子拉开 → 回调
-    function playCurtainCloseThenOpen(onOpened) {
+    function playCurtainCloseThenOpen(onOpened, onClosed) {
         console.log('[curtain] 开始帘子合上→拉开过渡');
         var wrap = document.createElement('div');
         wrap.className = 'curtain-close-wrap curtain-close-active';
         wrap.innerHTML = '<div class="curtain-close-left"></div><div class="curtain-close-right"></div>';
+        // 强制内联样式保证可见性（覆盖任何可能的 CSS 冲突）
+        wrap.style.cssText = 'position:absolute!important;inset:0!important;z-index:60!important;display:flex!important;overflow:hidden!important;pointer-events:none!important;';
         var stageEl = document.getElementById('stage');
+        console.log('[curtain] stageEl=', !!stageEl, ', 将挂载到', (stageEl ? '#stage' : 'body'));
         (stageEl || document.body).appendChild(wrap);
-        console.log('[curtain] 帘子DOM已挂载, 等待合拢动画(1.2s)+停顿(1s)+拉开(1.1s)');
+        // 强制重排，确保动画从正确状态开始
+        void wrap.offsetHeight;
+        console.log('[curtain] 帘子DOM已挂载并强制重排, 等待合拢动画(1.2s)+停顿(1s)+拉开(1.1s)');
         setTimeout(function() {                                   // 合拢 1.2s 完成
             console.log('[curtain] 合拢完成, 停顿1s');
             setTimeout(function() {                                // 再停 1 秒
                 console.log('[curtain] 停顿结束, 开始拉开');
+                if (onClosed) onClosed();                          // 拉开前先切换场景，避免拉开瞬间露出旧场景
                 wrap.classList.add('curtain-open-active');         // 帘子拉开
                 setTimeout(function() {
                     console.log('[curtain] 拉开完成, 执行回调 onOpened');
@@ -3676,6 +3746,8 @@ const ShadowJudge = {
             }, 1000);
         }, 1300);
     }
+    // 跨 IIFE 暴露：info-panel 里的「跳到第二场」按钮(3245) 与它不在同一作用域，需走 window 桥接
+    window.playCurtainCloseThenOpen = playCurtainCloseThenOpen;
     // 第一场展示皮影戏：在舞台（幕中）区域内播放 mp4 动画，播完/点击/出错则继续
     function playAct1ShowVideo(onDone) {
         var ov = document.createElement('div');
@@ -3709,7 +3781,7 @@ const ShadowJudge = {
 
             var isFirstScene = (gameState.currentAct === 1 && gameState.currentScene === 0);
             if (isFirstScene) {
-            // 第一场：帘子合上 → 停1秒 → 帘子拉开 → 播放 mp4 动画 → 再走信转场进第二场
+            // 第一场：帘子合上 → 停1秒 → 帘子拉开 → 播放 mp4 动画 → 点对话框 → 路师傅点评 → 信发亮(聚焦) → 点信 → 信全屏打开 → 白光 → 进第二场（正规剧情流程）
             playCurtainCloseThenOpen(function() {
                 hideShowPlayBtn();
                 narrationActive = false;
@@ -3729,13 +3801,10 @@ const ShadowJudge = {
                         if (cmtHint && cmtHint.parentNode) cmtHint.parentNode.removeChild(cmtHint);
                         document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.remove('locked'); });
                         speaker.textContent = '路师傅';
-                        typewriter(dialogueText, '第一幕表现的不错，快点击书生手中的信进行第二场的表演吧', 48);
+                        typewriter(dialogueText, '第一幕表现的不错，快点击书生手中的信进行第二场的表演吧。', 48);
                         waitForTypingDoneThen(function() {
-                            setTimeout(function() { focusOnLetter(function() {
-                                // advanceScene 定义在另一 IIFE(IIFE-B)，走 window 桥接
-                                if (window.advanceScene) window.advanceScene();
-                                else advanceScene();
-                            }); }, 1000);
+                            // 点评完 1 秒后，信发亮（聚焦幕上信皮影，引导玩家点击）—— 正规剧情流程入口
+                            setTimeout(function() { focusOnLetter(enterAct2Directly); }, 1000);
                         });
                     }
                     function onDlgClick(e) {
@@ -3746,28 +3815,19 @@ const ShadowJudge = {
                 });
             });
         } else {
-            // 其它场次（含第一幕第二场等）：帘子合上 → 停1秒 → 帘子拉开 → 再进下一场（与第一场过渡一致）
-            console.log('[onShowPlayClick] 走else分支(非第一场), 开始 playCurtainCloseThenOpen');
-            playCurtainCloseThenOpen(function() {
-                console.log('[onShowPlayClick] 帘子拉开回调执行, 准备调用 advanceScene');
-                try {
-                    hideShowPlayBtn();
-                    narrationActive = false;
-                    setNarrationLock(false);
-                    // 帘子拉开后直接推进下一场（第二场无"信"皮影，不走信转场 focusOnLetter）
-                    // advanceScene 定义在另一 IIFE(IIFE-B) 内，必须走 window 桥接，否则 ReferenceError 被静默吞掉
-                    if (window.advanceScene) {
-                        console.log('[onShowPlayClick] 调用 window.advanceScene()');
-                        window.advanceScene();
-                    } else {
-                        console.error('[onShowPlayClick] window.advanceScene 不存在！尝试裸调 advanceScene()');
-                        advanceScene();
-                    }
-                } catch(err) {
-                    console.error('[onShowPlayClick] 回调内出错:', err);
-                    alert('场次切换出错: ' + err.message);
-                }
-            });
+            // 其它场次（含第一幕第二场等）：帘子合上 → 停1秒 → 帘子拉开(onClosed切场景) → 拉开完成(onOpened进下一场)
+            console.log('[onShowPlayClick] 走else分支(非第一场), currentAct='+gameState.currentAct+' currentScene='+gameState.currentScene);
+            hideShowPlayBtn();
+            narrationActive = false;
+            setNarrationLock(false);
+            var curtainFn = (window.playCurtainCloseThenOpen || playCurtainCloseThenOpen);
+            if (!curtainFn) { console.error('[onShowPlayClick] playCurtainCloseThenOpen 不存在!'); return; }
+            // onClosed: 帘子拉开前先切场景（避免拉开瞬间露出旧背景）
+            // onOpened:  帘子拉开完成后推进下一场
+            curtainFn(
+                function() { console.log('[onShowPlayClick] 帘子已完全拉开, 调 advanceScene'); if (window.advanceScene) window.advanceScene(); },
+                function() { console.log('[onShowPlayClick] 帘子开始拉开, 先调 startCurrentScene 切场景'); if (window.startCurrentScene) window.startCurrentScene(); }
+            );
         }
         } catch(outerErr) {
             console.error('[onShowPlayClick] 外层异常:', outerErr);
@@ -3777,20 +3837,59 @@ const ShadowJudge = {
             if (btn2) btn2.disabled = false;
         }
     }
+
+    // ===== 第一场→第二场「正规剧情流程」：信发亮 → 点信 → 信全屏打开 → 白光 → 进第二场 =====
+    // 与「跳到第二场」调试按钮并存，两条路径都能进第二场。
+    function showActTitle(actTitle) {
+        var ov = document.createElement('div');
+        ov.className = 'act-title-overlay act2';
+        ov.innerHTML = '<div class="act-title-bg"></div><div class="act-title-text">'+actTitle+'</div>';
+        document.body.appendChild(ov);
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){ ov.classList.add('visible'); }); });
+        setTimeout(function(){ ov.classList.add('fade-out'); }, 2600);
+        setTimeout(function(){ if (ov.parentNode) ov.parentNode.removeChild(ov); }, 4300);
+    }
+
+    // 点击信件后：全屏展示信的正面 → 信从中线打开 → 背景渐白 → 维持 → 淡出还原；白光铺满后叠加场次标题卡
+    function playLetterReveal(onDone, actTitle) {
+        var overlay = document.createElement('div');
+        overlay.id = 'letterReveal';
+        overlay.innerHTML = '<div class="letter-reveal-white"></div>'
+            + '<div class="letter-page">'
+            +   '<div class="letter-img"></div>'
+            +   '<div class="letter-half letter-half-l"></div>'
+            +   '<div class="letter-half letter-half-r"></div>'
+            + '</div>';
+        document.body.appendChild(overlay);
+        setTimeout(function() { overlay.classList.add('play'); }, 450);
+        setTimeout(function() { overlay.classList.add('to-white'); }, 1450);
+        setTimeout(function() { if (onDone) onDone(); }, 2200);
+        setTimeout(function() { overlay.classList.add('fading'); }, 4150);
+        setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 5050);
+        if (actTitle) {
+            setTimeout(function() { showActTitle(actTitle); }, 2600);
+        }
+    }
+
     // 舞台聚焦「信」：背景虚化压暗，唯有信发亮，引导玩家点击
     function focusOnLetter(onDone) {
         var stage = document.getElementById('stage');
-        if (!stage) { onDone(); return; }
+        if (!stage) { if (onDone) onDone(); return; }
         var letter = stage.querySelector('.stage-puppet[data-puppet="letter"]');
-        if (!letter) { onDone(); return; }   // 没有信则直接进下一场
+        if (!letter) {
+            // 兜底：若幕上无信皮影，临时放一枚，确保剧情流程不中断
+            letter = document.createElement('div');
+            letter.className = 'stage-puppet';
+            letter.setAttribute('data-puppet', 'letter');
+            letter.style.cssText = 'left:50%;top:42%;width:84px;height:112px;transform:translate(-50%,-50%);background:url("assets/images/letter.png") center/contain no-repeat;';
+            stage.appendChild(letter);
+        }
         stage.classList.add('letter-focus');
-        // 引导文字
         var hint = document.createElement('div');
         hint.className = 'letter-focus-hint';
         hint.id = 'letterFocusHint';
         hint.textContent = '▸ 点击那封信';
         stage.appendChild(hint);
-        // 信上方透明点击热区（避免触发拖动/翻转）
         var hot = document.createElement('div');
         hot.className = 'letter-focus-hotspot';
         hot.id = 'letterFocusHotspot';
@@ -3807,11 +3906,23 @@ const ShadowJudge = {
             stage.classList.remove('letter-focus');
             var h = document.getElementById('letterFocusHint'); if (h) h.remove();
             var hs = document.getElementById('letterFocusHotspot'); if (hs) hs.remove();
-            // 点击信件 → 信的正面铺满全屏、打开、背景变白，再进下一场（跳过幕间休息，直入第二场）
-            playLetterReveal(enterAct2Directly, '第二场&nbsp;&nbsp;·&nbsp;&nbsp;信中之秘');
+            playLetterReveal(onDone, '第二场&nbsp;&nbsp;·&nbsp;&nbsp;信中之秘');
         };
         hot.addEventListener('click', done);
     }
+
+    // 进第二场（信中之秘）：设置场景后走统一入口 startCurrentScene（含 act2-bg 背景切换 + 完整旁白）
+    function enterAct2Directly() {
+        try {
+            gameState.currentAct = 1;
+            gameState.currentScene = 1;
+            if (window.startCurrentScene) window.startCurrentScene();
+            else startCurrentScene();
+        } catch(e) {
+            if (window.showDialogue) window.showDialogue('路师傅', '（师傅顿了顿，接着说）咱们继续——下一场。');
+        }
+    }
+
     // 带帘子合上过渡效果（仅在幕布 stage 内合拢，不遮挡对话框/皮影箱等）
     function playCurtainClose(onDone) {
         // 创建帘子层
@@ -3830,97 +3941,6 @@ const ShadowJudge = {
             wrap.remove();
             if (onDone) onDone();
         }, 1400);  // 略长于动画 1.2s，确保视觉完整
-    }
-    // 点击信件后：全屏展示信的正面 → 信从中线打开 → 背景渐白 → 维持2秒 → 淡出还原界面
-    // actTitle: 可选，白光铺满后在其上叠加「场次标题卡」（如 "第二场 · 信中之秘"），再淡出露出新场景
-    function playLetterReveal(onDone, actTitle) {
-        var overlay = document.createElement('div');
-        overlay.id = 'letterReveal';
-        overlay.innerHTML = '<div class="letter-reveal-white"></div>'
-            + '<div class="letter-page">'
-            +   '<div class="letter-img"></div>'
-            +   '<div class="letter-half letter-half-l"></div>'
-            +   '<div class="letter-half letter-half-r"></div>'
-            + '</div>';
-        document.body.appendChild(overlay);
-        // 先让玩家看清「信的正面」铺满全屏，再打开
-        setTimeout(function() { overlay.classList.add('play'); }, 450);
-        // 信打开后背景渐变为白（约 2150ms 完全变白）
-        setTimeout(function() { overlay.classList.add('to-white'); }, 1450);
-        // 白幕完全覆盖后进入下一场（在白幕后渲染好新场景）
-        setTimeout(function() { if (onDone) onDone(); }, 2200);
-        // 白光维持约 2 秒后，整层逐渐淡出，露出原界面
-        setTimeout(function() { overlay.classList.add('fading'); }, 4150);
-        setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 5050);
-        // 白光铺满后，在其上叠一场次标题卡（与第一场同款），再随白光淡出露出新场景
-        if (actTitle) {
-            setTimeout(function() { showActTitle(actTitle); }, 2600);
-        }
-    }
-    // 场次标题卡（复用第一场的 .act-title-overlay 样式）：淡入显示「第X场 · 副标题」，停留后淡出
-    function showActTitle(text) {
-        if (!text) return;
-        var ov = document.createElement('div');
-        ov.className = 'act-title-overlay act2';
-        ov.innerHTML = '<div class="act-title-bg"></div><div class="act-title-text">' + text + '</div>';
-        document.body.appendChild(ov);
-        // 下一帧再加 visible，确保过渡动画播放
-        requestAnimationFrame(function() {
-            requestAnimationFrame(function() { ov.classList.add('visible'); });
-        });
-        // 停留约 3.2s 后开始淡出（淡出过渡 1.5s）
-        setTimeout(function() { ov.classList.remove('visible'); ov.classList.add('fade-out'); }, 3200);
-        setTimeout(function() {
-            if (ov.parentNode) ov.parentNode.removeChild(ov);
-        }, 4700);
-    }
-    // 信件转场结束后，跳过幕间休息，直接进入第二场「信中之秘」
-    function enterAct2Directly() {
-        try {
-            // 进入第一幕第二场（信中之秘）。注："真假传人"是第二幕第一场，以后再说。
-            gameState.currentAct = 1;
-            gameState.currentScene = 1;   // act1_scene2：信中之秘
-            window.resetSceneState();
-            EventBus.emit('countdown_stop_request');
-            EventBus.emit('act_intermission');
-            // 皮影箱保持第一幕皮影（信中之秘所需的 scholar/elder/letter 都在其中）
-            window.updatePuppetCards(1);
-            window.updateHeader();
-            // 皮影箱滚动回顶部，卡片紧贴标题下方
-            var pBox = document.getElementById('puppetBox');
-            if (pBox) pBox.scrollTop = 0;
-            // 清空幕中所有皮影
-            if (window.TheaterSystem && TheaterSystem.clearStage) TheaterSystem.clearStage();
-            // 切换为第二场（大栅栏街景）背景
-            var stageEl = document.getElementById('stage');
-            if (stageEl) { stageEl.classList.remove('night'); stageEl.classList.add('act2-bg'); }
-            // 恢复按钮状态
-            var btnC = document.getElementById('btnConfirm'), btnA = document.getElementById('btnAsk');
-            if (btnC) btnC.disabled = false;
-            if (btnA) btnA.disabled = false;
-
-            // ====== 第二场开场：与第一场 startCurrentScene 完全同款的呈现效果 ======
-            // 第一场用的是 EventBus.emit('narration_chunk',...) → 监听器入队 → pump → typewriter
-            // 这里照搬同一模式：场名标题 + 内容(静态或AI) + 摆影引导，逐条走打字机
-            var act = ACTS_DATA.acts[gameState.currentAct - 1];
-            var scene = act && act.scenes ? act.scenes[gameState.currentScene] : null;
-            if (!scene) return;
-
-            var sceneName = scene.name || '信中之秘';
-            var sceneDesc = scene.description || '';
-
-            // ① 固定场名标题（和第一场「月夜等人」完全同款格式）
-            EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+sceneName+'」', speed:80 });
-
-            // ② 固定场景描述（按需求不使用 AI 动态生成，直接念脚本台词）
-            EventBus.emit('narration_chunk', { speaker:'路师傅', text: '\n\n'+sceneDesc, speed:80 });
-
-            // ③ 摆影引导（和第一场完全同款）
-            EventBus.emit('narration_chunk', { speaker:'路师傅', text:
-                '\n（从皮影箱里，选合适的皮影，把这出戏接着演下去。）', speed:68 });
-        } catch(e) {
-            if (window.showDialogue) window.showDialogue('路师傅', '（换场出了点岔子……请刷新页面。）');
-        }
     }
 
     // 玩家点击字幕区 → 推进下一条（仅脚本序列进行中、且当前已打完时响应；展示按钮期间不响应）
@@ -4169,6 +4189,8 @@ const ShadowJudge = {
 
     window.TheaterSystem = { clearStage:clearStage, collectStagedPuppets:collectStagedPuppets, getCurrentSceneId:getCurrentSceneId, typewriter:typewriter, isOfflineMode:function(){return OFFLINE_MODE;}, isSpeaking:function(){return speakingFlag;} };
     console.log('[theater] 舞台管理系统就绪'+(OFFLINE_MODE?'（离线模式）':'（在线模式）'));
+    // 跨 IIFE 暴露：main IIFE(4207) 的 showActIntro/startCurrentScene 需要读取离线状态
+    window.OFFLINE_MODE = OFFLINE_MODE;
 })();
 </script>
 
@@ -4213,12 +4235,16 @@ const ShadowJudge = {
         try {
             var act = ACTS_DATA.acts[gameState.currentAct-1] || ACTS_DATA.acts[0];
             showActIntro(act, function() { startCurrentScene(); });
-        } catch(e) { showDialogue('路师傅','（灯晃了一下。请刷新页面。）'); }
+        } catch(e) {
+            console.warn('[startGameFlow]', e.message);
+            var a = (ACTS_DATA&&ACTS_DATA.acts&&(ACTS_DATA.acts[gameState.currentAct-1]||ACTS_DATA.acts[0]));
+            showDialogue('路师傅', a ? ('（师傅清了清嗓子）\n\n' + a.intro) : '（灯亮了——咱们开戏吧。）');
+        }
     }
 
     function showActIntro(act, callback) {
         // AI生成幕间开场白，替代硬编码的act.intro
-        if (!OFFLINE_MODE && typeof AI !== 'undefined') {
+        if (!window.OFFLINE_MODE && typeof AI !== 'undefined') {
             EventBus.emit('narration_chunk', { speaker:'路师傅', text:'（路师傅清了清嗓子，灯焰安静下来……）', speed:50 });
             AI.call(
                 PROMPTS_DATA.baseSystemPrompt + '\n\n【当前剧目】第'+act.id+'幕：'+act.name+'。灯油'+gameState.lampOil+'%。请以路师傅口吻说一段幕间开场白（60-120字），自然引入这幕戏的背景：'+act.intro,
@@ -4245,11 +4271,23 @@ const ShadowJudge = {
             var act = ACTS_DATA.acts[gameState.currentAct-1];
             var scene = act.scenes[gameState.currentScene];
             updateHeader();
-            if (window.TheaterSystem&&TheaterSystem.clearStage) TheaterSystem.clearStage();
+            if (window.TheaterSystem&&window.TheaterSystem.clearStage) window.TheaterSystem.clearStage();
+            // 进入第二场（信中之秘）：切换为 stage-bg-act2.jpg 背景。
+            // 内联兜底（优先级最高），绕开 .stage.night 覆盖 / 缓存问题，确保图一定显示。
+            if (gameState.currentAct===1 && gameState.currentScene===1) {
+                var stageElS = document.getElementById('stage');
+                if (stageElS) {
+                    stageElS.classList.remove('night');
+                    stageElS.classList.add('act2-bg');
+                    stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
+                    stageElS.style.backgroundSize = 'cover';
+                    stageElS.style.backgroundPosition = 'center bottom';
+                }
+            }
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
             // AI生成场景开场白（替代硬编码的scene.name+description）
-            if (!OFFLINE_MODE && typeof AI !== 'undefined') {
+            if (!window.OFFLINE_MODE && typeof AI !== 'undefined') {
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:'（路师傅看着白布，缓缓开口……）', speed:50 });
                 AI.call(
                     PROMPTS_DATA.baseSystemPrompt + '\n\n第'+act.id+'幕：'+act.name+'。当前场景：'+scene.name+'。场景设定：'+scene.description+'。灯油'+gameState.lampOil+'%。请以路师傅口吻说一段场景开场白（80-150字），自然引入这个场景。',
@@ -4296,7 +4334,15 @@ const ShadowJudge = {
 
             // 线索谜底改为「摆对/追问才揭晓」：由 triggerClue 在触发时正经念出 reveal_content，
             // 不再于开场剧透（保持两场一致、保留悬念）
-        } catch(e) { showDialogue('路师傅','（……灯晃了一下。刚才说到哪了？——请刷新页面。）'); }
+        } catch(e) {
+            console.warn('[startCurrentScene]', e.message);
+            var sc = (ACTS_DATA&&ACTS_DATA.acts&&ACTS_DATA.acts[gameState.currentAct-1]&&ACTS_DATA.acts[gameState.currentAct-1].scenes&&ACTS_DATA.acts[gameState.currentAct-1].scenes[gameState.currentScene]);
+            if (sc) {
+                showDialogue('路师傅', '（师傅看着白布，缓缓开口）\n\n「' + sc.name + '」\n\n' + sc.description);
+            } else {
+                showDialogue('路师傅', '（师傅咳了一声）白布——摆上去。');
+            }
+        }
     }
 
     EventBus.on('scene_judged', function(data) {
@@ -4368,7 +4414,7 @@ const ShadowJudge = {
             var text = ['','—— 第'+getActNum(gameState.currentAct)+'幕 ——','',nextAct.intro].join('\n');
             EventBus.emit('narration_chunk',{speaker:'',text:text,speed:36});
             if (window.NarrationCtl) window.NarrationCtl.enqueueAction(startCurrentScene);
-        } catch(e) {             showDialogue('路师傅','（幕间换场时出了点岔子……请刷新页面。）'); }
+        } catch(e) { console.warn('[goAct2]', e.message); showDialogue('路师傅', '（幕布重新拉开）下一幕——请接着摆。'); }
     }
 
     // 第一幕收尾：幕间休息（按新剧本 16-25 分钟）——灯油补给 + 解锁新皮影叙事 + 自动续进第二幕
@@ -4423,7 +4469,7 @@ const ShadowJudge = {
         var se=document.getElementById('speaker'),de=document.getElementById('dialogueText');
         if(se)se.textContent=speakerText||'';
         if(de){
-            if(window.TheaterSystem&&TheaterSystem.typewriter){ TheaterSystem.typewriter(de, text||'', 0); }
+            if(window.TheaterSystem&&window.TheaterSystem.typewriter){ window.TheaterSystem.typewriter(de, text||'', 0); }
             else { de.textContent=text||''; }
         }
     }
@@ -4447,7 +4493,7 @@ const ShadowJudge = {
     // 用途：你对照网格读出坐标，直接告诉我"槐树该在 x=?, y=?"，我改 POSITION_RULES 即可。
     // 快捷键 G 可随时开关。
     // ==========================================================
-    var DEV_SHOW_FRAME = true;
+    var DEV_SHOW_FRAME = false;   // 默认隐藏坐标，按 G 键切换显示/隐藏
     (function initDevFrame(){
         var devLayer = null, devTick = null;
         function ensureLayer(){
@@ -4543,8 +4589,8 @@ const ShadowJudge = {
     else { init(); }
     console.log('[main] 游戏流程控制器就绪');
 
-    // 暴露给跨 IIFE 作用域调用（游戏/旁白 IIFE 的 enterAct2Directly 需要这些函数，
-    // 它们原本只在 main 闭包内，不挂 window 会导致 ReferenceError 被 try/catch 吞掉）
+    // 暴露给跨 IIFE 作用域调用（onShowPlayClick 等函数在别的 IIFE 闭包内，
+    // 不挂 window 会导致 ReferenceError 被 try/catch 吞掉）
     window.resetSceneState = resetSceneState;
     window.updatePuppetCards = updatePuppetCards;
     window.updateHeader = updateHeader;
