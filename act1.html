@@ -3605,19 +3605,25 @@ const ShadowJudge = {
                 AI.call(sys, '触发线索。请路师傅给学徒一点暗示。', {temperature:0.7, maxTokens:200, model:AI.MODEL_DEFAULT}).then(function(reply){
                     speakAndPlay(reply, dialogueText, 46);
                 }).catch(function(){
-                    typewriter(dialogueText, clue.reveal_content || '', 46);
+                    var _fc = clue.reveal_content || '';
+                    if (_fc) waitForTypingDoneThen(function() { typewriter(dialogueText, _fc, 50); });
                 });
             } else {
                 var prefix = clue.layer === 3 ? '（师傅的声音低了下去）' : (clue.layer === 2 ? '（师傅顿了顿）' : '');
                 var msg = '';
                 if (clue.reveal_content) msg += prefix + clue.reveal_content;
                 if (clue.cipher_link && clue.cipher_link.length > 0) {
-                    // 暗语显示文案：用叙事化描述替代干巴巴的暗语名
-                    var cipherDisplay = { '三根线':'金蟾需要三根线，戏曲里也有三个人', '金蟾碎了':'金蟾碎了——线也断了', '槐树':'琉璃厂东街那棵老槐树' };
+                    // 暗语显示文案：叙事化描述，暗示传承线索
+                    var cipherDisplay = {
+                        '三根线':'金蟾需要三根线，舞这戏的也有三个人',
+                        '金蟾碎了':'金蟾碎了——断了两根线，只有他一个人了',
+                        '槐树':'琉璃厂东街那棵老槐树'
+                    };
                     var displayNames = (clue.cipher_link||[]).map(function(c){ return cipherDisplay[c] || c; });
                     msg += '\n\n【暗语解锁】你听懂了——' + displayNames.join('、') + '。';
                 }
-                if (msg) typewriter(dialogueText, msg, 46);
+                // 暗语必须等前一句打完再打字：避免杀掉 buildOfflineHint 正在播的叙事文字
+                if (msg) waitForTypingDoneThen(function() { typewriter(dialogueText, msg, 50); });
             }
         } catch (e) {}
     }
