@@ -2321,12 +2321,12 @@ const ShadowJudge = {
             scholar: { type:'rel', to:'tree',    dx:-0.08, dy:0.08, r:0.09, label:'书生·槐树左下' },
             letter:  { type:'rel', to:'scholar', dx:-0.05, dy:0.01, r:0.04, label:'信·书生手里' }
         },
-        // —— 第二场：信中之秘 —— 背景为大渊阁（珍奇斋）门面
-        //   elder 站在该铺子门槛下（左侧建筑前）；frog 趴在地上（中下方）；scholar 偏右中，呈"从信中望出"的视角
+        // —— 第二场：信中之秘 —— 背景为琉璃厂街景：大渊阁(中)、珍奇斋(右)
+        //   elder 站在大渊阁底下；frog = 老者用三根线操纵的金蟾(rel跟随elder)；scholar 在珍奇斋附近（从信中望出）
         'act1_scene2': {
-            elder:   { type:'abs', cx:0.15, cy:0.72, r:0.12, label:'老者·大渊阁阶下' },
-            frog:    { type:'abs', cx:0.50, cy:0.85, r:0.11, label:'金蟾·地上' },
-            scholar: { type:'abs', cx:0.75, cy:0.65, r:0.12, label:'书生·信中望出' }
+            elder:   { type:'abs', cx:0.45, cy:0.72, r:0.13, label:'老者·大渊阁底下' },
+            frog:    { type:'rel', to:'elder', dx:0.06, dy:0.18, r:0.11, label:'金蟾·老者线下' },
+            scholar: { type:'abs', cx:0.82, cy:0.68, r:0.12, label:'书生·珍奇斋旁' }
         }
     },
 
@@ -2378,11 +2378,17 @@ const ShadowJudge = {
         if (Math.abs(dx) > 0.05) dirs.push(dx > 0 ? '往左' : '往右');
         if (Math.abs(dy) > 0.05) dirs.push(dy > 0 ? '往上' : '往下');
         var move = dirs.length ? dirs.join('、') + '挪挪' : '再挪挪';
-        // ===== 第二场（信中之秘）· 叙事化位置提示：用画面参照物+师傅口吻给方向 =====
+        // ===== 第二场（信中之秘）· 叙事化位置提示：用背景里真实的建筑名 =====
         if (sceneId === 'act1_scene2') {
-            if (pid === 'elder')  return '（师傅指了指大渊阁的门槛）老者——得站在这间铺子底下。' + move + '。';
-            if (pid === 'frog')   return '（师傅低头看了看地面）金蟾——在地上呢。它从来不上台面的。' + move + '。';
-            if (pid === 'scholar') return '（师傅沉默了一会儿）书生……他现在不在戏台上。\n他在信里面，从他的角度看——先看到的是大渊阁的牌子。' + move + '。';
+            if (pid === 'elder')  return '（师傅指了指中间那栋大渊阁的台阶）老者——得站在大渊阁底下。' + move + '。';
+            if (pid === 'frog')   return '（师傅低头看了看老者脚边）金蟾——在老者的三根线下面呢，得跟着老者走。' + move + '。';
+            if (pid === 'scholar') return '（师傅沉默了一会儿）书生……他现在不在戏台上。\n他在信里面，从他的角度望出去——右边那栋是珍奇斋。' + move + '。';
+        }
+        // 金蟾三级判定（rel→elder 时）：很远→"在老者线下面"(不给方向)；近但没到位→"跟着老者"+方向
+        if (rule.type === 'rel' && rule.to === 'elder') {
+            var frogFar = Math.max(rule.r * 2.0, 0.11);
+            if (dist > frogFar) return '（师傅摇头）金蟾——得在老者的三根线下面。';
+            return '（师傅摇头）金蟾，得跟着老者——' + move + '。';
         }
         // 信的三级判定（阈值基于容差r的倍数，不写死绝对值）
         if (rule.type === 'rel' && rule.to === 'scholar') {
@@ -3509,7 +3515,7 @@ const ShadowJudge = {
             if (placedIds.indexOf('frog')!==-1)
                 return '路师傅低头看着金蟾：\n「它趴在地上，不走。戏里它是被戏弄的，戏外——它是等我的。」';
             if (placedIds.indexOf('elder')!==-1)
-                return '路师傅站在大渊阁的门槛下，影子被灯光拉得很长：\n「这间铺子，我师父当年就在这儿摆摊。」';
+                return '路师傅站在大渊阁的台阶下，影子被灯光拉得很长：\n「大渊阁——我师父当年就在这底下摆摊。」';
             return '路师傅点了点头：影面齐了，位置也对了。';
         }
         // —— ③ 全对（或即兴场无阵容要求）：念戏词，把线索点出来 ——
@@ -3925,40 +3931,14 @@ const ShadowJudge = {
     function focusOnLetter(onDone) {
         var stage = document.getElementById('stage');
         if (!stage) { if (onDone) onDone(); return; }
-        var letter = stage.querySelector('.stage-puppet[data-puppet="letter"]');
-        if (!letter) {
-            // 兜底：若幕上无信皮影，临时放一枚，确保剧情流程不中断
-            letter = document.createElement('div');
-            letter.className = 'stage-puppet';
-            letter.setAttribute('data-puppet', 'letter');
-            letter.style.cssText = 'left:50%;top:42%;width:84px;height:112px;transform:translate(-50%,-50%);background:url("assets/images/letter.png") center/contain no-repeat;';
-            stage.appendChild(letter);
-        }
+        // 信发亮效果保留（letter-focus 视觉），但不再要求手动点击——0.8s 后自动进入第二场
         stage.classList.add('letter-focus');
-        var hint = document.createElement('div');
-        hint.className = 'letter-focus-hint';
-        hint.id = 'letterFocusHint';
-        hint.textContent = '▸ 点击那封信';
-        stage.appendChild(hint);
-        var hot = document.createElement('div');
-        hot.className = 'letter-focus-hotspot';
-        hot.id = 'letterFocusHotspot';
-        var sRect = stage.getBoundingClientRect();
-        var lRect = letter.getBoundingClientRect();
-        hot.style.left = (lRect.left - sRect.left) + 'px';
-        hot.style.top = (lRect.top - sRect.top) + 'px';
-        hot.style.width = lRect.width + 'px';
-        hot.style.height = lRect.height + 'px';
-        stage.appendChild(hot);
-        var done = function(e) {
-            if (e) { e.stopPropagation(); e.preventDefault(); }
-            hot.removeEventListener('click', done);
+        setTimeout(function() {
             stage.classList.remove('letter-focus');
             var h = document.getElementById('letterFocusHint'); if (h) h.remove();
             var hs = document.getElementById('letterFocusHotspot'); if (hs) hs.remove();
             playLetterReveal(onDone, '第二场&nbsp;&nbsp;·&nbsp;&nbsp;信中之秘');
-        };
-        hot.addEventListener('click', done);
+        }, 800);
     }
 
     // 进第二场（信中之秘）：设置场景后走统一入口 startCurrentScene（含 act2-bg 背景切换 + 完整旁白）
@@ -4609,7 +4589,7 @@ const ShadowJudge = {
                 var leftPct=t.cx*100, topPct=t.cy*100, wPct=t.r*200, hPct=t.r*200;
                 var placed = byId[pid];
                 var okNow = placed ? (Math.sqrt(Math.pow(placed.x-t.cx,2)+Math.pow(placed.y-t.cy,2))<=t.r) : false;
-                var col = okNow ? '90,230,140' : '255,180,90';
+                var col = okNow ? '90,230,140' : '0,180,255';   // 暖色背景上用青蓝替代橙，避免撞色
                 html += '<div style="position:absolute;left:'+leftPct+'%;top:'+topPct+'%;width:'+wPct+'%;height:'+hPct+'%;transform:translate(-50%,-50%);border:1.5px dashed rgba('+col+',0.9);border-radius:50%;background:rgba('+col+',0.08);"></div>';
                 html += '<div style="position:absolute;left:'+leftPct+'%;top:'+topPct+'%;transform:translate(-50%,-50%);font-size:10px;color:rgb('+col+');text-shadow:0 0 3px #000;white-space:nowrap;">'+rule.label+' ('+t.cx.toFixed(2)+','+t.cy.toFixed(2)+')</div>';
             });
