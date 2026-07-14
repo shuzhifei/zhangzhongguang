@@ -1469,7 +1469,7 @@ body {
 <!-- ====== 场次标题卡片 ====== -->
 <div class="act-title-overlay" id="actTitleOverlay">
     <div class="act-title-bg"></div>
-    <div class="act-title-text">第一场&nbsp;&nbsp;·&nbsp;&nbsp;月夜等人</div>
+    <div class="act-title-text">第一幕—第一场&nbsp;&nbsp;·&nbsp;&nbsp;月夜等人</div>
 </div>
 
 <div class="header">掌 中 光 · 第 一 幕 — 刘海戏金蟾</div>
@@ -2799,7 +2799,10 @@ const ShadowJudge = {
                     var se2 = document.getElementById('speaker');
                     var de2 = document.getElementById('dialogueText');
                     if (se2) se2.textContent = '路师傅';
-                    if (de2) de2.textContent = '要把皮影收回，得放回它自己的卡槽才行。';
+                    if (de2) {
+                        if (window.TheaterSystem && window.TheaterSystem.typewriter) window.TheaterSystem.typewriter(de2, '要把皮影收回，得放回它自己的卡槽才行。', 45);
+                        else de2.textContent = '要把皮影收回，得放回它自己的卡槽才行。';
+                    }
                 }
             }
         }
@@ -3732,6 +3735,7 @@ const ShadowJudge = {
     if (dialogueArea) dialogueArea.addEventListener('click', function(e) {
         if (e.target && e.target.id === 'btnEnterAct2') return; // 不拦截幕间"前往大栅栏"按钮
         if (e.target && e.target.id === 'showPlayBtn') return;  // 不拦截「展示皮影戏」按钮
+        if (e.target && (e.target.id === 'btnAsk' || e.target.id === 'btnConfirm' || e.target.id === 'btnNext')) return; // 不拦截控制按钮——否则点击后事件冒泡触发 fastForwardTyping 把刚生成的话瞬间补全
         if (fastForwardTyping()) return;                        // 生成中点击空白 → 直接生成完毕
         onDialogueAdvance();
     });
@@ -4189,6 +4193,12 @@ const ShadowJudge = {
             if (finished) return; finished = true;
             try { v.pause(); } catch (e) {}
             if (ov.parentNode) ov.parentNode.removeChild(ov);
+            // 视频结束：把播放前为防穿帮隐藏的幕中皮影(.stage-puppet)与提示(.stage-hint)恢复显示，
+            // 让后续「点对话框→路师傅点评→信发亮(聚焦)」流程里人物与信都正常可见、可点击
+            if (stageEl) {
+                stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
+                var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
+            }
             if (onDone) onDone();
         }
         v.addEventListener('ended', finish);
@@ -4220,6 +4230,12 @@ const ShadowJudge = {
             if (finished) return; finished = true;
             try { v.pause(); } catch (e) {}
             if (ov.parentNode) ov.parentNode.removeChild(ov);
+            // 视频结束：把播放前为防穿帮隐藏的幕中皮影(.stage-puppet)与提示(.stage-hint)恢复显示，
+            // 让后续「点对话框→路师傅点评→信发亮(聚焦)」流程里人物与信都正常可见、可点击
+            if (stageEl) {
+                stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
+                var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
+            }
             if (onDone) onDone();
         }
         v.addEventListener('ended', finish);
@@ -4244,16 +4260,37 @@ const ShadowJudge = {
             var act2Info = (ACTS_DATA && ACTS_DATA.acts && ACTS_DATA.acts[1]) ? ACTS_DATA.acts[1] : null;
             var isAct2FinalTransition = (gameState.currentAct === 2 && act2Info && (gameState.currentScene + 1) >= act2Info.scenes.length);
             if (isFirstScene) {
-            // 第一场：帘子合上 → 停1秒 → 帘子拉开 → 播放 mp4 动画 → 点对话框 → 路师傅点评 → 信发亮(聚焦) → 点信 → 信全屏打开 → 白光 → 进第二场（正规剧情流程）
+            // 第一场：帘子合上 → 停1秒 → 帘子拉开 → 播放 mp4 动画 → 点对话框 → 路师傅点评 → 信发亮(聚焦) → 点信 → 信全屏打开 → 白光 → 进第二场（还原"之前的代码"正规剧情流程）
             playCurtainCloseThenOpen(function() {
                 hideShowPlayBtn();
                 narrationActive = false;
                 setNarrationLock(false);
                 playAct1ShowVideo(function() {
-                    // 动画播完：帘子合拢收尾 → 拉开时让幕上的信发亮（视觉引导）
-                    playCurtainCloseThenOpen(null, function() {
-                        focusOnLetter(enterAct2Directly);
-                    });
+                    // 动画播完：必须先在对话框点一下，路师傅才点评（等待期间锁定皮影箱，避免误操作）
+                    document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.add('locked'); });
+                    var dlgArea = document.querySelector('.dialogue-area');
+                    var cmtHint = document.createElement('div');
+                    cmtHint.textContent = '▸ 点击对话框继续';
+                    cmtHint.style.cssText = 'text-align:center;color:#e8c97a;font-size:13px;letter-spacing:2px;padding:8px 0;opacity:.85;';
+                    if (dlgArea) dlgArea.appendChild(cmtHint);
+                    var cmtStarted = false;
+                    function startComment() {
+                        if (cmtStarted) return; cmtStarted = true;
+                        if (dlgArea) dlgArea.removeEventListener('click', onDlgClick);
+                        if (cmtHint && cmtHint.parentNode) cmtHint.parentNode.removeChild(cmtHint);
+                        document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.remove('locked'); });
+                        speaker.textContent = '路师傅';
+                        typewriter(dialogueText, '第一幕表现的不错，快点击书生手中的信进行第二场的表演吧。', 48);
+                        waitForTypingDoneThen(function() {
+                            // 点评完 1 秒后，信发亮（聚焦幕上信皮影，引导玩家点击）—— 正规剧情流程入口
+                            setTimeout(function() { focusOnLetter(enterAct2Directly); }, 1000);
+                        });
+                    }
+                    function onDlgClick(e) {
+                        if (e.target && (e.target.id === 'showPlayBtn' || e.target.id === 'btnEnterAct2')) return;
+                        startComment();
+                    }
+                    if (dlgArea) dlgArea.addEventListener('click', onDlgClick);
                 });
             });
         } else if (isAct2FinalTransition) {
@@ -4332,11 +4369,13 @@ const ShadowJudge = {
         ov.innerHTML = '<div class="act-title-bg"></div><div class="act-title-text">'+actTitle+'</div>';
         document.body.appendChild(ov);
         requestAnimationFrame(function(){ requestAnimationFrame(function(){ ov.classList.add('visible'); }); });
-        setTimeout(function(){ ov.classList.add('fade-out'); }, 2600);
-        setTimeout(function(){ if (ov.parentNode) ov.parentNode.removeChild(ov); }, 4300);
+        setTimeout(function(){ ov.classList.add('fade-out'); }, 1300);
+        setTimeout(function(){ if (ov.parentNode) ov.parentNode.removeChild(ov); }, 2300);
     }
 
     // 点击信件后：全屏展示信的正面 → 信从中线打开 → 背景渐白 → 维持 → 淡出还原；白光铺满后叠加场次标题卡
+    // 点击信件后：信正面铺满→打开→白光→标题卡；白光铺满时先在幕中放下「合拢」的帘子，
+    // 标题卡淡出后帘子缓缓拉开，同时进入第二场、对话框开始生成「信中之秘……」台词
     function playLetterReveal(onDone, actTitle) {
         var overlay = document.createElement('div');
         overlay.id = 'letterReveal';
@@ -4347,28 +4386,76 @@ const ShadowJudge = {
             +   '<div class="letter-half letter-half-r"></div>'
             + '</div>';
         document.body.appendChild(overlay);
+        var curtainWrap = null;
         setTimeout(function() { overlay.classList.add('play'); }, 450);
         setTimeout(function() { overlay.classList.add('to-white'); }, 1450);
-        setTimeout(function() { if (onDone) onDone(); }, 2200);
-        setTimeout(function() { overlay.classList.add('fading'); }, 4150);
-        setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 5050);
-        if (actTitle) {
-            setTimeout(function() { showActTitle(actTitle); }, 2600);
-        }
+        // 白光铺满后，在幕中放下「合拢」的帘子（此刻仍被白光盖住，玩家看不见）
+        setTimeout(function() {
+            curtainWrap = document.createElement('div');
+            curtainWrap.className = 'curtain-close-wrap curtain-close-active';
+            curtainWrap.innerHTML = '<div class="curtain-close-left"></div><div class="curtain-close-right"></div>';
+            curtainWrap.style.cssText = 'position:absolute!important;inset:0!important;z-index:60!important;display:flex!important;overflow:hidden!important;pointer-events:none!important;';
+            var stageEl = document.getElementById('stage');
+            (stageEl || document.body).appendChild(curtainWrap);
+            void curtainWrap.offsetHeight;
+        }, 1500);
+        // 标题卡（第二场场次名）
+        if (actTitle) setTimeout(function() { showActTitle(actTitle); }, 1900);
+        setTimeout(function() { overlay.classList.add('fading'); }, 2300);
+        setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 3200);
+        // 帘子还合着时，提前把舞台背景切到第二场（大栅栏街景），拉开瞬间不会露馅
+        setTimeout(function() {
+            var stageElS = document.getElementById('stage');
+            if (stageElS) {
+                stageElS.classList.remove('night');
+                stageElS.classList.add('act2-bg');
+                stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
+                stageElS.style.backgroundSize = 'cover';
+                stageElS.style.backgroundPosition = 'center bottom';
+            }
+        }, 3000);
+        // 标题卡淡出 → 帘子缓缓拉开，同时进入第二场、对话框生成「信中之秘……」
+        setTimeout(function() {
+            if (curtainWrap) curtainWrap.classList.add('curtain-open-active');
+            if (onDone) onDone();
+            setTimeout(function() { if (curtainWrap && curtainWrap.parentNode) curtainWrap.parentNode.removeChild(curtainWrap); }, 1300);
+        }, 3700);
     }
 
-    // 舞台聚焦「信」：背景虚化压暗，唯有信发亮，引导玩家点击
+    // 舞台聚焦「信」：背景虚化压暗，唯有信发亮，引导玩家点击信件
     function focusOnLetter(onDone) {
         var stage = document.getElementById('stage');
         if (!stage) { if (onDone) onDone(); return; }
-        // 信发亮效果保留（letter-focus 视觉），但不再要求手动点击——0.8s 后自动进入第二场
+        var letter = stage.querySelector('.stage-puppet[data-puppet="letter"]');
+        if (!letter) { if (onDone) onDone(); return; }   // 没有信则直接进下一场
         stage.classList.add('letter-focus');
-        setTimeout(function() {
+        // 引导文字
+        var hint = document.createElement('div');
+        hint.className = 'letter-focus-hint';
+        hint.id = 'letterFocusHint';
+        hint.textContent = '▸ 点击那封信';
+        stage.appendChild(hint);
+        // 信上方透明点击热区（避免触发拖动/翻转）
+        var hot = document.createElement('div');
+        hot.className = 'letter-focus-hotspot';
+        hot.id = 'letterFocusHotspot';
+        var sRect = stage.getBoundingClientRect();
+        var lRect = letter.getBoundingClientRect();
+        hot.style.left = (lRect.left - sRect.left) + 'px';
+        hot.style.top = (lRect.top - sRect.top) + 'px';
+        hot.style.width = lRect.width + 'px';
+        hot.style.height = lRect.height + 'px';
+        stage.appendChild(hot);
+        var done = function(e) {
+            if (e) { e.stopPropagation(); e.preventDefault(); }
+            hot.removeEventListener('click', done);
             stage.classList.remove('letter-focus');
             var h = document.getElementById('letterFocusHint'); if (h) h.remove();
             var hs = document.getElementById('letterFocusHotspot'); if (hs) hs.remove();
-            playLetterReveal(onDone, '信中之秘');
-        }, 800);
+            // 点击信件 → 信的正面铺满全屏、打开、背景变白，再进下一场
+            playLetterReveal(onDone, '第一幕—第二场&nbsp;&nbsp;·&nbsp;&nbsp;信中之秘');
+        };
+        hot.addEventListener('click', done);
     }
 
     // 进第二场（信中之秘）：设置场景后走统一入口 startCurrentScene（含 act2-bg 背景切换 + 完整旁白）
@@ -4602,7 +4689,7 @@ const ShadowJudge = {
         stage.classList.add('stage-dark');
         if(flame)flame.classList.add('flame-gone');
         speaker.textContent='路师傅'; if(typewriterTimer)clearInterval(typewriterTimer);
-        typewriter(dialogueText, '灯——灭了。', 0); btnConfirm.disabled=true; btnAsk.disabled=true;
+        typewriter(dialogueText, '灯——灭了。', 45); btnConfirm.disabled=true; btnAsk.disabled=true;
     });
 
     // 把油灯拖到幕中：路师傅即时提示（与熄灭机制呼应——点一下即可让其消失）
@@ -4753,6 +4840,10 @@ const ShadowJudge = {
             }
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
+            // 第二场专属：开场先用「信中之秘……」点题，再接路师傅的引子（与帘子拉开同步生成）
+            if (gameState.currentAct===1 && gameState.currentScene===1) {
+                EventBus.emit('narration_chunk', { speaker:'路师傅', text:'信中之秘……', speed:60 });
+            }
             // AI生成场景开场白（替代硬编码的scene.name+description）
             if (!window.OFFLINE_MODE && typeof AI !== 'undefined') {
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:'（路师傅看着白布，缓缓开口……）', speed:50 });
@@ -4994,7 +5085,7 @@ const ShadowJudge = {
         var se=document.getElementById('speaker'),de=document.getElementById('dialogueText');
         if(se)se.textContent=speakerText||'';
         if(de){
-            if(window.TheaterSystem&&window.TheaterSystem.typewriter){ window.TheaterSystem.typewriter(de, text||'', 0); }
+            if(window.TheaterSystem&&window.TheaterSystem.typewriter){ window.TheaterSystem.typewriter(de, text||'', 45); }
             else { de.textContent=text||''; }
         }
     }
