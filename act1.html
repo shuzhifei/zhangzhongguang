@@ -2850,12 +2850,15 @@ const ShadowJudge = {
         updateMoonNight();
     }
 
-    // ===== 老者「舞线」操纵杆：两根红线顶端各一操纵杆。按住【左杆】往右拖，老者像卡牌一样实时翻转 =====
-    //   翻转进度 p：0=朝左(默认)，1=朝右。左杆在轨道 xL..xR 上的横向位置 = p；scaleX=cos(p·π) 做卡牌翻面。
-    //   实时跟踪：拖到哪、翻到哪；松手吸附到最近端(0 或 1)。
+    // ===== 老者「舞线」操纵杆（皮影艺人手感版）=====
+    //   · 细长竹签 + 小操纵珠，两杆贴双肩、靠得近；红线细，从双肩连到竹签底。
+    //   · 左杆可在【虚线范围框】内 2D 自由拖动；只有横向位移影响翻转。
+    //   · 翻转实时跟踪：左杆在右杆(pivot)左侧→scaleX 1..0；刚好到右杆身上→0(一条线)；
+    //     移到右杆【右边】→0..-1(完全翻转朝右)。松手：越过右杆则定格翻转，否则回弹；超框回弹到边缘。
     function setupElderRods(elderEl) {
-        // 清掉旧的操纵杆（重摆老者时重建）
         if (stage._elderRodCleanup) stage._elderRodCleanup();
+
+        var STICK_BOTTOM = 56;   // 竹签底相对操纵珠中心的下移量（红线落点）
 
         var ctrl = document.createElement('div');
         ctrl.className = 'elder-rod-ctrl';
@@ -2864,38 +2867,56 @@ const ShadowJudge = {
         var svgNS = 'http://www.w3.org/2000/svg';
         var svg = document.createElementNS(svgNS, 'svg');
         svg.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;';
+        // 范围框（像坐标范围一样虚线标注）
+        var box = document.createElementNS(svgNS, 'rect');
+        box.setAttribute('fill', 'rgba(0,190,255,0.05)');
+        box.setAttribute('stroke', 'rgba(0,190,255,0.55)');
+        box.setAttribute('stroke-width', '1.3');
+        box.setAttribute('stroke-dasharray', '6 4');
+        box.setAttribute('rx', '4');
+        svg.appendChild(box);
+        var boxLabel = document.createElementNS(svgNS, 'text');
+        boxLabel.setAttribute('fill', 'rgba(0,190,255,0.8)');
+        boxLabel.setAttribute('font-size', '11');
+        boxLabel.textContent = '操纵范围';
+        svg.appendChild(boxLabel);
+        // 细红线（双肩→竹签底）
         var lineL = document.createElementNS(svgNS, 'line');
         var lineR = document.createElementNS(svgNS, 'line');
         [lineL, lineR].forEach(function(ln) {
-            ln.setAttribute('stroke', 'rgba(220,40,40,0.95)');   // 红线
-            ln.setAttribute('stroke-width', '3');                 // 更明显
+            ln.setAttribute('stroke', 'rgba(220,40,40,0.9)');
+            ln.setAttribute('stroke-width', '1.4');       // 细线
             ln.setAttribute('stroke-linecap', 'round');
             svg.appendChild(ln);
         });
         ctrl.appendChild(svg);
 
-        // grabbable=true 的杆才可按住拖动
-        function makeDot(grabbable) {
+        // 细长竹签 + 小操纵珠。grabbable=true 才能按住拖
+        function makeRod(grabbable) {
             var d = document.createElement('div');
-            d.style.cssText = 'position:absolute;width:18px;height:18px;margin-left:-9px;margin-top:-9px;border-radius:50%;'
-                + 'background:radial-gradient(circle at 35% 30%,#ffd7d7,#c22020);border:1px solid #6b1f1f;'
-                + 'box-shadow:0 1px 4px rgba(0,0,0,0.55);z-index:9;'
-                + 'cursor:' + (grabbable ? 'grab' : 'default') + ';pointer-events:' + (grabbable ? 'auto' : 'none') + ';';
-            var stick = document.createElement('div');   // 小棒（抬高：更长）
-            stick.style.cssText = 'position:absolute;left:50%;bottom:15px;width:4px;height:40px;margin-left:-2px;'
-                + 'background:linear-gradient(to bottom,#7a1010,#d23636);border-radius:2px;box-shadow:0 0 2px rgba(0,0,0,0.45);';
+            d.style.cssText = 'position:absolute;width:16px;height:66px;margin-left:-8px;margin-top:-4px;'
+                + 'z-index:9;cursor:' + (grabbable ? 'grab' : 'default') + ';'
+                + 'pointer-events:' + (grabbable ? 'auto' : 'none') + ';'
+                + (grabbable ? '' : 'opacity:0.72;');
+            var bead = document.createElement('div');   // 小操纵珠（缩小）
+            bead.style.cssText = 'position:absolute;left:50%;top:0;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;'
+                + 'background:radial-gradient(circle at 35% 30%,#f2e4c4,#9a6a2a);border:1px solid #5a3a12;'
+                + 'box-shadow:0 1px 2px rgba(0,0,0,0.5);';
+            var stick = document.createElement('div');  // 细长竹签
+            stick.style.cssText = 'position:absolute;left:50%;top:7px;width:2px;height:52px;margin-left:-1px;'
+                + 'background:linear-gradient(to bottom,#6a4520,#96652e);border-radius:1px;';
             d.appendChild(stick);
+            d.appendChild(bead);
             return d;
         }
-        var dotL = makeDot(true), dotR = makeDot(false);
-        dotL.title = '按住我，往右拖，老者就转身';
+        var dotL = makeRod(true), dotR = makeRod(false);
+        dotL.title = '按住我，越过右边那根杆，老者就转身';
         ctrl.appendChild(dotL);
         ctrl.appendChild(dotR);
         stage.appendChild(ctrl);
 
-        // p：翻转进度 0(朝左)→1(朝右)。初始按当前 flipped 状态
-        var p = elderEl.classList.contains('flipped') ? 1 : 0;
         var dragging = false;
+        var rodX = 0, rodY = 0;   // 左杆操纵珠当前坐标
 
         function geom() {
             return {
@@ -2905,40 +2926,57 @@ const ShadowJudge = {
                 h: elderEl.offsetHeight || 140
             };
         }
-        // 老者身上两个连线锚点（左右对称，肩部）
+        // 双肩锚点（靠近对称）
         function anchors(g) {
-            return { L: { x: g.l + g.w * 0.34, y: g.t + g.h * 0.10 },
-                     R: { x: g.l + g.w * 0.66, y: g.t + g.h * 0.10 } };
+            return { L: { x: g.l + g.w * 0.40, y: g.t + g.h * 0.14 },
+                     R: { x: g.l + g.w * 0.60, y: g.t + g.h * 0.14 } };
         }
-        // 操纵杆横向轨道 + 抬高后的高度
+        // 轨道：左杆静止位 xL(左肩上)、右杆(pivot) xPivot(右肩上，靠近)、翻转终点 xEnd(右杆右侧,镜像)
         function track(g) {
-            return { xL: g.l + g.w * 0.28, xR: g.l + g.w * 0.72, y: g.t - 72 };
+            var xL = g.l + g.w * 0.42;
+            var xPivot = g.l + g.w * 0.58;
+            var xEnd = 2 * xPivot - xL;          // 关于右杆镜像 → 到 xEnd 时 q=1
+            var restY = g.t - 66;
+            return {
+                xL: xL, xPivot: xPivot, xEnd: xEnd, restY: restY,
+                boxL: xL - 16, boxR: xEnd + 16, boxT: restY - 40, boxB: restY + 40
+            };
         }
+        function progress(tk) { return Math.max(0, Math.min(1, (rodX - tk.xL) / (tk.xEnd - tk.xL))); }
         function setLine(ln, a, b) { ln.setAttribute('x1', a.x); ln.setAttribute('y1', a.y); ln.setAttribute('x2', b.x); ln.setAttribute('y2', b.y); }
         function place(el, pt) { el.style.left = pt.x + 'px'; el.style.top = pt.y + 'px'; }
 
-        // 按 p 渲染：左杆在轨道上滑动，老者做卡牌翻转 scaleX=cos(p·π)
         function render() {
             var g = geom(), an = anchors(g), tk = track(g);
-            var lx = tk.xL + (tk.xR - tk.xL) * p;    // 左杆随 p 从左滑到右
-            place(dotL, { x: lx,    y: tk.y });
-            place(dotR, { x: tk.xR, y: tk.y });      // 右杆固定在右侧作参照
-            setLine(lineL, an.L, { x: lx,    y: tk.y });
-            setLine(lineR, an.R, { x: tk.xR, y: tk.y });
-            // 卡牌翻转：p=0→scaleX 1(朝左)；p=0.5→0(立起来一条缝)；p=1→-1(朝右)
-            elderEl.style.transform = 'scaleX(' + Math.cos(p * Math.PI).toFixed(4) + ')';
+            var q = progress(tk);
+            place(dotL, { x: rodX, y: rodY });
+            place(dotR, { x: tk.xPivot, y: tk.restY });     // 右杆固定=参照(pivot)
+            setLine(lineL, an.L, { x: rodX, y: rodY + STICK_BOTTOM });
+            setLine(lineR, an.R, { x: tk.xPivot, y: tk.restY + STICK_BOTTOM });
+            box.setAttribute('x', tk.boxL); box.setAttribute('y', tk.boxT);
+            box.setAttribute('width', tk.boxR - tk.boxL); box.setAttribute('height', tk.boxB - tk.boxT);
+            boxLabel.setAttribute('x', tk.boxL + 2); boxLabel.setAttribute('y', tk.boxT - 4);
+            // 卡牌翻转：q=0→1(朝左)；q=0.5(左杆到右杆身上)→0(一条线)；q=1(右杆右侧)→-1(朝右)
+            elderEl.style.transform = 'scaleX(' + Math.cos(q * Math.PI).toFixed(4) + ')';
         }
-        render();
+        // 非拖动时按 flipped 状态把左杆归位（朝左→xL；朝右→xEnd）
+        function layout() {
+            var tk = track(geom());
+            rodY = tk.restY;
+            rodX = elderEl.classList.contains('flipped') ? tk.xEnd : tk.xL;
+            render();
+        }
+        layout();
 
-        // —— 拖动左杆：实时跟踪，横向位置映射到 p ——
+        // —— 拖左杆：范围内 2D 自由移动，仅横向影响翻转 ——
         function pointer(e) { return (e.touches && e.touches[0]) ? e.touches[0] : e; }
         function onMove(e) {
             if (!dragging) return;
-            var mv = pointer(e);
-            var rect = stage.getBoundingClientRect();
-            var mx = mv.clientX - rect.left;
-            var g = geom(), tk = track(g);
-            p = Math.max(0, Math.min(1, (mx - tk.xL) / (tk.xR - tk.xL)));
+            var mv = pointer(e), rect = stage.getBoundingClientRect();
+            var mx = mv.clientX - rect.left, my = mv.clientY - rect.top;
+            var tk = track(geom());
+            rodX = Math.max(tk.boxL, Math.min(tk.boxR, mx));   // 超框→夹到边缘
+            rodY = Math.max(tk.boxT, Math.min(tk.boxB, my));
             render();
             if (e.cancelable) e.preventDefault();
         }
@@ -2950,10 +2988,12 @@ const ShadowJudge = {
             document.removeEventListener('mouseup', onUp);
             document.removeEventListener('touchmove', onMove);
             document.removeEventListener('touchend', onUp);
-            settle(p < 0.5 ? 0 : 1);   // 吸附到最近端
+            var tk = track(geom());
+            // 越过右杆(q>=0.5=到 xPivot)才定格翻转，否则回弹；无论如何回到边缘静止位
+            settle(progress(tk) >= 0.5 ? 1 : 0);
         }
         function onDown(e) {
-            e.stopPropagation(); e.preventDefault();   // 阻止触发老者本体拖拽
+            e.stopPropagation(); e.preventDefault();     // 别触发老者本体拖拽
             dragging = true;
             dotL.style.cursor = 'grabbing';
             document.addEventListener('mousemove', onMove);
@@ -2964,35 +3004,40 @@ const ShadowJudge = {
         dotL.addEventListener('mousedown', onDown);
         dotL.addEventListener('touchstart', onDown, { passive: false });
 
-        // 松手后短平滑吸附到 target(0/1)，并同步 flipped class 给其他系统
+        // 松手平滑吸附到边缘静止位；仅当翻转状态真的变化才扣油(emit)
         function settle(target) {
-            var from = p, t0 = null, dur = 160;
+            var tk = track(geom());
+            var toX = target ? tk.xEnd : tk.xL, toY = tk.restY;
+            var fromX = rodX, fromY = rodY;
+            var wasFlipped = elderEl.classList.contains('flipped') ? 1 : 0;
+            var t0 = null, dur = 180;
             function fr(ts) {
                 if (t0 === null) t0 = ts;
                 var k = Math.min((ts - t0) / dur, 1);
-                var ease = 0.5 - 0.5 * Math.cos(k * Math.PI);
-                p = from + (target - from) * ease;
+                var e = 0.5 - 0.5 * Math.cos(k * Math.PI);
+                rodX = fromX + (toX - fromX) * e;
+                rodY = fromY + (toY - fromY) * e;
                 render();
                 if (k < 1) { requestAnimationFrame(fr); }
                 else {
-                    p = target;
-                    if (target === 1) elderEl.classList.add('flipped');
-                    else elderEl.classList.remove('flipped');
+                    rodX = toX; rodY = toY;
+                    if (target) elderEl.classList.add('flipped'); else elderEl.classList.remove('flipped');
                     render();
-                    EventBus.emit('puppet_flipped', { id: 'elder' });
+                    if (target !== wasFlipped) EventBus.emit('puppet_flipped', { id: 'elder' });
                 }
             }
             requestAnimationFrame(fr);
         }
 
-        // 老者被拖动 → 操纵杆跟随（guard：ctrl 脱离 DOM 后空转）
-        var moveHandler = function(d) { if (!ctrl.parentNode) return; if (d && d.id === 'elder' && !dragging) render(); };
+        // 老者被拖动 → 操纵杆整体跟随
+        var moveHandler = function(d) { if (!ctrl.parentNode) return; if (d && d.id === 'elder' && !dragging) layout(); };
         var removeHandler = function(d) { if (d && d.id === 'elder' && stage._elderRodCleanup) stage._elderRodCleanup(); };
         EventBus.on('puppet_moved', moveHandler);
         EventBus.on('puppet_removed', removeHandler);
 
         stage._elderRodCleanup = function() {
             if (ctrl.parentNode) ctrl.remove();
+            elderEl.style.transform = '';   // 归还给 .flipped class
             if (EventBus.off) { EventBus.off('puppet_moved', moveHandler); EventBus.off('puppet_removed', removeHandler); }
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
