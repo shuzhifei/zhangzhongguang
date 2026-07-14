@@ -2442,7 +2442,7 @@ const ShadowJudge = {
             if (unflipped.length > 0) {
                 correct = false;
                 return { score: Math.max(0, score - 15), correct: false,
-                         comment: '路师傅没点头：「差着呢。有啥拿不准的，问我便是。」', needFlip: true };
+                         comment: '路师傅没点头：「差着呢，要不再试试呢。有啥拿不准的，问我便是。」', needFlip: true };
             }
         }
         // ===== 确认按钮只说简短判断（对/不对），具体提示留给"追问师傅" =====
@@ -2456,7 +2456,7 @@ const ShadowJudge = {
             spatial:{score:Math.round(coverage*25*0.6),comment:''},
             plot_detail:{score:Math.round(coverage*25*0.6),comment:''},
             authenticity:{score:coverage>=0.8?16:6,comment:''},
-            comment: correct ? (okComments[currentSceneId] || ('这一面，齐了。\n\n（师傅微微点了点头）\n影儿都摆到了位子，戏味出来了。')) : '路师傅没点头：「差着呢。有啥拿不准的，问我便是。」',
+            comment: correct ? (okComments[currentSceneId] || ('这一面，齐了。\n\n（师傅微微点了点头）\n影儿都摆到了位子，戏味出来了。')) : '路师傅没点头：「差着呢，要不再试试呢。有啥拿不准的，问我便是。」',
             guiding_hint: ''   // 不在此处给提示——追问师傅才给详情
         };
     },
@@ -3781,7 +3781,7 @@ const ShadowJudge = {
                 });
                 if (unflipped.length > 0) {
                     var flipNames = unflipped.join('和');
-                    parts.push('路师傅指了指' + flipNames + '：\n「它还没转过身来——戏里它得面朝这边演。\n你按住那根竹签，把它舞到对面去。」');
+                    parts.push('路师傅眯了眯眼，没直接说破——\n「老者舞戏，总爱背着瀚墨斋站。你瞧，他现在……面朝哪儿呢？」\n（他顿了顿，视线落在老者肩头那两根红线上）\n「这杆子——是能动的。」');
                 }
             }
         }
@@ -3801,7 +3801,7 @@ const ShadowJudge = {
                 return '路师傅点了点头：\n「书生打开了信封——从信里望出去，首先看到的，就是熟悉的珍奇斋。」';
             // 只有老者 → 瀚墨斋朝向叙事 + 翻转提示（老者背着瀚墨斋、面朝右才有安全感）
             if (placedIds.indexOf('elder')!==-1)
-                return '路师傅眯了眯眼：\n「老者舞戏，总爱背着瀚墨斋站——\n面朝这边，心里才踏实些。」\n（他指了指老者）「按住竹签，把他舞过来——别让他背对着戏台。」';
+                return '路师傅眯了眯眼：\n「老者舞戏，总爱背着瀚墨斋站——面朝这边，心里才踏实些。」\n（他顿了顿）「你瞧瞧他现在……是不是反了？」';
             // 只有金蟾
             if (placedIds.indexOf('frog')!==-1)
                 return '路师傅低头看了看：\n「金蟾——得跟着老者走。它自己不会动的。」';
