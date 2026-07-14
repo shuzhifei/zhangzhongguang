@@ -3757,7 +3757,15 @@ const ShadowJudge = {
                 staged.forEach(function(p) {
                     if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
                         var el = document.querySelector('.stage-puppet[data-puppet="' + p.puppetId + '"]');
-                        if (el && !el.classList.contains('flipped')) unflipped.push(getPuppetName(p.puppetId));
+                        if (el) {
+                            var hasClass = el.classList.contains('flipped');
+                            // 兜底：操纵杆实时跟踪时 style.transform 会有 scaleX(-1) 但 classList 可能还没 settle
+                            var tx = el.style.transform || '';
+                            var hasNegScaleX = tx.indexOf('scaleX(-') !== -1 || tx.indexOf('scaleX(-0') !== -1;
+                            var isFlipped = hasClass || hasNegScaleX;
+                            console.log('[flip-check] ' + p.puppetId + ': class=' + hasClass + ', transform=' + tx + ', final=' + isFlipped);
+                            if (!isFlipped) unflipped.push(getPuppetName(p.puppetId));
+                        }
                     }
                 });
                 if (unflipped.length > 0) {
