@@ -3296,8 +3296,14 @@ const ShadowJudge = {
             btn.onmouseenter = function() { btn.style.background = 'rgba(100,45,18,0.9)'; };
             btn.onmouseleave = function() { btn.style.background = 'rgba(74,31,10,0.7)'; };
             btn.onclick = function() {
+                // —— 切换优先级：点击瞬间立即终止一切在播字幕，绝不让旧台词续打 ——
+                if (window.stopAllDialogue) window.stopAllDialogue();
+                // 默认「第一场全通过」：跳到第二场即视为第一场已通关，状态保持一致
+                gameState.passedScenes = gameState.passedScenes || {};
+                gameState.passedScenes['act1_scene1'] = true;
                 var doJump = function() {
                     try {
+                        if (window.stopAllDialogue) window.stopAllDialogue(); // 防御性再清一次
                         EventBus.emit('countdown_stop_request');
                         gameState.currentAct = 1;
                         gameState.currentScene = targetScene;
@@ -3699,6 +3705,19 @@ const ShadowJudge = {
         return true;
     }
     window.fastForwardTyping = fastForwardTyping;
+
+    // 立即终止一切正在/即将播放的字幕：清掉打字机定时器、移除半句残影、清空旁白队列、停 TTS、解锁说戏。
+    // 用于「跳到第二场」等需要强制切场的场景——保证切换优先级高于任何在播字幕。
+    window.stopAllDialogue = function() {
+        if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
+        if (twEntry && twEntry.parentNode) twEntry.parentNode.removeChild(twEntry); // 移除正在逐字的半句，避免残留冻结文字
+        twEntry = null; twFull = '';
+        narrationQueue = [];
+        setSpeaking(false);
+        if (typeof hideNarrationHint === 'function') hideNarrationHint();
+        if (typeof stopTTS === 'function') stopTTS();
+        console.log('[stopAllDialogue] 已强制终止在播字幕');
+    };
 
     // ===== 脚本字幕"点击推进"队列系统 =====
     // 脚本化旁白(开场白/场次描述/操作提示/幕间/结局)进入队列，玩家点击才出下一条；
