@@ -2728,21 +2728,8 @@ const ShadowJudge = {
                             }, 2000);
                         })(puppetEl);
                     }
-                } else {
-                    // 单击 → 左右翻转（Web Animations API 控制动画，两个方向一致）
-                    var wasFlipped = puppetEl.classList.contains('flipped');
-                    puppetEl.classList.toggle('flipped');
-                    var fromScale = wasFlipped ? -1 : 1;
-                    var toScale   = wasFlipped ?  1 : -1;
-                    puppetEl.animate([
-                        { transform: 'scaleX(' + fromScale + ')', opacity: 1 },
-                        { transform: 'scaleX(0)',                 opacity: 0.5, offset: 0.5 },
-                        { transform: 'scaleX(' + toScale   + ')', opacity: 1 }
-                    ], { duration: 380, easing: 'ease-in-out' });
-                    puppetEl.style.opacity = '1';
-                    puppetEl.style.pointerEvents = '';
-                    EventBus.emit('puppet_flipped', { id: puppetId });
                 }
+                // 非油灯皮影单击不再翻转（只能通过操纵杆翻）
             } else if (onStage) {
                 // clone 左上角相对于舞台 = 放置位置
                 puppetEl.style.left = (cloneRect.left - stageRect.left) + 'px';
@@ -3781,7 +3768,14 @@ const ShadowJudge = {
                 });
                 if (unflipped.length > 0) {
                     var flipNames = unflipped.join('和');
-                    parts.push('路师傅眯了眯眼，没直接说破——\n「老者舞戏，总爱背着瀚墨斋站。你瞧，他现在……面朝哪儿呢？」\n（他顿了顿，视线落在老者肩头那两根红线上）\n「这杆子——是能动的。」');
+                    // 根据实际未翻的皮影动态生成提示
+                    if (flipNames === '老者') {
+                        parts.push('路师傅眯了眯眼：\n「老者舞戏，总爱背着瀚墨斋站——面朝这边，心里才踏实些。」\n（他顿了顿）「你瞧瞧他现在……是不是反了？」');
+                    } else if (flipNames === '金蟾') {
+                        parts.push('路师傅低头看了看金蟾：\n「这小东西——它得跟着老者的方向走。你看看它……脸朝哪边了？」\n（视线落在金蟾肩头的红线上）「杆能动，试试看？」');
+                    } else {
+                        parts.push('路师傅眯了眯眼，没直接说破——\n「它们得面朝戏台演。你瞧瞧' + flipNames + '……现在朝哪呢？」\n（视线落在那两根红线上）「这杆子——是能动的。」');
+                    }
                 }
             }
         }
