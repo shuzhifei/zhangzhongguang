@@ -2858,7 +2858,8 @@ const ShadowJudge = {
     function setupElderRods(elderEl) {
         if (stage._elderRodCleanup) stage._elderRodCleanup();
 
-        var STICK_BOTTOM = 56;   // 竹签底相对操纵珠中心的下移量（红线落点）
+        var ROD_H = 74;     // 竹签整体高（手持端在上，越高越挑）
+        var BEAD_R = 3;     // 操纵珠半径（更细）
 
         var ctrl = document.createElement('div');
         ctrl.className = 'elder-rod-ctrl';
@@ -2891,20 +2892,20 @@ const ShadowJudge = {
         });
         ctrl.appendChild(svg);
 
-        // 细长竹签 + 小操纵珠。grabbable=true 才能按住拖
+        // 细长竹签（手持端在上）+ 底部小操纵珠（连线端，上下颠倒）。grabbable=true 才能按住拖
         function makeRod(grabbable) {
             var d = document.createElement('div');
-            d.style.cssText = 'position:absolute;width:16px;height:66px;margin-left:-8px;margin-top:-4px;'
+            d.style.cssText = 'position:absolute;width:14px;height:' + ROD_H + 'px;'
                 + 'z-index:9;cursor:' + (grabbable ? 'grab' : 'default') + ';'
                 + 'pointer-events:' + (grabbable ? 'auto' : 'none') + ';'
                 + (grabbable ? '' : 'opacity:0.72;');
-            var bead = document.createElement('div');   // 小操纵珠（缩小）
-            bead.style.cssText = 'position:absolute;left:50%;top:0;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;'
+            var stick = document.createElement('div');  // 细长竹签（在上，手持端）
+            stick.style.cssText = 'position:absolute;left:50%;top:0;width:2px;height:' + (ROD_H - BEAD_R * 2) + 'px;margin-left:-1px;'
+                + 'background:linear-gradient(to bottom,#96652e,#6a4520);border-radius:1px;';
+            var bead = document.createElement('div');   // 小操纵珠（在下，连红线接肩膀）
+            bead.style.cssText = 'position:absolute;left:50%;bottom:0;width:' + (BEAD_R * 2) + 'px;height:' + (BEAD_R * 2) + 'px;margin-left:-' + BEAD_R + 'px;border-radius:50%;'
                 + 'background:radial-gradient(circle at 35% 30%,#f2e4c4,#9a6a2a);border:1px solid #5a3a12;'
                 + 'box-shadow:0 1px 2px rgba(0,0,0,0.5);';
-            var stick = document.createElement('div');  // 细长竹签
-            stick.style.cssText = 'position:absolute;left:50%;top:7px;width:2px;height:52px;margin-left:-1px;'
-                + 'background:linear-gradient(to bottom,#6a4520,#96652e);border-radius:1px;';
             d.appendChild(stick);
             d.appendChild(bead);
             return d;
@@ -2926,17 +2927,17 @@ const ShadowJudge = {
                 h: elderEl.offsetHeight || 140
             };
         }
-        // 双肩锚点（靠近对称）
+        // 双肩锚点（靠近对称，再往下调一点点）
         function anchors(g) {
-            return { L: { x: g.l + g.w * 0.40, y: g.t + g.h * 0.14 },
-                     R: { x: g.l + g.w * 0.60, y: g.t + g.h * 0.14 } };
+            return { L: { x: g.l + g.w * 0.40, y: g.t + g.h * 0.22 },
+                     R: { x: g.l + g.w * 0.60, y: g.t + g.h * 0.22 } };
         }
         // 轨道：左杆静止位 xL(左肩上)、右杆(pivot) xPivot(右肩上，靠近)、翻转终点 xEnd(右杆右侧,镜像)
         function track(g) {
             var xL = g.l + g.w * 0.42;
             var xPivot = g.l + g.w * 0.58;
             var xEnd = 2 * xPivot - xL;          // 关于右杆镜像 → 到 xEnd 时 q=1
-            var restY = g.t - 66;
+            var restY = g.t - 92;                 // 竹签更高
             return {
                 xL: xL, xPivot: xPivot, xEnd: xEnd, restY: restY,
                 boxL: xL - 16, boxR: xEnd + 16, boxT: restY - 40, boxB: restY + 40
@@ -2944,15 +2945,16 @@ const ShadowJudge = {
         }
         function progress(tk) { return Math.max(0, Math.min(1, (rodX - tk.xL) / (tk.xEnd - tk.xL))); }
         function setLine(ln, a, b) { ln.setAttribute('x1', a.x); ln.setAttribute('y1', a.y); ln.setAttribute('x2', b.x); ln.setAttribute('y2', b.y); }
-        function place(el, pt) { el.style.left = pt.x + 'px'; el.style.top = pt.y + 'px'; }
+        // (cx,cy)=操纵珠中心（竹签底端），竹签向上延伸
+        function place(el, cx, cy) { el.style.left = (cx - 7) + 'px'; el.style.top = (cy - (ROD_H - BEAD_R)) + 'px'; }
 
         function render() {
             var g = geom(), an = anchors(g), tk = track(g);
             var q = progress(tk);
-            place(dotL, { x: rodX, y: rodY });
-            place(dotR, { x: tk.xPivot, y: tk.restY });     // 右杆固定=参照(pivot)
-            setLine(lineL, an.L, { x: rodX, y: rodY + STICK_BOTTOM });
-            setLine(lineR, an.R, { x: tk.xPivot, y: tk.restY + STICK_BOTTOM });
+            place(dotL, rodX, rodY);
+            place(dotR, tk.xPivot, tk.restY);     // 右杆固定=参照(pivot)
+            setLine(lineL, an.L, { x: rodX, y: rodY });          // 红线：珠子→左肩
+            setLine(lineR, an.R, { x: tk.xPivot, y: tk.restY }); // 红线：珠子→右肩
             box.setAttribute('x', tk.boxL); box.setAttribute('y', tk.boxT);
             box.setAttribute('width', tk.boxR - tk.boxL); box.setAttribute('height', tk.boxB - tk.boxT);
             boxLabel.setAttribute('x', tk.boxL + 2); boxLabel.setAttribute('y', tk.boxT - 4);
@@ -2973,10 +2975,8 @@ const ShadowJudge = {
         function onMove(e) {
             if (!dragging) return;
             var mv = pointer(e), rect = stage.getBoundingClientRect();
-            var mx = mv.clientX - rect.left, my = mv.clientY - rect.top;
-            var tk = track(geom());
-            rodX = Math.max(tk.boxL, Math.min(tk.boxR, mx));   // 超框→夹到边缘
-            rodY = Math.max(tk.boxT, Math.min(tk.boxB, my));
+            rodX = mv.clientX - rect.left;    // 拖动时不设限，随手走
+            rodY = mv.clientY - rect.top;
             render();
             if (e.cancelable) e.preventDefault();
         }
