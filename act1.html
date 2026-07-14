@@ -1093,8 +1093,8 @@ body {
 .dlg-entry .dlg-body { color: #f1e3c6; }
 /* 正在生成（打字中）的当前句：视觉上「占主体」——更大字号、亮色、淡金背景，区别于上方历史 */
 .dlg-entry.current { background: rgba(232,200,96,0.10); border-radius: 6px; padding: 9px 11px; border-bottom: none; box-shadow: 0 0 0 1px rgba(232,200,96,0.18) inset; }
-.dlg-entry.current .dlg-speaker { color: #ffd877; font-size: 17px; }
-.dlg-entry.current .dlg-body { color: #fff8e8; font-size: 18px; line-height: 2; text-shadow: 0 0 8px rgba(232,200,96,0.25); }
+.dlg-entry.current .dlg-speaker { color: #ffd877; font-size: 15px; }
+.dlg-entry.current .dlg-body { color: #fff8e8; font-size: 16px; line-height: 1.9; text-shadow: 0 0 8px rgba(232,200,96,0.25); }
 /* 字幕缓缓浮现：整条条目透明度+轻微上移渐入，配合逐字打字实现"实时跟新" */
 @keyframes dlgFadeIn {
     from { opacity: 0; transform: translateY(8px); }
@@ -2072,25 +2072,12 @@ const ACTS_DATA = {
                 {"id":"act2_scene2","name":"影速对决","description":"真传人和假传人同时演——AI快速描述一段剧情，学徒必须在10秒内用正确的皮影组合回应。","standard_puppets":["demon","monkey"],"acceptable_extras":["elder","bamboo"],"time_limit":10},
                 {"id":"act2_scene3","name":"揭穿之后","description":"假传人被揭穿。但他不认——他说路师傅死前没有定下传承人，谁都可以说是真传。","standard_puppets":["elder","demon"],"acceptable_extras":["lamp","monkey","master"]}
             ]
-        },
-        {
-            "id": 3, "name": "影子自己的戏",
-            "intro": "还有一出戏。没有名字，没有唱词，没有人演过。因为路师傅还来不及教——就走了。",
-            "setting": "一个废弃的戏台，积满灰尘。晨光从破洞的幕布中透进来。",
-            "embedded_play": null,
-            "mood": "安静。灯快灭了。不是在教，是在告别。",
-            "keywords": ["寒江","断线","一个人的戏台"],
-            "scenes": [
-                {"id":"act3_scene1","name":"即兴开场","description":"路师傅只说了三个词：寒江、断线、一个人的戏台。然后他沉默了。剩下的——该你了。","standard_puppets":[],"acceptable_extras":[],"is_improvisation":true,"keywords":["寒江","断线","一个人的戏台"]},
-                {"id":"act3_scene2","name":"回忆浮现","description":"你的影面让路师傅想起了一段往事。他自言自语般地讲了起来。","standard_puppets":[],"acceptable_extras":[],"is_improvisation":true,"keywords":["寒江","断线","一个人的戏台"]},
-                {"id":"act3_scene3","name":"收灯","description":"灯快灭了。师傅的声音越来越轻。白布上只剩最后一个影——你的影子。","standard_puppets":[],"acceptable_extras":[],"is_improvisation":true,"keywords":["传承","灯灭","影子"]}
-            ]
         }
     ],
     "endings": {
-        "light_passed": {"name":"传灯","condition":"三幕全部正确完成","description":"你成为新的说戏人。"},
-        "light_kept": {"name":"守灯","condition":"三幕完成但第三幕走样","description":"灯一直在闪，但没有灭。"},
-        "shadow_remains": {"name":"残影","condition":"只完成两幕","description":"灯灭了。但白布上还有影子。"},
+        "light_passed": {"name":"传灯","condition":"两幕全部正确完成","description":"你成为新的说戏人。"},
+        "light_kept": {"name":"守灯","condition":"两幕完成但第二幕走样","description":"灯一直在闪，但没有灭。"},
+        "shadow_remains": {"name":"残影","condition":"只完成第一幕","description":"灯灭了。但白布上还有影子。"},
         "light_out": {"name":"灯灭","condition":"灯油耗尽","description":"全黑。师傅最后一句：'没事。灯灭过很多次。每次都会有人再点起来。'"},
         "shadow_master": {"name":"影子师傅","condition":"隐藏","description":"你走了自己的路——成为了非传统的传承人。"}
     }
@@ -3292,7 +3279,8 @@ const ShadowJudge = {
         speaker.textContent='路师傅'; typewriter(dialogueText, '（师傅凑近白布，眯着眼细细端详……）', 30);
         EventBus.emit('stage_confirmed', { puppets: staged });
         var sceneId = getCurrentSceneId();
-        var isImprov = (gameState.currentAct===3);
+        var _sceneMeta = ShadowJudge._getSceneData(sceneId);
+        var isImprov = !!(_sceneMeta && _sceneMeta.is_improvisation);
         if (OFFLINE_MODE) {
             setTimeout(function() {
                 var result = ShadowJudge.quickJudge(staged, sceneId);
@@ -3339,11 +3327,13 @@ const ShadowJudge = {
                 // 同步：TTS生成完 → 打字+语音同时启动
                 speaker.textContent = '路师傅';
                 setSpeaking(true);
+                // 关键：在打字开始前就设好回调，确保 comment 打完立刻显示「点击继续」提示
+                // （原写法在打字结束后才赋值，导致提示永不出现，玩家只能盲点对话框）
+                typingDoneCb = function() { if (window._showPlayPending) showNarrationHint(); };
                 speakAndPlay(comment, dialogueText, 55).then(function() {
                     setSpeaking(false);
                     EventBus.emit('judge_result', result);
                     emitSceneJudged(staged, sceneId, result);
-                    typingDoneCb = function() { if (window._showPlayPending) showNarrationHint(); };
                     btnConfirm.disabled = false; btnAsk.disabled = false;
                 });
             }).catch(function(e) {
@@ -3512,6 +3502,7 @@ const ShadowJudge = {
                 if (needsAsk && !isAsk) return;
                 triggerClue(clue);
                 triggered = true;
+                if (triggered) return;   // 每次摆放只触发一条线索，避免多条同时涌进对话框
             });
         } catch (e) {}
         return triggered;
@@ -3756,7 +3747,46 @@ const ShadowJudge = {
             + '<div class="show-video-hint">点击跳过</div>';
         // 挂载到 #stage 内：动画只在幕中区域播放，不遮挡对话框/皮影箱等外围 UI
         var stageEl = document.getElementById('stage');
+        // 播放动画前隐藏幕中玩家摆放的皮影，避免与视频画面穿帮（播完进下一场会自动清空）
+        if (stageEl) {
+            stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
+            var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
+        }
         (stageEl || document.body).appendChild(ov);
+        // 演出是纯动画：播放时清空对话框，避免残留台词干扰
+        if (dialogueText) dialogueText.textContent = '';
+        if (speaker) speaker.textContent = '';
+        var v = ov.querySelector('video');
+        var finished = false;
+        function finish() {
+            if (finished) return; finished = true;
+            try { v.pause(); } catch (e) {}
+            if (ov.parentNode) ov.parentNode.removeChild(ov);
+            if (onDone) onDone();
+        }
+        v.addEventListener('ended', finish);
+        v.addEventListener('error', finish);
+        ov.addEventListener('click', finish);
+        var p = v.play();
+        if (p && p.catch) p.catch(function() {});
+    }
+    // 第二场展示皮影戏：与第一场同机制，在舞台（幕中）区域内播放第二场 mp4 动画，播完/点击/出错则继续
+    function playAct2ShowVideo(onDone) {
+        var ov = document.createElement('div');
+        ov.id = 'act2ShowVideoOverlay';
+        ov.innerHTML = '<video id="act2ShowVideo" src="assets/video/act2-show.mp4" playsinline autoplay></video>'
+            + '<div class="show-video-hint">点击跳过</div>';
+        // 挂载到 #stage 内：动画只在幕中区域播放，不遮挡对话框/皮影箱等外围 UI
+        var stageEl = document.getElementById('stage');
+        // 播放动画前隐藏幕中玩家摆放的皮影，避免与视频画面穿帮（播完进下一场会自动清空）
+        if (stageEl) {
+            stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
+            var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
+        }
+        (stageEl || document.body).appendChild(ov);
+        // 演出是纯动画：播放时清空对话框，避免残留台词干扰
+        if (dialogueText) dialogueText.textContent = '';
+        if (speaker) speaker.textContent = '';
         var v = ov.querySelector('video');
         var finished = false;
         function finish() {
@@ -3774,12 +3804,18 @@ const ShadowJudge = {
     // 「展示皮影戏」按钮点击 → 帘子合上 → 进下一场
     function onShowPlayClick() {
         try {
-            var btn = document.getElementById('showPlayBtn');
-            if (!btn) { console.warn('[onShowPlayClick] 按钮不存在'); return; }
-            btn.disabled = true;  // 防连点
+        var btn = document.getElementById('showPlayBtn');
+        if (!btn) { console.warn('[onShowPlayClick] 按钮不存在'); return; }
+        if (btn.disabled) { console.warn('[onShowPlayClick] 重复触发, 已忽略(按钮双绑定防护)'); return; }  // 防止双击/重复绑定导致两次播放
+        btn.disabled = true;  // 防连点
+            // 点击即清空对话框：避免帘子/动画期间仍显示上一场台词
+            if (dialogueText) dialogueText.textContent = '';
+            if (speaker) speaker.textContent = '';
             console.log('[onShowPlayClick] 点击生效, currentAct='+gameState.currentAct+' currentScene='+gameState.currentScene);
 
             var isFirstScene = (gameState.currentAct === 1 && gameState.currentScene === 0);
+            var act2Info = (ACTS_DATA && ACTS_DATA.acts && ACTS_DATA.acts[1]) ? ACTS_DATA.acts[1] : null;
+            var isAct2FinalTransition = (gameState.currentAct === 2 && act2Info && (gameState.currentScene + 1) >= act2Info.scenes.length);
             if (isFirstScene) {
             // 第一场：帘子合上 → 停1秒 → 帘子拉开 → 播放 mp4 动画 → 点对话框 → 路师傅点评 → 信发亮(聚焦) → 点信 → 信全屏打开 → 白光 → 进第二场（正规剧情流程）
             playCurtainCloseThenOpen(function() {
@@ -3787,47 +3823,39 @@ const ShadowJudge = {
                 narrationActive = false;
                 setNarrationLock(false);
                 playAct1ShowVideo(function() {
-                    // 动画播完：必须先在对话框点一下，路师傅才点评（等待期间锁定皮影箱，避免误操作）
-                    document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.add('locked'); });
-                    var dlgArea = document.querySelector('.dialogue-area');
-                    var cmtHint = document.createElement('div');
-                    cmtHint.textContent = '▸ 点击对话框继续';
-                    cmtHint.style.cssText = 'text-align:center;color:#e8c97a;font-size:13px;letter-spacing:2px;padding:8px 0;opacity:.85;';
-                    if (dlgArea) dlgArea.appendChild(cmtHint);
-                    var cmtStarted = false;
-                    function startComment() {
-                        if (cmtStarted) return; cmtStarted = true;
-                        if (dlgArea) dlgArea.removeEventListener('click', onDlgClick);
-                        if (cmtHint && cmtHint.parentNode) cmtHint.parentNode.removeChild(cmtHint);
-                        document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.remove('locked'); });
-                        speaker.textContent = '路师傅';
-                        typewriter(dialogueText, '第一幕表现的不错，快点击书生手中的信进行第二场的表演吧。', 48);
-                        waitForTypingDoneThen(function() {
-                            // 点评完 1 秒后，信发亮（聚焦幕上信皮影，引导玩家点击）—— 正规剧情流程入口
-                            setTimeout(function() { focusOnLetter(enterAct2Directly); }, 1000);
-                        });
-                    }
-                    function onDlgClick(e) {
-                        if (e.target && (e.target.id === 'showPlayBtn' || e.target.id === 'btnEnterAct2')) return;
-                        startComment();
-                    }
-                    if (dlgArea) dlgArea.addEventListener('click', onDlgClick);
+                    // 动画播完：直接让幕上的信发亮（视觉引导，本身就是动画的一部分），不再用文字点评打断演出
+                    focusOnLetter(enterAct2Directly);
                 });
             });
-        } else {
-            // 其它场次（含第一幕第二场等）：帘子合上 → 停1秒 → 帘子拉开(onClosed切场景) → 拉开完成(onOpened进下一场)
-            console.log('[onShowPlayClick] 走else分支(非第一场), currentAct='+gameState.currentAct+' currentScene='+gameState.currentScene);
+        } else if (isAct2FinalTransition) {
+            // 第二幕终场（游戏终幕）：帘子合上 → 拉开 → 在舞台播放原皮影戏视频(act1-show.mp4) → 进结局
+            console.log('[onShowPlayClick] 第二幕终场, 播放 act1-show.mp4 后结算, currentAct='+gameState.currentAct+' currentScene='+gameState.currentScene);
             hideShowPlayBtn();
             narrationActive = false;
             setNarrationLock(false);
-            var curtainFn = (window.playCurtainCloseThenOpen || playCurtainCloseThenOpen);
-            if (!curtainFn) { console.error('[onShowPlayClick] playCurtainCloseThenOpen 不存在!'); return; }
-            // onClosed: 帘子拉开前先切场景（避免拉开瞬间露出旧背景）
-            // onOpened:  帘子拉开完成后推进下一场
-            curtainFn(
-                function() { console.log('[onShowPlayClick] 帘子已完全拉开, 调 advanceScene'); if (window.advanceScene) window.advanceScene(); },
-                function() { console.log('[onShowPlayClick] 帘子开始拉开, 先调 startCurrentScene 切场景'); if (window.startCurrentScene) window.startCurrentScene(); }
-            );
+            playCurtainCloseThenOpen(function() {
+                playAct1ShowVideo(function() {
+                    console.log('[onShowPlayClick] 终场视频播完, 调 advanceScene 结算');
+                    if (window.advanceScene) window.advanceScene();
+                });
+            });
+        } else {
+            // 中间场次（含第一幕第二场、第二幕前两场等）：帘子过渡 → 播本场皮影戏动画 → 进下一场
+            // 与首场(act1-show.mp4)、第二场(微信视频 act2-show.mp4)、终幕(act1-show.mp4)统一为"看皮影戏"体验；演出期间对话框已清空
+            console.log('[onShowPlayClick] 走else分支(中间场次), currentAct='+gameState.currentAct+' currentScene='+gameState.currentScene);
+            hideShowPlayBtn();
+            narrationActive = false;
+            setNarrationLock(false);
+            // 第二场（第一幕第二场，currentAct=1 的 else 分支）播放用户提供的微信视频(act2-show.mp4)；
+            // 第二幕(currentAct=2)各场复用原皮影戏视频(act1-show.mp4)，避免自定义视频到处重复
+            var videoFn = (gameState.currentAct === 2) ? playAct1ShowVideo : playAct2ShowVideo;
+            playCurtainCloseThenOpen(function() {
+                // 帘子拉开后，在舞台播放本幕皮影戏动画（纯动画，无台词）
+                videoFn(function() {
+                    console.log('[onShowPlayClick] 中间场次视频播完, 调 advanceScene 进下一场');
+                    if (window.advanceScene) window.advanceScene();
+                });
+            });
         }
         } catch(outerErr) {
             console.error('[onShowPlayClick] 外层异常:', outerErr);
@@ -3906,7 +3934,7 @@ const ShadowJudge = {
             stage.classList.remove('letter-focus');
             var h = document.getElementById('letterFocusHint'); if (h) h.remove();
             var hs = document.getElementById('letterFocusHotspot'); if (hs) hs.remove();
-            playLetterReveal(onDone, '第二场&nbsp;&nbsp;·&nbsp;&nbsp;信中之秘');
+            playLetterReveal(onDone, '信中之秘');
         };
         hot.addEventListener('click', done);
     }
@@ -4227,7 +4255,8 @@ const ShadowJudge = {
             updateHeader();
             // 不在这里启动字幕流程！等队友B的开场系统(黑屏→点灯→标题卡→幕布拉开)全部播完后再开始
             // 幕布拉开时会触发 'opening_complete' 事件 → startGameFlow() 接管
-            document.addEventListener('opening_complete', startGameFlow);
+            // once:true 防重入：无论 opening_complete 被派发几次，startGameFlow 只跑一次，避免第一场重入播两遍
+            document.addEventListener('opening_complete', startGameFlow, { once: true });
         } catch(e) { showDialogue('系统','游戏初始化出错：'+e.message+'。请刷新页面。'); }
     }
 
@@ -4430,6 +4459,8 @@ const ShadowJudge = {
             var advanced=false;
             function goAct2(){
                 if(advanced)return; advanced=true;
+                // 清理可能仍残留的「前往大栅栏」按钮（玩家提前点掉按钮时会走这条路径）
+                var b=document.getElementById('btnEnterAct2'); if(b&&b.parentNode)b.parentNode.removeChild(b);
                 if(window.NarrationCtl) window.NarrationCtl.reset();
                 advanceToNextAct();
             }
