@@ -2728,8 +2728,12 @@ const ShadowJudge = {
                             }, 2000);
                         })(puppetEl);
                     }
+                } else {
+                    // 非油灯皮影单击不再翻转（只能通过操纵杆翻）
+                    // 但仍要还原 mousedown 时淡化的状态，否则皮影会卡在 opacity:0.25 + pointer-events:none
+                    puppetEl.style.opacity = '1';
+                    puppetEl.style.pointerEvents = '';
                 }
-                // 非油灯皮影单击不再翻转（只能通过操纵杆翻）
             } else if (onStage) {
                 // clone 左上角相对于舞台 = 放置位置
                 puppetEl.style.left = (cloneRect.left - stageRect.left) + 'px';
@@ -2899,20 +2903,17 @@ const ShadowJudge = {
         // 细长竹签（手持端在上）+ 底部小操纵珠（连线端，上下颠倒）。grabbable=true 才能按住拖
         function makeRod(grabbable) {
             var d = document.createElement('div');
-            // 容器本身不拦截事件；只有内部的竹签和珠子可点击（避免大面积遮挡皮影本体拖拽）
-            d.style.cssText = 'position:absolute;width:' + (BEAD_R * 2 + 4) + 'px;height:' + ROD_H + 'px;'
+            d.style.cssText = 'position:absolute;width:14px;height:' + ROD_H + 'px;'
                 + 'z-index:9;cursor:' + (grabbable ? 'grab' : 'default') + ';'
-                + 'pointer-events:none;'
-                + (!grabbable ? 'opacity:0.72;' : '');
-            var stick = document.createElement('div');  // 细长竹签（在上，手持端）—— 可点击区域
-            stick.style.cssText = 'position:absolute;left:50%;top:0;width:8px;height:' + (ROD_H - BEAD_R * 2) + 'px;margin-left:-4px;'
-                + 'background:linear-gradient(to bottom,#96652e,#6a4520);border-radius:1px;'
-                + 'pointer-events:' + (grabbable ? 'auto' : 'none') + ';';
-            var bead = document.createElement('div');   // 小操纵珠（在下，连红线接肩膀）—— 可点击区域
+                + 'pointer-events:' + (grabbable ? 'auto' : 'none') + ';'
+                + (grabbable ? '' : 'opacity:0.72;');
+            var stick = document.createElement('div');  // 细长竹签（在上，手持端）
+            stick.style.cssText = 'position:absolute;left:50%;top:0;width:2px;height:' + (ROD_H - BEAD_R * 2) + 'px;margin-left:-1px;'
+                + 'background:linear-gradient(to bottom,#96652e,#6a4520);border-radius:1px;';
+            var bead = document.createElement('div');   // 小操纵珠（在下，连红线接肩膀）
             bead.style.cssText = 'position:absolute;left:50%;bottom:0;width:' + (BEAD_R * 2) + 'px;height:' + (BEAD_R * 2) + 'px;margin-left:-' + BEAD_R + 'px;border-radius:50%;'
                 + 'background:radial-gradient(circle at 35% 30%,#f2e4c4,#9a6a2a);border:1px solid #5a3a12;'
-                + 'box-shadow:0 1px 2px rgba(0,0,0,0.5);'
-                + 'pointer-events:' + (grabbable ? 'auto' : 'none') + ';';
+                + 'box-shadow:0 1px 2px rgba(0,0,0,0.5);';
             d.appendChild(stick);
             d.appendChild(bead);
             return d;
@@ -2958,7 +2959,7 @@ const ShadowJudge = {
         function progress(tk) { return Math.max(0, Math.min(1, (rodX - tk.xL) / (tk.xEnd - tk.xL))); }
         function setLine(ln, a, b) { ln.setAttribute('x1', a.x); ln.setAttribute('y1', a.y); ln.setAttribute('x2', b.x); ln.setAttribute('y2', b.y); }
         // (cx,cy)=操纵珠中心（竹签底端），竹签向上延伸
-        function place(el, cx, cy) { el.style.left = (cx - (BEAD_R * 2 + 4) / 2) + 'px'; el.style.top = (cy - (ROD_H - BEAD_R)) + 'px'; }
+        function place(el, cx, cy) { el.style.left = (cx - 7) + 'px'; el.style.top = (cy - (ROD_H - BEAD_R)) + 'px'; }
 
         function render() {
             var g = geom(), tk = track(g);
