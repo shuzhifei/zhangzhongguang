@@ -2927,20 +2927,23 @@ const ShadowJudge = {
                 h: elderEl.offsetHeight || 140
             };
         }
-        // 双肩锚点（靠近对称，再往下调一点点）
-        function anchors(g) {
-            return { L: { x: g.l + g.w * 0.40, y: g.t + g.h * 0.22 },
-                     R: { x: g.l + g.w * 0.60, y: g.t + g.h * 0.22 } };
+        var PIVOT_F = 0.58;   // 翻转轴 = 右肩线所在比例（transform-origin 也用它）
+        // 双肩锚点随翻转 s 实时镜像：以右肩线(PIVOT_F)为轴，翻转时左右肩连同红线一起换边
+        function anchors(g, s) {
+            function ax(f) { return g.l + g.w * (PIVOT_F + s * (f - PIVOT_F)); }
+            var y = g.t + g.h * 0.22;
+            return { L: { x: ax(0.40), y: y }, R: { x: ax(0.60), y: y } };
         }
-        // 轨道：左杆静止位 xL(左肩上)、右杆(pivot) xPivot(右肩上，靠近)、翻转终点 xEnd(右杆右侧,镜像)
+        // 轨道：左杆静止位 xL、右杆(pivot,=翻转轴) xPivot、翻转终点 xEnd(关于右杆镜像)
+        // 范围框右边 = xEnd：竹签走到框边界时老者刚好完全翻转
         function track(g) {
             var xL = g.l + g.w * 0.42;
-            var xPivot = g.l + g.w * 0.58;
-            var xEnd = 2 * xPivot - xL;          // 关于右杆镜像 → 到 xEnd 时 q=1
+            var xPivot = g.l + g.w * PIVOT_F;
+            var xEnd = 2 * xPivot - xL;          // 关于右杆镜像 → 到 xEnd 时 q=1 完全翻转
             var restY = g.t - 92;                 // 竹签更高
             return {
                 xL: xL, xPivot: xPivot, xEnd: xEnd, restY: restY,
-                boxL: xL - 16, boxR: xEnd + 16, boxT: restY - 40, boxB: restY + 40
+                boxL: xL, boxR: xEnd, boxT: restY - 30, boxB: restY + 30
             };
         }
         function progress(tk) { return Math.max(0, Math.min(1, (rodX - tk.xL) / (tk.xEnd - tk.xL))); }
@@ -2949,17 +2952,20 @@ const ShadowJudge = {
         function place(el, cx, cy) { el.style.left = (cx - 7) + 'px'; el.style.top = (cy - (ROD_H - BEAD_R)) + 'px'; }
 
         function render() {
-            var g = geom(), an = anchors(g), tk = track(g);
+            var g = geom(), tk = track(g);
             var q = progress(tk);
+            var s = Math.cos(q * Math.PI);        // 1→0→-1，卡牌翻转
+            var an = anchors(g, s);               // 肩膀锚点随翻转换边
             place(dotL, rodX, rodY);
-            place(dotR, tk.xPivot, tk.restY);     // 右杆固定=参照(pivot)
-            setLine(lineL, an.L, { x: rodX, y: rodY });          // 红线：珠子→左肩
-            setLine(lineR, an.R, { x: tk.xPivot, y: tk.restY }); // 红线：珠子→右肩
+            place(dotR, tk.xPivot, tk.restY);     // 右杆固定=翻转轴(pivot)
+            setLine(lineL, an.L, { x: rodX, y: rodY });          // 红线：珠子→左肩(翻转后到右侧)
+            setLine(lineR, an.R, { x: tk.xPivot, y: tk.restY }); // 红线：珠子→右肩(翻转后到中/左)
             box.setAttribute('x', tk.boxL); box.setAttribute('y', tk.boxT);
             box.setAttribute('width', tk.boxR - tk.boxL); box.setAttribute('height', tk.boxB - tk.boxT);
             boxLabel.setAttribute('x', tk.boxL + 2); boxLabel.setAttribute('y', tk.boxT - 4);
-            // 卡牌翻转：q=0→1(朝左)；q=0.5(左杆到右杆身上)→0(一条线)；q=1(右杆右侧)→-1(朝右)
-            elderEl.style.transform = 'scaleX(' + Math.cos(q * Math.PI).toFixed(4) + ')';
+            // 以右肩线为轴翻转：幅度更小、更贴合"绕右肩转身"；q=0.5(左杆到右杆)→0一条线；q=1→完全翻转
+            elderEl.style.transformOrigin = (PIVOT_F * 100) + '% 50%';
+            elderEl.style.transform = 'scaleX(' + s.toFixed(4) + ')';
         }
         // 非拖动时按 flipped 状态把左杆归位（朝左→xL；朝右→xEnd）
         function layout() {
@@ -3037,7 +3043,8 @@ const ShadowJudge = {
 
         stage._elderRodCleanup = function() {
             if (ctrl.parentNode) ctrl.remove();
-            elderEl.style.transform = '';   // 归还给 .flipped class
+            elderEl.style.transform = '';        // 归还给 .flipped class
+            elderEl.style.transformOrigin = '';  // 复位翻转轴
             if (EventBus.off) { EventBus.off('puppet_moved', moveHandler); EventBus.off('puppet_removed', removeHandler); }
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
