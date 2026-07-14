@@ -3307,6 +3307,16 @@ const ShadowJudge = {
                         EventBus.emit('countdown_stop_request');
                         gameState.currentAct = 1;
                         gameState.currentScene = targetScene;
+                        // 调试切场：清空「目标场次」已触发线索，使暗语可再次触发
+                        // （修复第二次跳转到第二场后，clue 已记录在 triggeredClues 中导致暗语不再出现）
+                        // 只清当前场次的 clue，不污染其他场次，也不影响正常通关流程
+                        var _sid = 'act1_scene' + targetScene;
+                        (getActClues(gameState.currentAct - 1) || []).forEach(function(c){
+                            if (c.scene_id === _sid) {
+                                var _i = gameState.triggeredClues.indexOf(c.id);
+                                if (_i !== -1) gameState.triggeredClues.splice(_i, 1);
+                            }
+                        });
                         if (window.resetSceneState) window.resetSceneState(); else resetSceneState();
                         if (window.NarrationCtl) window.NarrationCtl.reset();
                         if (window.startCurrentScene) window.startCurrentScene(); else startCurrentScene();
