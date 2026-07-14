@@ -2433,7 +2433,7 @@ const ShadowJudge = {
             var unflipped = [];
             stagedPuppets.forEach(function(p) {
                 if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
-                    var el = document.getElementById('stage-' + p.puppetId);
+                    var el = document.querySelector('.stage-puppet[data-puppet="' + p.puppetId + '"]');
                     if (el && !el.classList.contains('flipped')) {
                         unflipped.push(ShadowJudge._puppetName(p.puppetId));
                     }
