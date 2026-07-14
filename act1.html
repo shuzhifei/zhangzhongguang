@@ -3750,26 +3750,44 @@ const ShadowJudge = {
             if (extra.length>0)   return '路师傅皱了皱眉：' + extra.map(getPuppetName).join('、') + '是多余的——戏里没这角儿，先拿下去。';
             if (missing.length>0) return '路师傅眯着眼看了看白布：还差——' + missing.map(getPuppetName).join('、') + '。你觉得，该摆在哪？';
         }
-        // —— ② 阵容齐了、位置不对：复用位置判定，逐条点出往哪挪 ——
-        var pc = ShadowJudge._checkPositions(staged, sceneId);
-        if (pc && !pc.ok) {
-            var hints = pc.wrong.map(function(w){ return w.msg; });
-            return '路师傅凑近白布：影儿是齐了，可位置还差点——\n' + hints.join('\n');
+        // —— 三项同等级判定（数量→位置→翻转），全部收集完再一次性返回 ——
+        var parts = [];   // 按顺序收集各维度的问题提示
+
+        // ① 皮影数量判定
+        if (missing.length > 0 || extra.length > 0) {
+            if (extra.length > 0) parts.push('路师傅皱了皱眉：' + extra.map(getPuppetName).join('、') + '是多余的——戏里没这角儿，先拿下去。');
+            if (missing.length > 0) parts.push('路师傅眯着眼看了看白布：还差——' + missing.map(getPuppetName).join('、') + '。你觉得，该摆在哪？');
         }
-        // —— ②.4 第二场：老者/金蟾必须翻转朝右才通过 ——
-        if (sceneId === 'act1_scene2') {
-            var unflipped = [];
-            staged.forEach(function(p) {
-                if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
-                    var el = document.getElementById('stage-' + p.puppetId);
-                    if (el && !el.classList.contains('flipped')) unflipped.push(getPuppetName(p.puppetId));
-                }
-            });
-            if (unflipped.length > 0) {
-                var flipNames = unflipped.join('和');
-                return '路师傅指了指' + flipNames + '：\n「它还没转过身来——戏里它得面朝这边演。\n你按住那根竹签，把它舞到对面去。」';
+
+        // ② 位置判定（阵容齐了才查位置）
+        if (missing.length === 0 && extra.length === 0) {
+            var pc = ShadowJudge._checkPositions(staged, sceneId);
+            if (pc && !pc.ok) {
+                var hints = pc.wrong.map(function(w){ return w.msg; });
+                parts.push('路师傅凑近白布：影儿是齐了，可位置还差点——\n' + hints.join('\n'));
             }
         }
+
+        // ③ 翻转判定（第二场：老者/金蟾必须翻转朝右；阵容+位置都对了才查翻转）
+        if (sceneId === 'act1_scene2' && missing.length === 0 && extra.length === 0) {
+            var pc2 = ShadowJudge._checkPositions(staged, sceneId);
+            if (pc2 && pc2.ok) {   // 位置也对了，再查翻转
+                var unflipped = [];
+                staged.forEach(function(p) {
+                    if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
+                        var el = document.querySelector('.stage-puppet[data-puppet="' + p.puppetId + '"]');
+                        if (el && !el.classList.contains('flipped')) unflipped.push(getPuppetName(p.puppetId));
+                    }
+                });
+                if (unflipped.length > 0) {
+                    var flipNames = unflipped.join('和');
+                    parts.push('路师傅指了指' + flipNames + '：\n「它还没转过身来——戏里它得面朝这边演。\n你按住那根竹签，把它舞到对面去。」');
+                }
+            }
+        }
+
+        // 有任何问题 → 按顺序拼接返回（数量→位置→翻转）
+        if (parts.length > 0) return parts.join('\n\n');
         // —— ②.5 第二场（信中之秘）专属叙事提示：按摆的组合给对应叙事 ——
         if (sceneId === 'act1_scene2') {
             // 老者+金蟾齐 → 金蟾相关叙事 + 暗语「三根线」
