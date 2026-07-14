@@ -2428,6 +2428,23 @@ const ShadowJudge = {
             var pc = ShadowJudge._checkPositions(stagedPuppets, currentSceneId);
             if (!pc.ok) correct = false;
         }
+        // 第二场：老者和金蟾必须翻转朝右才通过（操纵杆交互要求）
+        if (correct && currentSceneId === 'act1_scene2') {
+            var unflipped = [];
+            stagedPuppets.forEach(function(p) {
+                if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
+                    var el = document.getElementById('stage-' + p.puppetId);
+                    if (el && !el.classList.contains('flipped')) {
+                        unflipped.push(ShadowJudge._puppetName(p.puppetId));
+                    }
+                }
+            });
+            if (unflipped.length > 0) {
+                correct = false;
+                return { score: Math.max(0, score - 15), correct: false,
+                         comment: '（师傅指了指' + unflipped.join('和') + '）\n它还没转身呢——按住竹签，把它舞到对面去。', needFlip: true };
+            }
+        }
         // ===== 确认按钮只说简短判断（对/不对），具体提示留给"追问师傅" =====
         var okComments = {
             'act1_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，眯着眼细细打量了一番）\n月夜下等人——老者在左，金蟾在旁，书生远远候着。\n这出戏的味道，有了。',
@@ -2841,10 +2858,9 @@ const ShadowJudge = {
         // 跨作用域取场景ID：本 IIFE(2474-2978)拿不到 getCurrentSceneId 裸函数，经 TheaterSystem 桥接
         var _sid = (window.TheaterSystem && window.TheaterSystem.getCurrentSceneId)
                    ? window.TheaterSystem.getCurrentSceneId() : '';
-        // 第二场：老者默认面朝左（背对右侧、面向左侧瀚墨斋）——玩家需手动拖动操纵杆才转向右
-        // 老者：挂上可手动「舞线」翻转的操纵杆（按住左杆往右拖，老者像卡牌一样实时翻转）
-        if (_sid === 'act1_scene2' && puppetId === 'elder') {
-            setupElderRods(pup);
+        // 第二场：老者/金蟾默认面朝左（玩家需手动拖动操纵杆才转向右）
+        if (_sid === 'act1_scene2' && (puppetId === 'elder' || puppetId === 'frog')) {
+            setupPuppetRods(pup, puppetId);
         }
 
         updateMoonNight();
@@ -2855,10 +2871,11 @@ const ShadowJudge = {
     //   · 左杆可在【虚线范围框】内 2D 自由拖动；只有横向位移影响翻转。
     //   · 翻转实时跟踪：左杆在右杆(pivot)左侧→scaleX 1..0；刚好到右杆身上→0(一条线)；
     //     移到右杆【右边】→0..-1(完全翻转朝右)。松手：越过右杆则定格翻转，否则回弹；超框回弹到边缘。
-    function setupElderRods(elderEl) {
-        if (stage._elderRodCleanup) stage._elderRodCleanup();
+    function setupPuppetRods(puppetEl, pid) {
+        if (!stage._rodCleanups) stage._rodCleanups = {};
+        if (stage._rodCleanups[pid]) stage._rodCleanups[pid]();
 
-        var ROD_H = 74;     // 竹签整体高（手持端在上，越高越挑）
+        var ROD_H = 99;     // 竹签整体高（在原 74 基础上再高约 1/3）
         var BEAD_R = 3;     // 操纵珠半径（更细）
 
         var ctrl = document.createElement('div');
@@ -2911,7 +2928,7 @@ const ShadowJudge = {
             return d;
         }
         var dotL = makeRod(true), dotR = makeRod(false);
-        dotL.title = '按住我，越过右边那根杆，老者就转身';
+        dotL.title = '按住我，越过右边那根杆，就能舞动它转身';
         ctrl.appendChild(dotL);
         ctrl.appendChild(dotR);
         stage.appendChild(ctrl);
@@ -2921,10 +2938,10 @@ const ShadowJudge = {
 
         function geom() {
             return {
-                l: parseFloat(elderEl.style.left) || 0,
-                t: parseFloat(elderEl.style.top) || 0,
-                w: elderEl.offsetWidth || 100,
-                h: elderEl.offsetHeight || 140
+                l: parseFloat(puppetEl.style.left) || 0,
+                t: parseFloat(puppetEl.style.top) || 0,
+                w: puppetEl.offsetWidth || 100,
+                h: puppetEl.offsetHeight || 140
             };
         }
         var PIVOT_F = 0.58;   // 翻转轴 = 右肩线所在比例（transform-origin 也用它）
@@ -2934,16 +2951,18 @@ const ShadowJudge = {
             var y = g.t + g.h * 0.22;
             return { L: { x: ax(0.40), y: y }, R: { x: ax(0.60), y: y } };
         }
-        // 轨道：左杆静止位 xL、右杆(pivot,=翻转轴) xPivot、翻转终点 xEnd(关于右杆镜像)
-        // 范围框右边 = xEnd：竹签走到框边界时老者刚好完全翻转
+        // 轨道：右杆(pivot=翻转轴,右肩线) xPivot 固定；左杆静止位 xL、翻转终点 xEnd 关于 pivot 对称
+        // half = 半程；在原 0.16w 基础上再放大 1/3 → 范围更大。xPivot 恒为中点(q=0.5 一条线)
+        // 范围框右边 = xEnd：竹签走到框边界时刚好完全翻转
         function track(g) {
-            var xL = g.l + g.w * 0.42;
             var xPivot = g.l + g.w * PIVOT_F;
-            var xEnd = 2 * xPivot - xL;          // 关于右杆镜像 → 到 xEnd 时 q=1 完全翻转
+            var half = g.w * 0.16 * (4 / 3);      // 范围扩大 1/3
+            var xL = xPivot - half;
+            var xEnd = xPivot + half;             // 到 xEnd 时 q=1 完全翻转
             var restY = g.t - 92;                 // 竹签更高
             return {
                 xL: xL, xPivot: xPivot, xEnd: xEnd, restY: restY,
-                boxL: xL, boxR: xEnd, boxT: restY - 30, boxB: restY + 30
+                boxL: xL, boxR: xEnd, boxT: restY - 40, boxB: restY + 40
             };
         }
         function progress(tk) { return Math.max(0, Math.min(1, (rodX - tk.xL) / (tk.xEnd - tk.xL))); }
@@ -2964,14 +2983,14 @@ const ShadowJudge = {
             box.setAttribute('width', tk.boxR - tk.boxL); box.setAttribute('height', tk.boxB - tk.boxT);
             boxLabel.setAttribute('x', tk.boxL + 2); boxLabel.setAttribute('y', tk.boxT - 4);
             // 以右肩线为轴翻转：幅度更小、更贴合"绕右肩转身"；q=0.5(左杆到右杆)→0一条线；q=1→完全翻转
-            elderEl.style.transformOrigin = (PIVOT_F * 100) + '% 50%';
-            elderEl.style.transform = 'scaleX(' + s.toFixed(4) + ')';
+            puppetEl.style.transformOrigin = (PIVOT_F * 100) + '% 50%';
+            puppetEl.style.transform = 'scaleX(' + s.toFixed(4) + ')';
         }
         // 非拖动时按 flipped 状态把左杆归位（朝左→xL；朝右→xEnd）
         function layout() {
             var tk = track(geom());
             rodY = tk.restY;
-            rodX = elderEl.classList.contains('flipped') ? tk.xEnd : tk.xL;
+            rodX = puppetEl.classList.contains('flipped') ? tk.xEnd : tk.xL;
             render();
         }
         layout();
@@ -2999,7 +3018,7 @@ const ShadowJudge = {
             settle(progress(tk) >= 0.5 ? 1 : 0);
         }
         function onDown(e) {
-            e.stopPropagation(); e.preventDefault();     // 别触发老者本体拖拽
+            e.stopPropagation(); e.preventDefault();     // 别触发皮影本体拖拽
             dragging = true;
             dotL.style.cursor = 'grabbing';
             document.addEventListener('mousemove', onMove);
@@ -3015,7 +3034,7 @@ const ShadowJudge = {
             var tk = track(geom());
             var toX = target ? tk.xEnd : tk.xL, toY = tk.restY;
             var fromX = rodX, fromY = rodY;
-            var wasFlipped = elderEl.classList.contains('flipped') ? 1 : 0;
+            var wasFlipped = puppetEl.classList.contains('flipped') ? 1 : 0;
             var t0 = null, dur = 180;
             function fr(ts) {
                 if (t0 === null) t0 = ts;
@@ -3027,30 +3046,31 @@ const ShadowJudge = {
                 if (k < 1) { requestAnimationFrame(fr); }
                 else {
                     rodX = toX; rodY = toY;
-                    if (target) elderEl.classList.add('flipped'); else elderEl.classList.remove('flipped');
+                    if (target) puppetEl.classList.add('flipped'); else puppetEl.classList.remove('flipped');
                     render();
-                    if (target !== wasFlipped) EventBus.emit('puppet_flipped', { id: 'elder' });
+                    if (target !== wasFlipped) EventBus.emit('puppet_flipped', { id: pid });
                 }
             }
             requestAnimationFrame(fr);
         }
 
-        // 老者被拖动 → 操纵杆整体跟随
-        var moveHandler = function(d) { if (!ctrl.parentNode) return; if (d && d.id === 'elder' && !dragging) layout(); };
-        var removeHandler = function(d) { if (d && d.id === 'elder' && stage._elderRodCleanup) stage._elderRodCleanup(); };
+        // 皮影被拖动 → 操纵杆整体跟随
+        var moveHandler = function(d) { if (!ctrl.parentNode) return; if (d && d.id === pid && !dragging) layout(); };
+        var removeHandler = function(d) { if (d && d.id === pid && stage._rodCleanups[pid]) stage._rodCleanups[pid](); };
         EventBus.on('puppet_moved', moveHandler);
         EventBus.on('puppet_removed', removeHandler);
 
-        stage._elderRodCleanup = function() {
+        stage._rodCleanups[pid] = function() {
             if (ctrl.parentNode) ctrl.remove();
-            elderEl.style.transform = '';        // 归还给 .flipped class
-            elderEl.style.transformOrigin = '';  // 复位翻转轴
+            puppetEl.style.transform = '';        // 归还给 .flipped class
+            puppetEl.style.transformOrigin = '';  // 复位翻转轴
             if (EventBus.off) { EventBus.off('puppet_moved', moveHandler); EventBus.off('puppet_removed', removeHandler); }
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
             document.removeEventListener('touchmove', onMove);
             document.removeEventListener('touchend', onUp);
-            stage._elderRodCleanup = null;
+            stage._rodCleanups[pid] = null;
+            delete stage._rodCleanups[pid];
         };
     }
 
@@ -3736,6 +3756,20 @@ const ShadowJudge = {
             var hints = pc.wrong.map(function(w){ return w.msg; });
             return '路师傅凑近白布：影儿是齐了，可位置还差点——\n' + hints.join('\n');
         }
+        // —— ②.4 第二场：老者/金蟾必须翻转朝右才通过 ——
+        if (sceneId === 'act1_scene2') {
+            var unflipped = [];
+            staged.forEach(function(p) {
+                if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
+                    var el = document.getElementById('stage-' + p.puppetId);
+                    if (el && !el.classList.contains('flipped')) unflipped.push(getPuppetName(p.puppetId));
+                }
+            });
+            if (unflipped.length > 0) {
+                var flipNames = unflipped.join('和');
+                return '路师傅指了指' + flipNames + '：\n「它还没转过身来——戏里它得面朝这边演。\n你按住那根竹签，把它舞到对面去。」';
+            }
+        }
         // —— ②.5 第二场（信中之秘）专属叙事提示：按摆的组合给对应叙事 ——
         if (sceneId === 'act1_scene2') {
             // 老者+金蟾齐 → 金蟾相关叙事 + 暗语「三根线」
@@ -3747,9 +3781,9 @@ const ShadowJudge = {
             // 只有书生（位置对了）→ 信中看到珍奇斋
             if (placedIds.indexOf('scholar')!==-1 && placedIds.indexOf('elder')===-1)
                 return '路师傅点了点头：\n「书生打开了信封——从信里望出去，首先看到的，就是熟悉的珍奇斋。」';
-            // 只有老者 → 瀚墨斋朝向叙事（老者背着瀚墨斋、面朝右才有安全感）
+            // 只有老者 → 瀚墨斋朝向叙事 + 翻转提示（老者背着瀚墨斋、面朝右才有安全感）
             if (placedIds.indexOf('elder')!==-1)
-                return '路师傅眯了眯眼：\n「老者舞戏，总爱背着瀚墨斋站——\n面朝这边，心里才踏实些。」';
+                return '路师傅眯了眯眼：\n「老者舞戏，总爱背着瀚墨斋站——\n面朝这边，心里才踏实些。」\n（他指了指老者）「按住竹签，把他舞过来——别让他背对着戏台。」';
             // 只有金蟾
             if (placedIds.indexOf('frog')!==-1)
                 return '路师傅低头看了看：\n「金蟾——得跟着老者走。它自己不会动的。」';
@@ -4419,7 +4453,12 @@ const ShadowJudge = {
     function clearStage() {
         var puppets = stage.querySelectorAll('.stage-puppet');
         puppets.forEach(function(p){p.remove();});
-        if (stage._elderRodCleanup) stage._elderRodCleanup();   // 清掉老者操纵杆，避免切场残留
+        // 清掉所有皮影操纵杆，避免切场残留
+        if (stage._rodCleanups) {
+            Object.keys(stage._rodCleanups).forEach(function(k) {
+                if (stage._rodCleanups[k]) stage._rodCleanups[k]();
+            });
+        }
         gameState.stagedPuppets=[];
         var hint=stage.querySelector('.stage-hint'); if(hint) hint.style.display='';
     }
