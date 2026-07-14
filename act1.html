@@ -2076,10 +2076,10 @@ const ACTS_DATA = {
             "hidden_clues": [
                 {"id":"clue_1","name":"槐树与地名","layer":1,"scene_id":"act1_scene1","trigger":"学徒在Scene1中摆放了槐树（tree）","trigger_puppets":["tree"],"reveal_content":"路师傅说戏时不经意提到'琉璃厂东街第三个书摊后面有棵老槐树'——这不是戏词，是他真实的记忆坐标。","cipher_link":["槐树"],"game_impact":"解锁暗语'槐树'","difficulty":"easy"},
                 {"id":"clue_2","name":"信不是情书","layer":1,"scene_id":"act1_scene1","trigger":"学徒在Scene1中摆了信（letter）且书生面朝信的方向","trigger_puppets":["scholar","letter"],"reveal_content":"路师傅看着影面，轻声说：'那封信——写了三年。不是情话，是比命还重的东西。'","cipher_link":["槐树"],"game_impact":"深化暗语'槐树'（信=师父留下的戏谱，同源）","difficulty":"easy"},
-                {"id":"clue_3","name":"三根线的秘密","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中同时摆了老者（elder）和金蟾（frog）","trigger_puppets":["elder","frog"],"reveal_content":"路师傅低头看着金蟾：'它趴在那儿，三根线吊着——戏里就是这么演的。'他停了停，'可你想过没，三根线吊一个金蟾？戏曲里……也有三个人。'","cipher_link":["三根线"],"game_impact":"解锁暗语'三根线'","difficulty":"medium"},
+                {"id":"clue_3","name":"三根线的秘密","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中同时摆了老者（elder）和金蟾（frog）","trigger_puppets":["elder","frog"],"reveal_content":"路师傅低头看着金蟾：'它趴在那儿，三根线吊着——戏里就是这么演的。'他停了停，'可你想过没，三根线吊一个金蟾？舞这戏的……也有三个人。'","cipher_link":["三根线"],"game_impact":"解锁暗语'三根线'","difficulty":"medium"},
                 {"id":"clue_4","name":"两个师兄弟","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了全部必需皮影且追问了'老者是谁'","trigger_puppets":["scholar","elder","frog"],"reveal_content":"路师傅被追问后：'我有两个师兄弟。一个远走他乡——那年秋天的事。另一个病在床上，临走前拉着我的手说：老三，线不能断。'","cipher_link":["三根线"],"game_impact":"大师兄贺云亭和二师兄刘玉山线索首次出现","difficulty":"hard"},
                 {"id":"clue_5","name":"金蟾为什么碎了","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了金蟾（frog）、老者（elder）和书生（scholar）","trigger_puppets":["frog","elder","scholar"],"reveal_content":"路师傅看着影面，声音忽然轻了：'书生读着信——仿佛置身于珍奇斋下。'他顿了顿，'金蟾碎了那天……我放下操纵杆，就再没拿起来过。'","cipher_link":["金蟾碎了"],"game_impact":"解锁暗语'金蟾碎了'；学徒第一次意识到'戏=现实'","difficulty":"medium"},
-                {"id":"clue_6","name":"最后一根线","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了全部必需皮影（老者+金蟾+书生）","trigger_puppets":["frog","elder","scholar"],"reveal_content":"老者手上只有两根线——第三根断了。路师傅的声音低到几乎听不见：'线不能断。断了——戏就散了。我手上——只剩这一根了。'","cipher_link":["三根线","金蟾碎了"],"game_impact":"第一幕暗语链闭环","difficulty":"hard"}
+                {"id":"clue_6","name":"最后一根线","layer":2,"scene_id":"act1_scene2","trigger":"学徒在Scene2中摆了全部必需皮影（老者+金蟾+书生）","trigger_puppets":["frog","elder","scholar"],"reveal_content":"路师傅的声音低到几乎听不见：'断了两根线……两根断了，就剩我一个了。'他顿了很久，'线不能断。断了——戏就散了。我手上——只剩这一根了。'","cipher_link":["三根线","金蟾碎了"],"game_impact":"第一幕暗语链闭环","difficulty":"hard"}
             ],
             "scenes": [
                 {"id":"act1_scene1","name":"月夜等人","description":"琉璃厂旧书铺的后院，一方白布戏台。月色斜照，槐树影静。木箱里睡着几枚皮影：书生、老者、金蟾、槐树、月亮。\n书生是读书人，他总在等人——可戏台前空着一座，他等的不是戏里的人，是台下能接住这出戏的人。","standard_puppets":["scholar","tree","moon","letter"],"acceptable_extras":["lamp"],"perfect_score":40,"hidden_clue":"琉璃厂的记忆坐标","hidden_clue_ids":["clue_1","clue_2"],"cipher_triggers":["槐树"],"cipher_guidance":"学徒摆了槐树→路师傅提到'我认得一棵槐树，在东街第三个书摊后面'；学徒摆了信→路师傅说'那封信写了三年——不是我写的，是我师父'（同样指向槐树/作坊记忆）"},
@@ -2378,11 +2378,14 @@ const ShadowJudge = {
         if (Math.abs(dx) > 0.05) dirs.push(dx > 0 ? '往左' : '往右');
         if (Math.abs(dy) > 0.05) dirs.push(dy > 0 ? '往上' : '往下');
         var move = dirs.length ? dirs.join('、') + '挪挪' : '再挪挪';
-        // ===== 第二场（信中之秘）· 叙事化位置提示：用背景里真实的建筑名 =====
+        // ===== 第二场（信中之秘）· 间接叙事化位置提示：不直接说答案，用角色习惯/回忆暗示方位 + 给方向 =====
         if (sceneId === 'act1_scene2') {
-            if (pid === 'elder')  return '（师傅指了指大渊阁的台阶）老者——得站在大渊阁底下。' + move + '。';
-            if (pid === 'frog')   return '（师傅低头看了看老者脚边）金蟾——在老者的三根线下面呢，得跟着老者走。' + move + '。';
-            if (pid === 'scholar') return '（师傅沉默了一会儿）书生打开了信封——\n从信里望出去，他首先看到的，是熟悉的珍奇斋。' + move + '。';
+            if (pid === 'elder')
+                return '（师傅眯了眯眼）老者啊……他以前经常在大渊阁底下摆摊演皮影。\n' + (move ? '你试试再往' + move + '挪挪？' : '差不多就在那儿了。');
+            if (pid === 'frog')
+                return '（师傅低头看了看地面）金蟾——它从来不上台面的，就趴在老者脚边跟着走。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就在那儿趴着。');
+            if (pid === 'scholar')
+                return '（师傅沉默了一会儿）书生……他最熟悉的，就是珍奇斋。\n每次看戏前总得去那转转，看点新奇玩意儿。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，从他的角度望过去正好能看见。');
         }
         // 金蟾三级判定（rel→elder 时）：很远→"在老者线下面"(不给方向)；近但没到位→"跟着老者"+方向
         if (rule.type === 'rel' && rule.to === 'elder') {
