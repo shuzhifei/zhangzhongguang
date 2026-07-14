@@ -1191,6 +1191,48 @@ body {
 @keyframes curtainOpenLeft  { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-100%); opacity: 1; } }
 @keyframes curtainOpenRight { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(100%); opacity: 1; } }
 
+/* ===== 幕间休息：帘子聚光 + 可点击 + 背景虚化 ===== */
+#stage.stage-dim {
+    filter: blur(5px) brightness(0.3);
+    transition: filter 1.2s ease;
+}
+.curtain-glow {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,215,100,0.7) 0%, rgba(255,190,60,0.35) 30%, rgba(255,170,40,0.08) 55%, transparent 70%);
+    animation: curtainGlowPulse 2.2s ease-in-out infinite alternate;
+    pointer-events: none;
+}
+@keyframes curtainGlowPulse {
+    0%   { opacity: 0.35; transform: translate(-50%, -50%) scale(0.8); }
+    100% { opacity: 1;   transform: translate(-50%, -50%) scale(1.2); }
+}
+.curtain-clickable {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+/* 帘子中间的点击提示文字 */
+.curtain-hint-text {
+    position: absolute;
+    bottom: 18%;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,230,160,0.75);
+    font-family: 'STKaiti','KaiTi','楷体',serif;
+    font-size: 14px;
+    letter-spacing: 4px;
+    animation: hintTextFade 2.4s ease-in-out infinite alternate;
+    pointer-events: none;
+    white-space: nowrap;
+}
+@keyframes hintTextFade {
+    0%   { opacity: 0.3; }
+    100% { opacity: 0.85; }
+}
+
 /* 第一场展示皮影戏：在舞台（幕中）区域内播放 mp4 动画 */
 #act1ShowVideoOverlay { position: absolute; inset: 0; z-index: 16; background: rgba(0,0,0,0.92);
     display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -3739,6 +3781,24 @@ const ShadowJudge = {
     }
     // 跨 IIFE 暴露：info-panel 里的「跳到第二场」按钮(3245) 与它不在同一作用域，需走 window 桥接
     window.playCurtainCloseThenOpen = playCurtainCloseThenOpen;
+    // 只合拢、不拉开（用于"演完动画帘子拉上后不再打开，直接出台词"的场景）
+    function playCurtainCloseOnly(onClosed) {
+        console.log('[curtain] 帘子合拢(不拉开)');
+        var wrap = document.createElement('div');
+        wrap.className = 'curtain-close-wrap curtain-close-active';
+        wrap.innerHTML = '<div class="curtain-close-left"></div><div class="curtain-close-right"></div>';
+        wrap.style.cssText = 'position:absolute!important;inset:0!important;z-index:60!important;display:flex!important;overflow:hidden!important;pointer-events:none!important;';
+        var stageEl = document.getElementById('stage');
+        (stageEl || document.body).appendChild(wrap);
+        void wrap.offsetHeight;
+        setTimeout(function() {
+            console.log('[curtain] 合拢完成(保持关闭), 执行 onClosed');
+            if (onClosed) onClosed(wrap);
+        }, 1300);
+        return wrap;
+    }
+    // 跨 IIFE 暴露：幕间休息等跨 IIFE 场景需要调用
+    window.playCurtainCloseOnly = playCurtainCloseOnly;
     // 第一场展示皮影戏：在舞台（幕中）区域内播放 mp4 动画，播完/点击/出错则继续
     function playAct1ShowVideo(onDone) {
         var ov = document.createElement('div');
@@ -3823,8 +3883,10 @@ const ShadowJudge = {
                 narrationActive = false;
                 setNarrationLock(false);
                 playAct1ShowVideo(function() {
-                    // 动画播完：直接让幕上的信发亮（视觉引导，本身就是动画的一部分），不再用文字点评打断演出
-                    focusOnLetter(enterAct2Directly);
+                    // 动画播完：帘子合拢收尾 → 拉开时让幕上的信发亮（视觉引导）
+                    playCurtainCloseThenOpen(null, function() {
+                        focusOnLetter(enterAct2Directly);
+                    });
                 });
             });
         } else if (isAct2FinalTransition) {
@@ -3835,8 +3897,11 @@ const ShadowJudge = {
             setNarrationLock(false);
             playCurtainCloseThenOpen(function() {
                 playAct1ShowVideo(function() {
-                    console.log('[onShowPlayClick] 终场视频播完, 调 advanceScene 结算');
-                    if (window.advanceScene) window.advanceScene();
+                    console.log('[onShowPlayClick] 终场视频播完, 帘子收尾后结算');
+                    // 动画播完：帘子合拢收尾 → 拉开时露出结局画面
+                    playCurtainCloseThenOpen(null, function() {
+                        if (window.advanceScene) window.advanceScene();
+                    });
                 });
             });
         } else {
@@ -3852,8 +3917,34 @@ const ShadowJudge = {
             playCurtainCloseThenOpen(function() {
                 // 帘子拉开后，在舞台播放本幕皮影戏动画（纯动画，无台词）
                 videoFn(function() {
-                    console.log('[onShowPlayClick] 中间场次视频播完, 调 advanceScene 进下一场');
-                    if (window.advanceScene) window.advanceScene();
+                    var isAct1Second = (gameState.currentAct === 1 && gameState.currentScene === 1);
+                    if (isAct1Second) {
+                        // 第二场：帘子合拢(不拉开) → 对话区生成路师傅台词 → 玩家点对话框继续 → 移除帘子进第二幕
+                        console.log('[onShowPlayClick] 第二场视频播完, 帘子合拢不拉开, 出台词');
+                        playCurtainCloseOnly(function(wrap) {
+                            speaker.textContent = '路师傅';
+                            typewriter(dialogueText, '这出戏，你接住了。信里写的不是词，是路子——当年我师傅也是这么教我的。\n（他收起影人，忽然皱眉）……大栅栏那头，听说有人打着我的名号。戏台子支起来了，可那影子，不对。', 50);
+                            typingDoneCb = function() {
+                                var nh = document.getElementById('narrationHint');
+                                if (nh) nh.style.display = '';
+                                var dlg = document.querySelector('.dialogue-area');
+                                if (!dlg) { if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap); if (window.advanceScene) window.advanceScene(); return; }
+                                function onCont(e) {
+                                    if (e.target && (e.target.id === 'btnEnterAct2' || e.target.id === 'showPlayBtn')) return;
+                                    dlg.removeEventListener('click', onCont);
+                                    if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
+                                    if (window.advanceScene) window.advanceScene();
+                                }
+                                dlg.addEventListener('click', onCont);
+                            };
+                        });
+                    } else {
+                        console.log('[onShowPlayClick] 中间场次视频播完, 帘子收尾后进下一场');
+                        // 动画播完：帘子合拢收尾 → 拉开时露出下一场
+                        playCurtainCloseThenOpen(null, function() {
+                            if (window.advanceScene) window.advanceScene();
+                        });
+                    }
                 });
             });
         }
@@ -4446,36 +4537,92 @@ const ShadowJudge = {
         } catch(e) { console.warn('[goAct2]', e.message); showDialogue('路师傅', '（幕布重新拉开）下一幕——请接着摆。'); }
     }
 
-    // 第一幕收尾：幕间休息（按新剧本 16-25 分钟）——灯油补给 + 解锁新皮影叙事 + 自动续进第二幕
+    // 第一幕收尾：幕间休息 —— 台词 → 背景虚化 → 帘子聚光发亮 → 点击帘子缓缓拉开 → 标题卡 → 第二幕
     function showAct1Intermission() {
         try {
             EventBus.emit('act_intermission');
+            // 幕间休息：合拢帘子盖住舞台
+            var _curtainFn = window.playCurtainCloseOnly;
+            var _wrap = null;
+            if (_curtainFn) _curtainFn(function(w) { _wrap = w; });
             var text = ['—— 幕 间 休 息 ——','','你打开皮影箱，发现多了一个皮影——一条船。',
                 '「船能带你走水路。」',
                 '师傅望着远方，轻声说：「我那大师兄，民国二十六年就失踪了，再没回来。」',
                 '他顿了顿：「你方才摆的每一个影，我都认得——槐树是东街的老地方，信是师父留下的戏谱，三根线是我和两位师兄，金蟾碎了……是传承断了。」',
                 '「信的最后一笔，指向大栅栏。听说，那儿有人打着我的名号。」'].join('\n');
             EventBus.emit('narration_chunk',{ speaker:'', text:text, speed:38 });
-            var advanced=false;
-            function goAct2(){
-                if(advanced)return; advanced=true;
-                // 清理可能仍残留的「前往大栅栏」按钮（玩家提前点掉按钮时会走这条路径）
-                var b=document.getElementById('btnEnterAct2'); if(b&&b.parentNode)b.parentNode.removeChild(b);
-                if(window.NarrationCtl) window.NarrationCtl.reset();
-                advanceToNextAct();
+
+            var advanced = false;
+            // 台词打完后：背景虚化 + 帘子聚光发亮 + 等待玩家点击帘子
+            function prepareCurtainTransition() {
+                if (advanced) return;
+                // ① 背景虚化（舞台变暗模糊，聚焦到帘子上）
+                var stageEl = document.getElementById('stage');
+                if (stageEl) stageEl.classList.add('stage-dim');
+
+                // ② 帘子中间加聚光效果 + 点击提示
+                if (_wrap) {
+                    _wrap.classList.add('curtain-clickable');
+                    var glow = document.createElement('div');
+                    glow.className = 'curtain-glow';
+                    var hint = document.createElement('div');
+                    hint.className = 'curtain-hint-text';
+                    hint.textContent = '— 点击幕布 —';
+                    _wrap.appendChild(glow);
+                    _wrap.appendChild(hint);
+
+                    // ③ 玩家点击帘子 → 缓缓拉开 → 显示标题卡 → 进第二幕
+                    _wrap.addEventListener('click', function onCurtainClick() {
+                        if (advanced) return;
+                        advanced = true;
+                        _wrap.removeEventListener('click', onCurtainClick);
+                        console.log('[intermission] 玩家点击了帘子, 开始拉开');
+
+                        // 移除虚化
+                        if (stageEl) { stageEl.classList.remove('stage-dim'); }
+
+                        // 移除发光/提示
+                        if (glow && glow.parentNode) glow.parentNode.removeChild(glow);
+                        if (hint && hint.parentNode) hint.parentNode.removeChild(hint);
+                        _wrap.classList.remove('curtain-clickable');
+
+                        // 帘子缓缓拉开（复用 curtainOpenLeft/Right 动画）
+                        _wrap.classList.add('curtain-open-active');
+                        setTimeout(function() {
+                            // ④ 拉开完成：显示 "第二幕 · 第一场 · 真假传人" 标题卡
+                            showAct2SceneTitleCard(function() {
+                                // ⑤ 标题卡淡出后：清理帘子 + 进第二幕
+                                if (_wrap && _wrap.parentNode) _wrap.parentNode.removeChild(_wrap);
+                                if (window.NarrationCtl) window.NarrationCtl.reset();
+                                advanceToNextAct();
+                            });
+                        }, 1100); // 拉开动画时长
+                    });
+                } else {
+                    // 没有帘子 wrap 时直接进第二幕（降级路径）
+                    if (window.NarrationCtl) window.NarrationCtl.reset();
+                    advanceToNextAct();
+                }
             }
-            // 提供进入第二幕（大栅栏·主线）的入口；什刹海（支线）待后续
-            setTimeout(function(){
-                var btn=document.createElement('button');
-                btn.id='btnEnterAct2';
-                btn.textContent='前往大栅栏（主线）';
-                btn.style.cssText='position:absolute;bottom:26px;left:50%;transform:translateX(-50%);padding:12px 28px;background:transparent;border:1px solid #e8c860;color:#e8c860;font-size:15px;letter-spacing:3px;border-radius:2px;cursor:pointer;z-index:120;';
-                btn.onclick=function(){ if(btn.parentNode)btn.parentNode.removeChild(btn); goAct2(); };
-                document.body.appendChild(btn);
-            }, 7000);
-            // 第一幕结束自动续进第二幕（玩家点完幕间旁白后触发）
-            if (window.NarrationCtl) window.NarrationCtl.enqueueAction(goAct2);
-        } catch(e) { advanceToNextAct(); }
+            // 台词全部打完后自动进入"等待点击帘子"状态
+            if (window.NarrationCtl) window.NarrationCtl.enqueueAction(prepareCurtainTransition);
+        } catch(e) { console.warn('[showAct1Intermission]', e.message); advanceToNextAct(); }
+    }
+
+    // 显示 "第 X 幕 · 第 Y 场 · 场景名" 标题卡片（复用 act-title-overlay 组件）
+    function showAct2SceneTitleCard(onDone) {
+        try {
+            var ov = document.createElement('div');
+            ov.className = 'act-title-overlay act2';
+            ov.innerHTML = '<div class="act-title-bg"></div><div class="act-title-text">第二幕&nbsp;&nbsp;·&nbsp;&nbsp;第一场&nbsp;&nbsp;·&nbsp;&nbsp;真假传人</div>';
+            document.body.appendChild(ov);
+            void ov.offsetHeight;
+            ov.classList.add('visible');
+            setTimeout(function() {
+                ov.classList.add('fade-out');
+                setTimeout(function() { if (ov.parentNode) ov.parentNode.removeChild(ov); if (onDone) onDone(); }, 1500);
+            }, 2800); // 标题卡停留时间
+        } catch(e) { if (onDone) onDone(); }
     }
 
     function endGame() {
