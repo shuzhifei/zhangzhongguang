@@ -2459,13 +2459,11 @@ const ShadowJudge = {
         }
         // 第二场：老者和金蟾必须翻转朝右才通过（操纵杆交互要求）
         if (correct && currentSceneId === 'act1_scene2') {
+            var flippedMap = gameState._flippedPuppets || {};
             var unflipped = [];
             stagedPuppets.forEach(function(p) {
                 if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
-                    var el = document.querySelector('.stage-puppet[data-puppet="' + p.puppetId + '"]');
-                    if (el && !el.classList.contains('flipped')) {
-                        unflipped.push(ShadowJudge._puppetName(p.puppetId));
-                    }
+                    if (!flippedMap[p.puppetId]) unflipped.push(ShadowJudge._puppetName(p.puppetId));
                 }
             });
             if (unflipped.length > 0) {
@@ -3066,7 +3064,11 @@ const ShadowJudge = {
                 if (k < 1) { requestAnimationFrame(fr); }
                 else {
                     rodX = toX; rodY = toY;
-                    if (target) puppetEl.classList.add('flipped'); else puppetEl.classList.remove('flipped');
+                    if (target) { puppetEl.classList.add('flipped'); }
+                    else { puppetEl.classList.remove('flipped'); }
+                    // ★ 用 gameState 记录翻转状态（DOM 检测不可靠：render 每帧覆盖 transform）
+                    if (!gameState._flippedPuppets) gameState._flippedPuppets = {};
+                    gameState._flippedPuppets[pid] = !!target;
                     render();
                     if (target !== wasFlipped) EventBus.emit('puppet_flipped', { id: pid });
                 }
@@ -3792,22 +3794,15 @@ const ShadowJudge = {
         }
 
         // ③ 翻转判定（第二场：老者/金蟾必须翻转朝右；阵容+位置都对了才查翻转）
+        // ★ 从 gameState._flippedPuppets 读取（不再依赖 DOM classList/transform，避免 render 每帧覆盖导致状态不一致）
         if (sceneId === 'act1_scene2' && missing.length === 0 && extra.length === 0) {
             var pc2 = ShadowJudge._checkPositions(staged, sceneId);
             if (pc2 && pc2.ok) {   // 位置也对了，再查翻转
+                var flippedMap = gameState._flippedPuppets || {};
                 var unflipped = [];
                 staged.forEach(function(p) {
                     if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
-                        var el = document.querySelector('.stage-puppet[data-puppet="' + p.puppetId + '"]');
-                        if (el) {
-                            var hasClass = el.classList.contains('flipped');
-                            // 兜底：操纵杆实时跟踪时 style.transform 会有 scaleX(-1) 但 classList 可能还没 settle
-                            var tx = el.style.transform || '';
-                            var hasNegScaleX = tx.indexOf('scaleX(-') !== -1 || tx.indexOf('scaleX(-0') !== -1;
-                            var isFlipped = hasClass || hasNegScaleX;
-                            console.log('[flip-check] ' + p.puppetId + ': class=' + hasClass + ', transform=' + tx + ', final=' + isFlipped);
-                            if (!isFlipped) unflipped.push(getPuppetName(p.puppetId));
-                        }
+                        if (!flippedMap[p.puppetId]) unflipped.push(getPuppetName(p.puppetId));
                     }
                 });
                 if (unflipped.length > 0) {
