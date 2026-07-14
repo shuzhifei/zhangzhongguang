@@ -2442,7 +2442,7 @@ const ShadowJudge = {
             if (unflipped.length > 0) {
                 correct = false;
                 return { score: Math.max(0, score - 15), correct: false,
-                         comment: '（师傅指了指' + unflipped.join('和') + '）\n它还没转身呢——按住竹签，把它舞到对面去。', needFlip: true };
+                         comment: '不通过，要不询问师傅的建议吧！', needFlip: true };
             }
         }
         // ===== 确认按钮只说简短判断（对/不对），具体提示留给"追问师傅" =====
@@ -2456,7 +2456,7 @@ const ShadowJudge = {
             spatial:{score:Math.round(coverage*25*0.6),comment:''},
             plot_detail:{score:Math.round(coverage*25*0.6),comment:''},
             authenticity:{score:coverage>=0.8?16:6,comment:''},
-            comment: correct ? (okComments[currentSceneId] || ('这一面，齐了。\n\n（师傅微微点了点头）\n影儿都摆到了位子，戏味出来了。')) : '（摇了摇头）不对。这出戏——不是这么摆的。再想想。',
+            comment: correct ? (okComments[currentSceneId] || ('这一面，齐了。\n\n（师傅微微点了点头）\n影儿都摆到了位子，戏味出来了。')) : '不通过，要不询问师傅的建议吧！',
             guiding_hint: ''   // 不在此处给提示——追问师傅才给详情
         };
     },
