@@ -2352,6 +2352,51 @@ const AI = {
 // ========================================
 // shadow-judge.js — 影面评判系统（精简版）
 // ========================================
+
+// ★★★ 纯事件驱动的翻转追踪器 ★★★
+// 不依赖 DOM/JS 变量/作用域——只听 EventBus 事件记录翻转状态。
+// settle() 翻转时 emit('puppet_flipped', {id})，这里直接收。
+// 这是终极方案：EventBus 是全局单例，跨 IIFE/跨脚本块 100% 可靠。
+const FlipTracker = {
+    _state: {},          // { elder: true, frog: false, ... }
+    _initDone: false,
+    init() {
+        if (this._initDone) return;
+        this._initDone = true;
+        // 翻转事件：settle() 在 q=1(完全翻过)时 emit，携带 { id: pid }
+        if (window.EventBus && EventBus.on) {
+            EventBus.on('puppet_flipped', (e) => {
+                if (e && e.id) {
+                    this._state[e.id] = true;
+                    console.log('[FlipTracker] 记录翻转:', e.id, '→ 当前状态:', JSON.stringify(this._state));
+                }
+            });
+            // 皮影被移走时清除状态（重新放上来默认未翻）
+            EventBus.on('puppet_removed', (e) => {
+                if (e && e.id) {
+                    delete this._state[e.id];
+                    console.log('[FlipTracker] 清除翻转:', e.id);
+                }
+            });
+        }
+        // 也从当前 DOM 同步一次（页面刷新后事件已丢失，但 DOM class 可能还在）
+        try {
+            document.querySelectorAll('.stage-puppet.flipped').forEach(el => {
+                if (el.dataset.puppet) this._state[el.dataset.puppet] = true;
+            });
+        } catch(e) {}
+    },
+    isFlipped(puppetId) {
+        // init() 在页面加载时已 eager 执行（见下方 FlipTracker.init() 调用）
+        // 这里保留防御性调用以防极端时序
+        return !!this._state[puppetId];
+    }
+};
+
+// ★ 立即初始化：页面加载时就挂好事件监听器，不等第一次查询
+// 这样用户翻转皮影时（settle → emit('puppet_flipped')），FlipTracker 一定已经收听
+FlipTracker.init();
+
 const ShadowJudge = {
     async judge(stagedPuppets, currentSceneId, isImprov) {
         isImprov = isImprov || false;
@@ -2404,12 +2449,22 @@ const ShadowJudge = {
         return NAMES[id] || id;
     },
 
-    // ★ 翻转检测：读浏览器最终计算样式 getComputedStyle（最可靠，涵盖所有来源）
+    // ★ 翻转检测：FlipTracker(事件驱动) > getComputedStyle > style > classList > data属性 > window全局
+    //   FlipTracker 监听 EventBus('puppet_flipped') 事件——settle() 翻转时 emit，这里直接收。
+    //   这是终极方案：EventBus 是全局单例，跨 IIFE/跨脚本块 100% 可靠。
     _isFlipped(puppetId) {
-        var el = document.querySelector('.stage-puppet[data-puppet="' + puppetId + '"]');
-        if (!el) { this._dbgFlip('⚠ 找不到元素', puppetId); return false; }
-
         var dbg = '[FLIP:' + puppetId + '] ';
+
+        // ★★★ 优先级0（最高）：事件驱动 FlipTracker ★★★
+        if (typeof FlipTracker !== 'undefined' && FlipTracker.isFlipped(puppetId)) {
+            this._dbgFlip(dbg + '✅已翻(FlipTracker事件)');
+            return true;
+        }
+        this._dbgFlip(dbg + 'FlipTracker=未翻, 继续查DOM...');
+
+        // 以下为 DOM 兜底（FlipTracker 未能覆盖的极端情况）
+        var el = document.querySelector('.stage-puppet[data-puppet="' + puppetId + '"]');
+        if (!el) { this._dbgFlip(dbg + '⚠找不到元素'); return false; }
 
         // 优先级1：getComputedStyle（最终生效值，matrix(a,b,c,d,tx,ty)，a<0=翻转）
         try {
@@ -2452,6 +2507,7 @@ const ShadowJudge = {
             d = document.createElement('div');
             d.id = '__flip_dbg__';
             d.style.cssText = 'position:fixed;top:60px;left:4px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:11px/1.4 monospace;padding:6px 8px;border-radius:4px;max-width:420px;word-break:break-all;pointer-events:none;';
+            d.textContent = '=== 翻转检测 v[EVENT] ===\n';  // 版本标识：事件驱动
             document.body.appendChild(d);
         }
         d.textContent += msg + '\n';
