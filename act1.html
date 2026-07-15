@@ -2449,18 +2449,22 @@ const ShadowJudge = {
         return NAMES[id] || id;
     },
 
-    // ★ 翻转检测：FlipTracker(事件驱动) > getComputedStyle > style > classList > data属性 > window全局
-    //   FlipTracker 监听 EventBus('puppet_flipped') 事件——settle() 翻转时 emit，这里直接收。
-    //   这是终极方案：EventBus 是全局单例，跨 IIFE/跨脚本块 100% 可靠。
+    // ★ 翻转检测优先级（从高到低）：
+    //   0. window['__flip_'+pid] — settle() 直接写的最原始全局变量
+    //   1. FlipTracker — 事件驱动
+    //   2-6. DOM 兜底（getComputedStyle / style / classList / data-flipped / window.__flippedPuppets）
     _isFlipped(puppetId) {
         var dbg = '[FLIP:' + puppetId + '] ';
 
-        // ★★★ 优先级0（最高）：事件驱动 FlipTracker ★★★
-        if (typeof FlipTracker !== 'undefined' && FlipTracker.isFlipped(puppetId)) {
-            this._dbgFlip(dbg + '✅已翻(FlipTracker事件)');
+        // ★★★ 优先级0（绝对最高）：settle 直接写入的 window 属性 ★★★
+        var rawFlip = window['__flip_' + puppetId];
+        if (rawFlip === true) {
+            this._dbgFlip(dbg + '✅已翻(window[__flip_' + puppetId + '])');
             return true;
         }
-        this._dbgFlip(dbg + 'FlipTracker=未翻, 继续查DOM...');
+        this._dbgFlip(dbg + 'rawFlip=' + rawFlip + '(typeof=' + typeof rawFlip + '), 继续查...');
+
+        // ★ 优先级1：事件驱动 FlipTracker ★
 
         // 以下为 DOM 兜底（FlipTracker 未能覆盖的极端情况）
         var el = document.querySelector('.stage-puppet[data-puppet="' + puppetId + '"]');
@@ -2506,8 +2510,8 @@ const ShadowJudge = {
         if (!d) {
             d = document.createElement('div');
             d.id = '__flip_dbg__';
-            d.style.cssText = 'position:fixed;top:60px;left:4px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:11px/1.4 monospace;padding:6px 8px;border-radius:4px;max-width:420px;word-break:break-all;pointer-events:none;';
-            d.textContent = '=== 翻转检测 v[EVENT] ===\n';  // 版本标识：事件驱动
+            d.style.cssText = 'position:fixed;top:60px;left:4px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:11px/1.4 monospace;padding:6px 8px;border-radius:4px;max-width:480px;word-break:break-all;pointer-events:none;';
+            d.textContent = '=== v[RAW] 2026-07-15 14:42 ===\n';  // 版本标识 + 时间戳
             document.body.appendChild(d);
         }
         d.textContent += msg + '\n';
@@ -3271,6 +3275,11 @@ const ShadowJudge = {
                 if (k < 1) { requestAnimationFrame(fr); }
                 else {
                     rodX = toX; rodY = toY;
+                    // ★★★ 不可绕过的全局写入（settle 内部直接写，不依赖任何框架） ★★★
+                    var FLIP_KEY = '__flip_' + pid;   // 如 __flip_elder
+                    window[FLIP_KEY] = !!target;      // 直接挂在 window 上，最原始的方式
+                    console.log('[SETTLE]', pid, 'target=', target, '→ window.' + FLIP_KEY, '=', window[FLIP_KEY], 'classList.flipped=', puppetEl.classList.contains('flipped'));
+
                     if (target) { puppetEl.classList.add('flipped'); }
                     else { puppetEl.classList.remove('flipped'); }
                     // ★ 双重记录翻转状态（彻底避免跨IIFE/DOM检测问题）：
@@ -3820,6 +3829,20 @@ const ShadowJudge = {
         var sceneId = getCurrentSceneId();
         var _sceneMeta = ShadowJudge._getSceneData(sceneId);
         var isImprov = !!(_sceneMeta && _sceneMeta.is_improvisation);
+
+        // ★★★ 先跑本地快速检查（数量+位置+翻转），结构不对直接拦截，不浪费AI调用 ★★★
+        var localResult = ShadowJudge.quickJudge(staged, sceneId);
+        if (!localResult.correct) {
+            // 本地检查不通过（数量/位置/翻转任一失败）→ 直接用本地结果，不调AI
+            setTimeout(function() {
+                displayJudgeResult(localResult);
+                emitSceneJudged(staged, sceneId, localResult);
+                btnConfirm.disabled=false; btnAsk.disabled=false;
+            }, 800);
+            return;  // ← 不走AI路径
+        }
+        // 本地通过才调AI生成叙事性评语
+
         if (OFFLINE_MODE) {
             setTimeout(function() {
                 var result = ShadowJudge.quickJudge(staged, sceneId);
