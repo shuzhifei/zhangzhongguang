@@ -2544,7 +2544,8 @@ const ShadowJudge = {
         }
         // 第二场：老者和金蟾必须翻转朝右才通过（操纵杆交互要求）
         if (correct && currentSceneId === 'act1_scene2') {
-            var flippedMap = gameState._flippedPuppets || {};
+            // ★ 唯一真源：window.__flippedPuppets（settle 写入；全局对象，不受 IIFE 作用域限制）
+            var flippedMap = window.__flippedPuppets || {};
             var unflipped = [];
             stagedPuppets.forEach(function(p) {
                 if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
@@ -2981,6 +2982,10 @@ const ShadowJudge = {
         if (!stage._rodCleanups) stage._rodCleanups = {};
         if (stage._rodCleanups[pid]) stage._rodCleanups[pid]();
 
+        // 放置时翻转状态复位为「未翻」（默认面朝左）；settle 成功跨越阈值才会写 true
+        if (!window.__flippedPuppets) window.__flippedPuppets = {};
+        window.__flippedPuppets[pid] = false;
+
         var ROD_H = 99;     // 竹签整体高（在原 74 基础上再高约 1/3）
         var BEAD_R = 3;     // 操纵珠半径（更细）
 
@@ -3154,9 +3159,12 @@ const ShadowJudge = {
                     rodX = toX; rodY = toY;
                     if (target) { puppetEl.classList.add('flipped'); }
                     else { puppetEl.classList.remove('flipped'); }
-                    // ★ 用 gameState 记录翻转状态（DOM 检测不可靠：render 每帧覆盖 transform）
-                    if (!gameState._flippedPuppets) gameState._flippedPuppets = {};
-                    gameState._flippedPuppets[pid] = !!target;
+                    // ★ 双重记录翻转状态（彻底避免跨IIFE/DOM检测问题）：
+                    //   1. data-flipped 属性（在元素自身上，任何作用域都能读到）
+                    //   2. window.__flippedPuppets（全局对象，不受IIFE作用域限制）
+                    puppetEl.setAttribute('data-flipped', target ? '1' : '0');
+                    if (!window.__flippedPuppets) window.__flippedPuppets = {};
+                    window.__flippedPuppets[pid] = !!target;
                     render();
                     if (target !== wasFlipped) EventBus.emit('puppet_flipped', { id: pid });
                 }
@@ -3883,15 +3891,20 @@ const ShadowJudge = {
         }
 
         // ③ 翻转判定（第二场：老者/金蟾必须翻转朝右；阵容+位置都对了才查翻转）
-        // ★ 从 gameState._flippedPuppets 读取（不再依赖 DOM classList/transform，避免 render 每帧覆盖导致状态不一致）
+        // ★ 从元素 data-flipped 属性读取（settle 写入、render 不会覆盖属性、不受 IIFE 作用域限制）
         if (sceneId === 'act1_scene2' && missing.length === 0 && extra.length === 0) {
             var pc2 = ShadowJudge._checkPositions(staged, sceneId);
             if (pc2 && pc2.ok) {   // 位置也对了，再查翻转
-                var flippedMap = gameState._flippedPuppets || {};
                 var unflipped = [];
                 staged.forEach(function(p) {
                     if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
-                        if (!flippedMap[p.puppetId]) unflipped.push(getPuppetName(p.puppetId));
+                        var el = document.querySelector('.stage-puppet[data-puppet="' + p.puppetId + '"]');
+                        // ★ 唯一真源：window.__flippedPuppets（settle 写入，全局对象，不随 DOM 重建丢失）
+                        //    并以 data-flipped 属性作兜底
+                        var winFlipped = window.__flippedPuppets && window.__flippedPuppets[p.puppetId];
+                        var attrFlipped = el && el.getAttribute('data-flipped') === '1';
+                        var isFlipped = !!(winFlipped || attrFlipped);
+                        if (!isFlipped) unflipped.push(getPuppetName(p.puppetId));
                     }
                 });
                 if (unflipped.length > 0) {
