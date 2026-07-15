@@ -2576,18 +2576,22 @@ const ShadowJudge = {
         return NAMES[id] || id;
     },
 
-    // ★ 翻转检测：FlipTracker(事件驱动) > getComputedStyle > style > classList > data属性 > window全局
-    //   FlipTracker 监听 EventBus('puppet_flipped') 事件——settle() 翻转时 emit，这里直接收。
-    //   这是终极方案：EventBus 是全局单例，跨 IIFE/跨脚本块 100% 可靠。
+    // ★ 翻转检测优先级（从高到低）：
+    //   0. window['__flip_'+pid] — settle() 直接写的最原始全局变量
+    //   1. FlipTracker — 事件驱动
+    //   2-6. DOM 兜底（getComputedStyle / style / classList / data-flipped / window.__flippedPuppets）
     _isFlipped(puppetId) {
         var dbg = '[FLIP:' + puppetId + '] ';
 
-        // ★★★ 优先级0（最高）：事件驱动 FlipTracker ★★★
-        if (typeof FlipTracker !== 'undefined' && FlipTracker.isFlipped(puppetId)) {
-            this._dbgFlip(dbg + '✅已翻(FlipTracker事件)');
+        // ★★★ 优先级0（绝对最高）：settle 直接写入的 window 属性 ★★★
+        var rawFlip = window['__flip_' + puppetId];
+        if (rawFlip === true) {
+            this._dbgFlip(dbg + '✅已翻(window[__flip_' + puppetId + '])');
             return true;
         }
-        this._dbgFlip(dbg + 'FlipTracker=未翻, 继续查DOM...');
+        this._dbgFlip(dbg + 'rawFlip=' + rawFlip + '(typeof=' + typeof rawFlip + '), 继续查...');
+
+        // ★ 优先级1：事件驱动 FlipTracker ★
 
         // 以下为 DOM 兜底（FlipTracker 未能覆盖的极端情况）
         var el = document.querySelector('.stage-puppet[data-puppet="' + puppetId + '"]');
@@ -2668,7 +2672,7 @@ const ShadowJudge = {
         //   elder 站在大渊阁底下；frog = 老者用三根线操纵的金蟾(rel跟随elder)；scholar 在珍奇斋附近（从信中望出）
         'act1_scene2': {
             elder:   { type:'abs', cx:0.28, cy:0.72, r:0.13, label:'老者·大渊阁底下' },
-            frog:    { type:'rel', to:'elder', dx:0.06, dy:0.18, r:0.11, label:'金蟾·老者线下' },
+            frog:    { type:'rel', to:'elder', dx:0.02, dy:0.09, r:0.07, label:'金蟾·老者线下' },
             scholar: { type:'abs', cx:0.82, cy:0.68, r:0.12, label:'书生·珍奇斋旁' }
         }
     },
@@ -3386,6 +3390,11 @@ const ShadowJudge = {
                 if (k < 1) { requestAnimationFrame(fr); }
                 else {
                     rodX = toX; rodY = toY;
+                    // ★★★ 不可绕过的全局写入（settle 内部直接写，不依赖任何框架） ★★★
+                    var FLIP_KEY = '__flip_' + pid;   // 如 __flip_elder
+                    window[FLIP_KEY] = !!target;      // 直接挂在 window 上，最原始的方式
+                    console.log('[SETTLE]', pid, 'target=', target, '→ window.' + FLIP_KEY, '=', window[FLIP_KEY], 'classList.flipped=', puppetEl.classList.contains('flipped'));
+
                     if (target) { puppetEl.classList.add('flipped'); }
                     else { puppetEl.classList.remove('flipped'); }
                     // ★ 双重记录翻转状态（彻底避免跨IIFE/DOM检测问题）：
@@ -3950,6 +3959,20 @@ const ShadowJudge = {
         var sceneId = getCurrentSceneId();
         var _sceneMeta = ShadowJudge._getSceneData(sceneId);
         var isImprov = !!(_sceneMeta && _sceneMeta.is_improvisation);
+
+        // ★★★ 先跑本地快速检查（数量+位置+翻转），结构不对直接拦截，不浪费AI调用 ★★★
+        var localResult = ShadowJudge.quickJudge(staged, sceneId);
+        if (!localResult.correct) {
+            // 本地检查不通过（数量/位置/翻转任一失败）→ 直接用本地结果，不调AI
+            setTimeout(function() {
+                displayJudgeResult(localResult);
+                emitSceneJudged(staged, sceneId, localResult);
+                btnConfirm.disabled=false; btnAsk.disabled=false;
+            }, 800);
+            return;  // ← 不走AI路径
+        }
+        // 本地通过才调AI生成叙事性评语
+
         if (OFFLINE_MODE) {
             setTimeout(function() {
                 var result = ShadowJudge.quickJudge(staged, sceneId);
@@ -4139,19 +4162,19 @@ const ShadowJudge = {
         if (sceneId === 'act1_scene2' && missing.length === 0 && extra.length === 0) {
             var pc2 = ShadowJudge._checkPositions(staged, sceneId);
             if (pc2 && pc2.ok) {   // 位置也对了，再查翻转
+                // ★ unflipped 存 puppetId（'elder'/'frog'），避免显示名带空格导致比对失败
                 var unflipped = [];
                 staged.forEach(function(p) {
                     if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
-                        if (!ShadowJudge._isFlipped(p.puppetId)) unflipped.push(getPuppetName(p.puppetId));
+                        if (!ShadowJudge._isFlipped(p.puppetId)) unflipped.push(p.puppetId);
                     }
                 });
-                console.log('[buildOfflineHint] unflipped=', unflipped);
                 ShadowJudge._dbgFlip('[BOH] unflipped=' + JSON.stringify(unflipped));
                 if (unflipped.length > 0) {
-                    // 根据实际未翻的皮影动态生成提示（直接比对数组元素，不依赖 join 字符串）
-                    if (unflipped.length === 1 && unflipped[0] === '老者') {
+                    // 按 puppetId 判断，与实际显示名完全解耦
+                    if (unflipped.length === 1 && unflipped[0] === 'elder') {
                         parts.push('路师傅眯了眯眼：\n「老者舞戏，总爱背着瀚墨斋站——面朝这边，心里才踏实些。」\n（他顿了顿）「你瞧瞧他现在……是不是反了？」');
-                    } else if (unflipped.length === 1 && unflipped[0] === '金蟾') {
+                    } else if (unflipped.length === 1 && unflipped[0] === 'frog') {
                         parts.push('路师傅低头看了看金蟾：\n「这小东西——它得跟着老者的方向走。你看看它……脸朝哪边了？」\n（视线落在金蟾肩头的红线上）「杆能动，试试看？」');
                     } else {
                         // 老者+金蟾都没翻
@@ -5339,6 +5362,16 @@ const ShadowJudge = {
             } else {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
                     '（从皮影箱里，选合适的皮影，把这出戏接着演下去。）', speed:68 });
+            }
+            // —— 第一场：位置提示（接在"选一枚皮影"之后，对应 POSITION_RULES.act1_scene1）——
+            if (gameState.currentAct===1 && gameState.currentScene===0) {
+                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
+                    '（望着白布像望记忆）「槐树在右下方，影儿铺一地；书生挨着槐树站着，等他那一封信。月亮挂上去，天一黑，戏就活了。」', speed:54 });
+            }
+            // —— 第二场：位置提示（接在通用"选皮影"之后、场景专属描述之前）——
+            if (gameState.currentAct===1 && gameState.currentScene===1) {
+                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
+                    '大渊阁？那是他常演的地方；金蟾不上台面，就趴在老者脚边跟着；书生看着信，也陷入了信中，第一眼就是他喜欢的珍奇阁。三人各占一方，这出戏就立住了。', speed:54 });
             }
             if (gameState.currentAct===1 && gameState.currentScene===1) {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
