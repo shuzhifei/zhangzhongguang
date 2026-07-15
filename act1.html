@@ -117,7 +117,17 @@ body {
 }
 
 .puppet-card.hidden {
-    display: none;
+    display: none !important;
+}
+/* 幕间休息：船卡片"新发现"的入场动画 */
+#boatPuppetCard.revealed {
+    animation: boatRevealIn 0.8s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
+    box-shadow: 0 0 18px 4px rgba(255,200,80,0.55), inset 0 0 12px rgba(255,220,120,0.2);
+}
+@keyframes boatRevealIn {
+    0%   { opacity: 0; transform: translateY(24px) scale(0.7); }
+    60%  { opacity: 1; transform: translateY(-4px) scale(1.06); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* 「展示皮影戏」按钮出现期间：皮影箱卡片不可按 */
@@ -1188,6 +1198,20 @@ body {
 /* 说戏中锁定：禁止摆放皮影，并给出视觉反馈 */
 #puppetBox.speaking-lock, #stage.speaking-lock { pointer-events: none !important; }
 #puppetBox.speaking-lock { opacity: .4; filter: grayscale(.35); transition: opacity .25s, filter .25s; }
+
+/* 打字生成台词期间：全局锁定——除对话框外，其他交互一律禁用（指针穿透到对话框以允许快进/继续） */
+body.typing-lock #puppetBox,
+body.typing-lock #stage,
+body.typing-lock .info-panel,
+body.typing-lock #showPlayBtn,
+body.typing-lock #btnConfirm,
+body.typing-lock #btnAsk,
+body.typing-lock #btnNext,
+body.typing-lock .curtain-close-wrap,
+body.typing-lock .act1-score-card,
+body.typing-lock .act-title-overlay { pointer-events: none !important; }
+/* 对话框本身保持可点（快进/继续/点信等交互仍可用） */
+body.typing-lock .dialogue-area { pointer-events: auto !important; }
 #puppetBox.speaking-lock::after {
     content: "路师傅正在说戏…";
     position: absolute; left: 50%; top: 38%;
@@ -1198,6 +1222,9 @@ body {
     border: 1px solid rgba(180,120,50,.5);
 }
 .puppet-box { position: relative; }
+
+/* 幕间休息：锁定左侧皮影箱，不可拖拽/点击 */
+#puppetBox.intermission-lock { pointer-events: none !important; opacity: .35; filter: grayscale(.4); transition: opacity .4s, filter .4s; }
 /* 脚本字幕"点击推进"期间：锁定皮影箱/舞台，并显示"点击继续"提示 */
 #puppetBox.narration-lock, #stage.narration-lock { pointer-events: none !important; }
 #puppetBox.narration-lock { opacity: .4; filter: grayscale(.35); transition: opacity .25s, filter .25s; }
@@ -1278,45 +1305,94 @@ body {
 
 /* ===== 幕间休息：帘子聚光 + 可点击 + 背景虚化 ===== */
 #stage.stage-dim {
-    filter: blur(5px) brightness(0.3);
-    transition: filter 1.2s ease;
+    transition: background 0.4s ease;
+}
+/* 幕间休息：只虚化/压暗帘子“背后”的舞台内容，帘子本身(z-index:60)及其中亮光、提示词保持清晰 */
+#stage.stage-dim::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px) brightness(0.45);
+    -webkit-backdrop-filter: blur(6px) brightness(0.45);
+    pointer-events: none;
 }
 .curtain-glow {
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 220px; height: 220px;
+    width: 320px; height: 320px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,215,100,0.7) 0%, rgba(255,190,60,0.35) 30%, rgba(255,170,40,0.08) 55%, transparent 70%);
-    animation: curtainGlowPulse 2.2s ease-in-out infinite alternate;
+    background: radial-gradient(circle,
+        rgba(255,255,235,0.95) 0%,
+        rgba(255,225,120,0.85) 18%,
+        rgba(255,200,70,0.55) 38%,
+        rgba(255,175,40,0.22) 58%,
+        rgba(255,160,30,0.06) 75%,
+        transparent 88%);
+    box-shadow: 0 0 60px 20px rgba(255,205,90,0.55), 0 0 120px 50px rgba(255,180,50,0.30);
+    animation: curtainGlowPulse 1.6s ease-in-out infinite alternate;
     pointer-events: none;
 }
 @keyframes curtainGlowPulse {
-    0%   { opacity: 0.35; transform: translate(-50%, -50%) scale(0.8); }
-    100% { opacity: 1;   transform: translate(-50%, -50%) scale(1.2); }
+    0%   { opacity: 0.55; transform: translate(-50%, -50%) scale(0.85); }
+    100% { opacity: 1;   transform: translate(-50%, -50%) scale(1.18); }
 }
 .curtain-clickable {
     cursor: pointer !important;
     pointer-events: auto !important;
 }
-/* 帘子中间的点击提示文字 */
+/* 帘子中间的点击提示文字（放亮光正下方，更醒目） */
 .curtain-hint-text {
     position: absolute;
-    bottom: 18%;
+    top: calc(50% + 150px);
     left: 50%;
     transform: translateX(-50%);
-    color: rgba(255,230,160,0.75);
+    color: #ffe9a8;
     font-family: 'STKaiti','KaiTi','楷体',serif;
-    font-size: 14px;
-    letter-spacing: 4px;
-    animation: hintTextFade 2.4s ease-in-out infinite alternate;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 6px;
+    text-shadow: 0 0 12px rgba(255,200,90,0.9), 0 0 26px rgba(255,170,40,0.6);
+    animation: hintTextFade 1.6s ease-in-out infinite alternate;
     pointer-events: none;
     white-space: nowrap;
 }
-@keyframes hintTextFade {
-    0%   { opacity: 0.3; }
-    100% { opacity: 0.85; }
+.curtain-hint-text::before {
+    content: '☟';
+    margin-right: 10px;
+    font-size: 22px;
+    color: #ffd866;
+    text-shadow: 0 0 14px rgba(255,200,90,0.95);
 }
+.curtain-hint-text::after {
+    content: '☟';
+    margin-left: 10px;
+    font-size: 22px;
+    color: #ffd866;
+    text-shadow: 0 0 14px rgba(255,200,90,0.95);
+}
+@keyframes hintTextFade {
+    0%   { opacity: 0.45; }
+    100% { opacity: 1; }
+}
+/* 帘子两侧补充提示词（明确指向中间亮光） */
+.curtain-hint-side {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,235,175,0.9);
+    font-family: 'STKaiti','KaiTi','楷体',serif;
+    font-size: 15px;
+    letter-spacing: 3px;
+    text-shadow: 0 0 10px rgba(255,190,80,0.7);
+    animation: hintTextFade 1.8s ease-in-out infinite alternate;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.curtain-hint-side.left  { left: 6%;  text-align: right; }
+.curtain-hint-side.right { right: 6%; text-align: left; }
 
 /* 第一场展示皮影戏：在舞台（幕中）区域内播放 mp4 动画 */
 #act1ShowVideoOverlay { position: absolute; inset: 0; z-index: 16; background: rgba(0,0,0,0.92);
@@ -1566,19 +1642,19 @@ body {
         <div class="scene-info" id="sceneInfo">第1场 · 月夜等人</div>
 
             <!-- 书生（真实图片） -->
-            <div class="puppet-card" data-puppet="scholar" data-act="1">
+            <div class="puppet-card" data-puppet="scholar" data-act="1,2">
                 <div class="puppet-icon"><img src="assets/images/scholar.png" alt="scholar" draggable="false"></div>
                 <div class="puppet-name">书 生</div>
             </div>
 
             <!-- 槐树（真实图片） -->
-            <div class="puppet-card" data-puppet="tree" data-act="1">
+            <div class="puppet-card" data-puppet="tree" data-act="1,2">
                 <div class="puppet-icon"><img src="assets/images/tree.png" alt="tree" draggable="false"></div>
                 <div class="puppet-name">槐 树</div>
             </div>
 
             <!-- 月亮（真实图片） -->
-            <div class="puppet-card" data-puppet="moon" data-act="1,3">
+            <div class="puppet-card" data-puppet="moon" data-act="1,2,3">
                 <div class="puppet-icon"><img src="assets/images/moon.png" alt="moon" draggable="false"></div>
                 <div class="puppet-name">月 亮</div>
             </div>
@@ -1590,13 +1666,13 @@ body {
             </div>
 
             <!-- 信（真实图片） -->
-            <div class="puppet-card" data-puppet="letter" data-act="1">
+            <div class="puppet-card" data-puppet="letter" data-act="1,2">
                 <div class="puppet-icon"><img src="assets/images/letter.png" alt="信"></div>
                 <div class="puppet-name">信</div>
             </div>
 
             <!-- 金蟾（真实图片） -->
-            <div class="puppet-card" data-puppet="frog" data-act="1">
+            <div class="puppet-card" data-puppet="frog" data-act="1,2">
                 <div class="puppet-icon"><img src="assets/images/frog.png" alt="frog" draggable="false"></div>
                 <div class="puppet-name">金 蟾</div>
             </div>
@@ -1652,6 +1728,31 @@ body {
                 <div class="puppet-name">孙悟空</div>
             </div>
 
+            <!-- 老人（无图片，内联SVG，占位；第二幕专用） -->
+            <div class="puppet-card" data-puppet="oldman" data-act="2">
+                <div class="puppet-icon"><svg viewBox="0 0 100 140">
+<defs><linearGradient id="oldmanGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9a8a78"/><stop offset="100%" stop-color="#5a4a3a"/></linearGradient></defs>
+<!-- 长袍 -->
+<path d="M34,58 Q28,85 30,120 Q32,134 40,138 L66,138 Q74,134 72,120 Q74,85 66,58 Z" fill="url(#oldmanGrad)" stroke="#3a2a1a" stroke-width="1.5"/>
+<!-- 头 -->
+<ellipse cx="50" cy="38" rx="13" ry="14" fill="#d8c4a8" stroke="#3a2a1a" stroke-width="1.5"/>
+<!-- 白发 -->
+<path d="M37,34 Q50,18 63,34 Q60,28 50,26 Q40,28 37,34 Z" fill="#e8e4dc" stroke="#9a9078" stroke-width="0.8"/>
+<!-- 眼 -->
+<circle cx="45" cy="38" r="1.6" fill="#2a1a0a"/>
+<circle cx="55" cy="38" r="1.6" fill="#2a1a0a"/>
+<!-- 弯眉（显老态） -->
+<path d="M41,34 Q45,32 49,34" fill="none" stroke="#6a5a3a" stroke-width="1"/>
+<path d="M51,34 Q55,32 59,34" fill="none" stroke="#6a5a3a" stroke-width="1"/>
+<!-- 白须 -->
+<path d="M46,46 Q50,58 54,46 Q50,52 46,46 Z" fill="#e8e4dc" stroke="#9a9078" stroke-width="0.6"/>
+<!-- 拐杖 -->
+<line x1="74" y1="20" x2="74" y2="120" stroke="#7a6048" stroke-width="2.4" stroke-linecap="round"/>
+<path d="M74,20 Q68,20 68,26" fill="none" stroke="#7a6048" stroke-width="2.4" stroke-linecap="round"/>
+                </svg></div>
+                <div class="puppet-name">老 人</div>
+            </div>
+
             <!-- 竹子（无图片，内联SVG） -->
             <div class="puppet-card" data-puppet="bamboo" data-act="2">
                 <div class="puppet-icon"><svg viewBox="0 0 100 140">
@@ -1671,6 +1772,31 @@ body {
             <div class="puppet-card" data-puppet="master" data-act="2,3">
                 <div class="puppet-icon"><img src="assets/images/master.png" alt="master" draggable="false"></div>
                 <div class="puppet-name">路师傅</div>
+            </div>
+
+            <!-- 船（内联SVG，幕间休息时动态显示） -->
+            <div class="puppet-card hidden" id="boatPuppetCard" data-puppet="boat" data-act="2">
+                <div class="puppet-icon"><svg viewBox="0 0 140 100">
+<defs><linearGradient id="boatGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#b8a078"/><stop offset="50%" stop-color="#9a8060"/><stop offset="100%" stop-color="#6a5440"/></linearGradient></defs>
+<!-- 船身 -->
+<path d="M10,62 Q5,68 8,74 L132,74 Q135,68 130,62 Z" fill="url(#boatGrad)" stroke="#4a3828" stroke-width="1.2"/>
+<path d="M15,62 L125,62 L120,52 L20,52 Z" fill="#c4a878" stroke="#4a3828" stroke-width="0.8"/>
+<!-- 船头 -->
+<path d="M128,62 L140,55 Q142,58 138,66 L130,62 Z" fill="#a08860" stroke="#4a3828" stroke-width="0.8"/>
+<!-- 船尾 -->
+<path d="M12,62 L2,56 Q0,59 4,65 L10,62 Z" fill="#a08860" stroke="#4a3828" stroke-width="0.8"/>
+<!-- 桅杆 -->
+<line x1="70" y1="52" x2="70" y2="14" stroke="#7a6048" stroke-width="2.2" stroke-linecap="round"/>
+<!-- 帆（半展开） -->
+<path d="M72,18 Q95,22 98,46 L72,44 Z" fill="#e8dcc8" stroke="#9a8870" stroke-width="0.8" opacity="0.85"/>
+<path d="M68,18 Q45,24 42,48 L68,45 Z" fill="#e0d4bc" stroke="#9a8870" stroke-width="0.8" opacity="0.82"/>
+<!-- 帆上折痕 -->
+<line x1="72" y1="20" x2="96" y2="43" stroke="#b8a888" stroke-width="0.4" opacity="0.5"/>
+<line x1="68" y1="21" x2="44" y2="46" stroke="#b8a888" stroke-width="0.4" opacity="0.5"/>
+<!-- 船舱（小） -->
+<rect x="48" y="54" width="28" height="8" rx="1.5" fill="#8a7860" stroke="#4a3828" stroke-width="0.6"/>
+                </svg></div>
+                <div class="puppet-name">船</div>
             </div>
         </div>
 
@@ -2146,8 +2272,9 @@ const PuppetImageMap = {
     demon:   null,
     monkey:  null,
     bamboo:  null,
+    boat:    null,
 };
-const PUPPET_EMOJI = { scholar:'📜', elder:'👴', tree:'🌳', moon:'🌙', letter:'✉️', frog:'🐸', demon:'👹', monkey:'🐵', lamp:'💡', master:'👨‍🏫', bamboo:'🎋' };
+const PUPPET_EMOJI = { scholar:'📜', elder:'👴', tree:'🌳', moon:'🌙', letter:'✉️', frog:'🐸', demon:'👹', monkey:'🐵', lamp:'💡', master:'👨‍🏫', bamboo:'🎋', boat:'⛵', oldman:'🧓' };
 
 // 皮影在舞台/拖动时的渲染尺寸（px）。默认宽 100、高 auto（按图比例）。
 // 「信」做小，给书生拿在手里；「槐树」高 = 书生显示高的两倍，宽 = 高（方形框内等比居中，不变形）
@@ -2447,19 +2574,8 @@ const ShadowJudge = {
 
     // 屏幕可见调试面板（不需要F12，直接在页面上看到翻转检测原始数据）
     _dbgFlip(msg) {
-        var d = document.getElementById('__flip_dbg__');
-        if (!d) {
-            d = document.createElement('div');
-            d.id = '__flip_dbg__';
-            d.style.cssText = 'position:fixed;top:60px;left:4px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:11px/1.4 monospace;padding:6px 8px;border-radius:4px;max-width:420px;word-break:break-all;pointer-events:none;';
-            document.body.appendChild(d);
-        }
-        d.textContent += msg + '\n';
-        // 最多保留30行
-        var lines = d.textContent.split('\n');
-        if (lines.length > 30) d.textContent = lines.slice(-30).join('\n');
-        // 同时打console
-        console.log(msg);
+        // 仅控制台输出，不在屏幕上显示调试面板
+        console.log('[FLIP-DBG]', msg);
     },
 
     puppetsToText(puppets) {
@@ -3746,6 +3862,21 @@ const ShadowJudge = {
             return btn;
         }
         container.appendChild(makeBtn('跳到第二场', 1));
+
+        // 「跳到幕间休息」按钮：直接进入第一幕幕间休息（调试用，发布前删除）
+        var interBtn = document.createElement('button');
+        interBtn.textContent = '跳到幕间休息';
+        interBtn.style.cssText = 'padding:6px 10px;font-size:12px;color:#e8c97a;background:rgba(74,31,10,0.7);border:1px solid #6b3a1f;border-radius:3px;cursor:pointer;font-family:inherit;letter-spacing:2px;transition:background 0.2s;';
+        interBtn.onmouseenter = function() { interBtn.style.background = 'rgba(100,45,18,0.9)'; };
+        interBtn.onmouseleave = function() { interBtn.style.background = 'rgba(74,31,10,0.7)'; };
+        interBtn.onclick = function() {
+            if (window.stopAllDialogue) window.stopAllDialogue();
+            EventBus.emit('countdown_stop_request');
+            if (window.NarrationCtl) window.NarrationCtl.reset();
+            if (window.showAct1Intermission) window.showAct1Intermission();
+        };
+        container.appendChild(interBtn);
+
         infoPanel.appendChild(container);
     })();
 
@@ -4160,6 +4291,8 @@ const ShadowJudge = {
         var st = document.getElementById('stage');
         if (pb) pb.classList.toggle('speaking-lock', speakingFlag);
         if (st) st.classList.toggle('speaking-lock', speakingFlag);
+        // 说戏（打字）期间：全局锁定，除对话框外其他交互全部禁用
+        document.body.classList.toggle('typing-lock', speakingFlag);
     }
     // 等待当前打字机结束后执行回调（轮询 typewriterTimer + speakingFlag）
     function waitForTypingDoneThen(cb) {
@@ -4277,9 +4410,21 @@ const ShadowJudge = {
         // 隐藏按钮时，恢复皮影箱卡片可点击
         document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.remove('locked'); });
     }
+    // 清理遗留的帘子层：保证任意时刻「同一舞台内最多只有一个帘子」，
+    // 避免多次过渡产生的帘子互相叠加/窜位（尤其调试按钮、半路切场、复用Pending等场景）。
+    // keep 参数用于保留需要继续复用的帘子（如幕间休息的 _pendingClosedCurtain）。
+    function clearStrayCurtains(keep) {
+        var all = document.querySelectorAll('.curtain-close-wrap');
+        for (var i = 0; i < all.length; i++) {
+            var w = all[i];
+            if (w === keep) continue;
+            if (w.parentNode) w.parentNode.removeChild(w);
+        }
+    }
     // 第一场展示皮影戏：帘子合上 → 停1秒 → 帘子拉开 → 回调
     function playCurtainCloseThenOpen(onOpened, onClosed) {
         console.log('[curtain] 开始帘子合上→拉开过渡');
+        clearStrayCurtains(); // 先清掉任何遗留帘子，确保本场帘子独占
         var wrap = document.createElement('div');
         wrap.className = 'curtain-close-wrap curtain-close-active';
         wrap.innerHTML = '<div class="curtain-close-left"></div><div class="curtain-close-right"></div>';
@@ -4310,6 +4455,7 @@ const ShadowJudge = {
     // 只合拢、不拉开（用于"演完动画帘子拉上后不再打开，直接出台词"的场景）
     function playCurtainCloseOnly(onClosed) {
         console.log('[curtain] 帘子合拢(不拉开)');
+        clearStrayCurtains(); // 清掉上一场的遗留帘子，本场帘子独占舞台
         var wrap = document.createElement('div');
         wrap.className = 'curtain-close-wrap curtain-close-active';
         wrap.innerHTML = '<div class="curtain-close-left"></div><div class="curtain-close-right"></div>';
@@ -4620,6 +4766,7 @@ const ShadowJudge = {
         setTimeout(function() { overlay.classList.add('to-white'); }, 1450);
         // 白光铺满后，在幕中放下「合拢」的帘子（此刻仍被白光盖住，玩家看不见）
         setTimeout(function() {
+            clearStrayCurtains(); // 先清掉任何遗留帘子，本场帘子独占舞台
             curtainWrap = document.createElement('div');
             curtainWrap.className = 'curtain-close-wrap curtain-close-active';
             curtainWrap.innerHTML = '<div class="curtain-close-left"></div><div class="curtain-close-right"></div>';
@@ -5208,7 +5355,20 @@ const ShadowJudge = {
     function showAct1Intermission() {
         try {
             EventBus.emit('act_intermission');
-            // 幕间休息：帘子盖住舞台
+            // 幕间休息：立即锁定左侧皮影箱（不可拖拽/点击）
+            var _puppetBox = document.getElementById('puppetBox');
+            if (_puppetBox) _puppetBox.classList.add('intermission-lock');
+
+            // 幕间休息：油灯恢复到满格（100），并刷新油灯 UI
+            gameState.lampOil = 100;
+            if (typeof updateOilUI === 'function') updateOilUI();
+            else {
+                var _ot = document.getElementById('oilText'); if (_ot) _ot.textContent = '100 / 100';
+                var _ob = document.getElementById('oilBar'); if (_ob) _ob.style.width = '100%';
+            }
+            EventBus.emit('oil_changed', { oil: 100, reason: 'intermission_refill' });
+
+            // 帘子盖住舞台
             // 若第二场结尾（"…可那影子，不对。"）帘子已合拢，直接复用它，不再重播一遍合拢动画
             var _wrap = null;
             if (window._pendingClosedCurtain && window._pendingClosedCurtain.parentNode) {
@@ -5219,33 +5379,75 @@ const ShadowJudge = {
                 if (_curtainFn) _curtainFn(function(w) { _wrap = w; });
             }
             var text = ['—— 幕 间 休 息 ——','','你打开皮影箱，发现多了一个皮影——一条船。',
+                '你顺手给油灯添满了灯油，灯芯重新亮起——灯油又恢复到了满格（100%）。',
                 '「船能带你走水路。」',
                 '师傅望着远方，轻声说：「我那大师兄，民国二十六年就失踪了，再没回来。」',
                 '他顿了顿：「你方才摆的每一个影，我都认得——槐树是东街的老地方，信是师父留下的戏谱，三根线是我和两位师兄，金蟾碎了……是传承断了。」',
                 '「信的最后一笔，指向大栅栏。听说，那儿有人打着我的名号。」'].join('\n');
             EventBus.emit('narration_chunk',{ speaker:'', text:text, speed:38 });
 
+            // 台词说到"发现多了一个皮影——一条船"时，皮影箱里动态出现船卡片
+            // 前面两行（标题+空行）约11个字符，speed=38 → 约420ms后开始打船这行
+            // 设定 750ms 后触发，刚好在玩家看到"船"字时卡片滑入
+            var _boatCard = document.getElementById('boatPuppetCard');
+            if (_boatCard) {
+                setTimeout(function() {
+                    _boatCard.classList.remove('hidden');
+                    // 强制重排后加动画类
+                    void _boatCard.offsetHeight;
+                    _boatCard.classList.add('revealed');
+                    // 动画结束后去掉发光，恢复正常状态
+                    setTimeout(function() {
+                        _boatCard.style.boxShadow = '';
+                        _boatCard.style.animation = '';
+                        _boatCard.classList.remove('revealed');
+                    }, 1200);
+                }, 750);
+            }
+
             var advanced = false;
             // 台词打完后：背景虚化 + 帘子聚光发亮 + 等待玩家点击帘子
             function prepareCurtainTransition() {
                 if (advanced) return;
+                console.log('[intermission] prepareCurtainTransition 触发, _wrap=', !!_wrap);
+                if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
                 // ① 背景虚化（舞台变暗模糊，聚焦到帘子上）
                 var stageEl = document.getElementById('stage');
                 if (stageEl) stageEl.classList.add('stage-dim');
 
                 // ② 帘子中间加聚光效果 + 点击提示
                 if (_wrap) {
+                    // 强制覆盖内联的 pointer-events:none!important（CSS !important 可覆盖 inline !important）
+                    _wrap.style.pointerEvents = 'auto';
+                    _wrap.style.cursor = 'pointer';
                     _wrap.classList.add('curtain-clickable');
                     var glow = document.createElement('div');
                     glow.className = 'curtain-glow';
                     var hint = document.createElement('div');
                     hint.className = 'curtain-hint-text';
-                    hint.textContent = '— 点击幕布 —';
+                    hint.textContent = '点 击 光 晕';
+                    var hintL = document.createElement('div');
+                    hintL.className = 'curtain-hint-side left';
+                    hintL.textContent = '⟶ 此处 揭幕 ⟵';
+                    var hintR = document.createElement('div');
+                    hintR.className = 'curtain-hint-side right';
+                    hintR.textContent = '⟵ 此处 揭幕 ⟶';
+                    // 确保 glow 和 hint 在帘子面板之上（z-index 提升）
+                    glow.style.position = 'absolute';
+                    glow.style.zIndex = '10';
+                    hint.style.position = 'absolute';
+                    hint.style.zIndex = '11';
+                    hintL.style.position = 'absolute'; hintL.style.zIndex = '11';
+                    hintR.style.position = 'absolute'; hintR.style.zIndex = '11';
                     _wrap.appendChild(glow);
                     _wrap.appendChild(hint);
+                    _wrap.appendChild(hintL);
+                    _wrap.appendChild(hintR);
 
                     // ③ 玩家点击帘子 → 缓缓拉开 → 显示标题卡 → 进第二幕
-                    _wrap.addEventListener('click', function onCurtainClick() {
+                    _wrap.addEventListener('click', function onCurtainClick(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
                         if (advanced) return;
                         advanced = true;
                         _wrap.removeEventListener('click', onCurtainClick);
@@ -5264,8 +5466,9 @@ const ShadowJudge = {
                         setTimeout(function() {
                             // ④ 拉开完成：显示 "第二幕 · 第一场 · 真假传人" 标题卡
                             showAct2SceneTitleCard(function() {
-                                // ⑤ 标题卡淡出后：清理帘子 + 进第二幕
+                                // ⑤ 标题卡淡出后：清理帘子 + 解锁皮影箱 + 进第二幕
                                 if (_wrap && _wrap.parentNode) _wrap.parentNode.removeChild(_wrap);
+                                if (_puppetBox) _puppetBox.classList.remove('intermission-lock');
                                 if (window.NarrationCtl) window.NarrationCtl.reset();
                                 advanceToNextAct();
                             });
@@ -5273,12 +5476,20 @@ const ShadowJudge = {
                     });
                 } else {
                     // 没有帘子 wrap 时直接进第二幕（降级路径）
+                    if (_puppetBox) _puppetBox.classList.remove('intermission-lock');
                     if (window.NarrationCtl) window.NarrationCtl.reset();
                     advanceToNextAct();
                 }
             }
             // 台词全部打完后自动进入"等待点击帘子"状态
             if (window.NarrationCtl) window.NarrationCtl.enqueueAction(prepareCurtainTransition);
+            // 保险：如果旁白系统没正确回调 enqueueAction，15秒后强制进入帘子点击状态
+            var _safetyTimer = setTimeout(function() {
+                if (!advanced) {
+                    console.log('[intermission] 安全超时触发：强制进入帘子点击状态');
+                    prepareCurtainTransition();
+                }
+            }, 15000);
         } catch(e) { console.warn('[showAct1Intermission]', e.message); advanceToNextAct(); }
     }
 
@@ -5325,16 +5536,38 @@ const ShadowJudge = {
         }
     }
 
+    // 各幕皮影箱内的卡片顺序（data-puppet 列表）。
+    // 第一幕沿用原有顺序；第二幕按用户指定顺序（含新增「老人」，位于孙悟空之后、竹子之前）。
+    var PUPPET_ORDER = {
+        1: ['scholar','tree','moon','elder','letter','frog','lamp'],
+        2: ['scholar','tree','moon','elder','letter','frog','lamp','boat','demon','monkey','oldman','bamboo','master'],
+        3: ['moon','elder','lamp','master']
+    };
     function updatePuppetCards(actNum) {
-        var cards=document.querySelectorAll('.puppet-card');
+        var box = document.getElementById('puppetBox');
+        if (!box) return;
+        var cards = Array.prototype.slice.call(box.querySelectorAll('.puppet-card'));
         var vc=0;
         cards.forEach(function(card){
             var acts=(card.dataset.act||'').split(',');
             if(acts.indexOf(String(actNum))>=0) { card.classList.remove('hidden'); vc++; }
             else card.classList.add('hidden');
         });
+        // 按本幕指定顺序重排 .puppet-card（h3 / scene-info 等其它节点保持原位，不受影响）
+        var order = PUPPET_ORDER[actNum];
+        if (order && order.length) {
+            var byId = {};
+            cards.forEach(function(c){ byId[c.dataset.puppet] = c; });
+            var frag = document.createDocumentFragment();
+            order.forEach(function(pid){
+                if (byId[pid]) { frag.appendChild(byId[pid]); delete byId[pid]; }
+            });
+            // 顺序表中未列出的卡片（如有）统一追加到末尾，避免丢失
+            cards.forEach(function(c){ if (byId[c.dataset.puppet]) frag.appendChild(c); });
+            box.appendChild(frag);
+        }
         // 切皮影后滚动回顶部
-        var pb = document.getElementById('puppetBox'); if(pb) pb.scrollTop = 0;
+        box.scrollTop = 0;
         console.log('[main] 皮影箱已切换至第'+getActNum(actNum)+'幕（显示'+vc+'个角色）');
     }
 
@@ -5448,6 +5681,7 @@ const ShadowJudge = {
     window.startCurrentScene = startCurrentScene;
     window.showDialogue = showDialogue;
     window.advanceScene = advanceScene;   // 跨 IIFE：onShowPlayClick(IIFE-A) 的「展示皮影戏」第二场分支需要调用
+    window.showAct1Intermission = showAct1Intermission; // 跨 IIFE：调试「跳到幕间休息」按钮需要调用
 })();
 </script>
 
