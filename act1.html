@@ -2404,6 +2404,39 @@ const ShadowJudge = {
         return NAMES[id] || id;
     },
 
+    // ★ 翻转检测：直接读 DOM 实际 transform（最可靠，不依赖任何 JS 变量）
+    //   操纵杆 render() 写 style.transform='scaleX(...)'，翻转向右时 scaleX<0
+    _isFlipped(puppetId) {
+        var el = document.querySelector('.stage-puppet[data-puppet="' + puppetId + '"]');
+        if (!el) { console.warn('[flip-check] 找不到皮影元素:', puppetId); return false; }
+        // 1) 内联 style.transform（render() 每帧写这里，最实时）
+        var t = el.style.transform || '';
+        if (t) {
+            var m = t.match(/scaleX\(([-\d.]+)\)/);
+            if (m && parseFloat(m[1]) < -0.01) {
+                console.log('[flip-check]', puppetId, '→ 已翻转(style.scaleX=', m[1], ')');
+                return true;
+            }
+        }
+        // 2) classList 兜底
+        if (el.classList.contains('flipped')) {
+            console.log('[flip-check]', puppetId, '→ 已翻转(classList)');
+            return true;
+        }
+        // 3) data 属性兜底
+        if (el.getAttribute('data-flipped') === '1') {
+            console.log('[flip-check]', puppetId, '→ 已翻转(data-flipped)');
+            return true;
+        }
+        // 4) window 全局兜底
+        if (window.__flippedPuppets && window.__flippedPuppets[puppetId]) {
+            console.log('[flip-check]', puppetId, '→ 已翻转(window.__flippedPuppets)');
+            return true;
+        }
+        console.log('[flip-check]', puppetId, '→ 未翻转(transform=', t, ')');
+        return false;
+    },
+
     puppetsToText(puppets) {
         if (!puppets||puppets.length===0) return '白布上空无一物。';
         return puppets.map(function(p) { return p.name+'在'+ShadowJudge._getAreaDescription(p.x,p.y); }).join('，')+'。';
@@ -2544,14 +2577,13 @@ const ShadowJudge = {
         }
         // 第二场：老者和金蟾必须翻转朝右才通过（操纵杆交互要求）
         if (correct && currentSceneId === 'act1_scene2') {
-            // ★ 唯一真源：window.__flippedPuppets（settle 写入；全局对象，不受 IIFE 作用域限制）
-            var flippedMap = window.__flippedPuppets || {};
             var unflipped = [];
             stagedPuppets.forEach(function(p) {
                 if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
-                    if (!flippedMap[p.puppetId]) unflipped.push(ShadowJudge._puppetName(p.puppetId));
+                    if (!ShadowJudge._isFlipped(p.puppetId)) unflipped.push(ShadowJudge._puppetName(p.puppetId));
                 }
             });
+            console.log('[quickJudge] unflipped=', unflipped);
             if (unflipped.length > 0) {
                 correct = false;
                 return { score: Math.max(0, score - 15), correct: false,
@@ -3891,22 +3923,17 @@ const ShadowJudge = {
         }
 
         // ③ 翻转判定（第二场：老者/金蟾必须翻转朝右；阵容+位置都对了才查翻转）
-        // ★ 从元素 data-flipped 属性读取（settle 写入、render 不会覆盖属性、不受 IIFE 作用域限制）
+        // ★ 用 ShadowJudge._isFlipped() 直接读 DOM 实际 transform（最可靠）
         if (sceneId === 'act1_scene2' && missing.length === 0 && extra.length === 0) {
             var pc2 = ShadowJudge._checkPositions(staged, sceneId);
             if (pc2 && pc2.ok) {   // 位置也对了，再查翻转
                 var unflipped = [];
                 staged.forEach(function(p) {
                     if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
-                        var el = document.querySelector('.stage-puppet[data-puppet="' + p.puppetId + '"]');
-                        // ★ 唯一真源：window.__flippedPuppets（settle 写入，全局对象，不随 DOM 重建丢失）
-                        //    并以 data-flipped 属性作兜底
-                        var winFlipped = window.__flippedPuppets && window.__flippedPuppets[p.puppetId];
-                        var attrFlipped = el && el.getAttribute('data-flipped') === '1';
-                        var isFlipped = !!(winFlipped || attrFlipped);
-                        if (!isFlipped) unflipped.push(getPuppetName(p.puppetId));
+                        if (!ShadowJudge._isFlipped(p.puppetId)) unflipped.push(getPuppetName(p.puppetId));
                     }
                 });
+                console.log('[buildOfflineHint] unflipped=', unflipped);
                 if (unflipped.length > 0) {
                     // 根据实际未翻的皮影动态生成提示（直接比对数组元素，不依赖 join 字符串）
                     if (unflipped.length === 1 && unflipped[0] === '老者') {
