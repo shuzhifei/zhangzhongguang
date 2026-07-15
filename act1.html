@@ -5334,6 +5334,11 @@ const ShadowJudge = {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
                     '（从皮影箱里，选合适的皮影，把这出戏接着演下去。）', speed:68 });
             }
+            // —— 第二场：位置提示（接在通用"选皮影"之后、场景专属描述之前）——
+            if (gameState.currentAct===1 && gameState.currentScene===1) {
+                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
+                    '大渊阁？那是他常演的地方；金蟾不上台面，就趴在老者脚边跟着；书生看着信，也陷入了信中，第一眼就是他喜欢的珍奇阁。三人各占一方，这出戏就立住了。', speed:54 });
+            }
             if (gameState.currentAct===1 && gameState.currentScene===1) {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
                     '（戏词里夹着不属于这个故事的东西……你听出来了吗？）\n'+
