@@ -2404,37 +2404,62 @@ const ShadowJudge = {
         return NAMES[id] || id;
     },
 
-    // ★ 翻转检测：直接读 DOM 实际 transform（最可靠，不依赖任何 JS 变量）
-    //   操纵杆 render() 写 style.transform='scaleX(...)'，翻转向右时 scaleX<0
+    // ★ 翻转检测：读浏览器最终计算样式 getComputedStyle（最可靠，涵盖所有来源）
     _isFlipped(puppetId) {
         var el = document.querySelector('.stage-puppet[data-puppet="' + puppetId + '"]');
-        if (!el) { console.warn('[flip-check] 找不到皮影元素:', puppetId); return false; }
-        // 1) 内联 style.transform（render() 每帧写这里，最实时）
-        var t = el.style.transform || '';
-        if (t) {
-            var m = t.match(/scaleX\(([-\d.]+)\)/);
-            if (m && parseFloat(m[1]) < -0.01) {
-                console.log('[flip-check]', puppetId, '→ 已翻转(style.scaleX=', m[1], ')');
+        if (!el) { this._dbgFlip('⚠ 找不到元素', puppetId); return false; }
+
+        var dbg = '[FLIP:' + puppetId + '] ';
+
+        // 优先级1：getComputedStyle（最终生效值，matrix(a,b,c,d,tx,ty)，a<0=翻转）
+        try {
+            var cs = getComputedStyle(el);
+            var ct = cs.transform || '';
+            // matrix(sx, 0, 0, sy, tx, ty) → sx 是矩阵第一个值
+            var mat = ct.match(/matrix\(([-\d.]+)/);
+            if (mat && parseFloat(mat[1]) < -0.01) {
+                this._dbgFlip(dbg + '✅已翻(getComputedStyle a=' + mat[1] + ')');
                 return true;
             }
-        }
-        // 2) classList 兜底
-        if (el.classList.contains('flipped')) {
-            console.log('[flip-check]', puppetId, '→ 已翻转(classList)');
+            // 有些浏览器可能返回 none
+            this._dbgFlip(dbg + 'getComputedStyle="' + ct + '"');
+        } catch(e) { this._dbgFlip(dbg + 'getComputedStyle异常: '+e.message); }
+
+        // 优先级2：内联 style.transform
+        var st = el.style.transform || '';
+        var sm = st.match(/scaleX\(([-\d.]+)\)|matrix\(([-\d.]+)/);
+        var sx = sm ? parseFloat(sm[1]||sm[2]) : null;
+        if (sx !== null && sx < -0.01) {
+            this._dbgFlip(dbg + '✅已翻(style.scaleX=' + sx + ')');
             return true;
         }
-        // 3) data 属性兜底
-        if (el.getAttribute('data-flipped') === '1') {
-            console.log('[flip-check]', puppetId, '→ 已翻转(data-flipped)');
-            return true;
-        }
-        // 4) window 全局兜底
-        if (window.__flippedPuppets && window.__flippedPuppets[puppetId]) {
-            console.log('[flip-check]', puppetId, '→ 已翻转(window.__flippedPuppets)');
-            return true;
-        }
-        console.log('[flip-check]', puppetId, '→ 未翻转(transform=', t, ')');
+        this._dbgFlip(dbg + 'style.transform="' + st + '"');
+
+        // 优先级3-5：兜底
+        if (el.classList.contains('flipped'))     { this._dbgFlip(dbg + '✅已翻(classList)'); return true; }
+        if (el.getAttribute('data-flipped')==='1') { this._dbgFlip(dbg + '✅已翻(data-flipped)'); return true; }
+        if (window.__flippedPuppets && window.__flippedPuppets[puppetId])
+                                                       { this._dbgFlip(dbg + '✅已翻(window全局)'); return true; }
+
+        this._dbgFlip(dbg + '❌未翻转');
         return false;
+    },
+
+    // 屏幕可见调试面板（不需要F12，直接在页面上看到翻转检测原始数据）
+    _dbgFlip(msg) {
+        var d = document.getElementById('__flip_dbg__');
+        if (!d) {
+            d = document.createElement('div');
+            d.id = '__flip_dbg__';
+            d.style.cssText = 'position:fixed;top:60px;left:4px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:11px/1.4 monospace;padding:6px 8px;border-radius:4px;max-width:420px;word-break:break-all;pointer-events:none;';
+            document.body.appendChild(d);
+        }
+        d.textContent += msg + '\n';
+        // 最多保留30行
+        var lines = d.textContent.split('\n');
+        if (lines.length > 30) d.textContent = lines.slice(-30).join('\n');
+        // 同时打console
+        console.log(msg);
     },
 
     puppetsToText(puppets) {
@@ -2584,6 +2609,7 @@ const ShadowJudge = {
                 }
             });
             console.log('[quickJudge] unflipped=', unflipped);
+            ShadowJudge._dbgFlip('[QJ] unflipped=' + JSON.stringify(unflipped));
             if (unflipped.length > 0) {
                 correct = false;
                 return { score: Math.max(0, score - 15), correct: false,
@@ -3934,6 +3960,7 @@ const ShadowJudge = {
                     }
                 });
                 console.log('[buildOfflineHint] unflipped=', unflipped);
+                ShadowJudge._dbgFlip('[BOH] unflipped=' + JSON.stringify(unflipped));
                 if (unflipped.length > 0) {
                     // 根据实际未翻的皮影动态生成提示（直接比对数组元素，不依赖 join 字符串）
                     if (unflipped.length === 1 && unflipped[0] === '老者') {
