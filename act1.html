@@ -4162,19 +4162,19 @@ const ShadowJudge = {
         if (sceneId === 'act1_scene2' && missing.length === 0 && extra.length === 0) {
             var pc2 = ShadowJudge._checkPositions(staged, sceneId);
             if (pc2 && pc2.ok) {   // 位置也对了，再查翻转
+                // ★ unflipped 存 puppetId（'elder'/'frog'），避免显示名带空格导致比对失败
                 var unflipped = [];
                 staged.forEach(function(p) {
                     if ((p.puppetId === 'elder' || p.puppetId === 'frog')) {
-                        if (!ShadowJudge._isFlipped(p.puppetId)) unflipped.push(getPuppetName(p.puppetId));
+                        if (!ShadowJudge._isFlipped(p.puppetId)) unflipped.push(p.puppetId);
                     }
                 });
-                console.log('[buildOfflineHint] unflipped=', unflipped);
                 ShadowJudge._dbgFlip('[BOH] unflipped=' + JSON.stringify(unflipped));
                 if (unflipped.length > 0) {
-                    // 根据实际未翻的皮影动态生成提示（直接比对数组元素，不依赖 join 字符串）
-                    if (unflipped.length === 1 && unflipped[0] === '老者') {
+                    // 按 puppetId 判断，与实际显示名完全解耦
+                    if (unflipped.length === 1 && unflipped[0] === 'elder') {
                         parts.push('路师傅眯了眯眼：\n「老者舞戏，总爱背着瀚墨斋站——面朝这边，心里才踏实些。」\n（他顿了顿）「你瞧瞧他现在……是不是反了？」');
-                    } else if (unflipped.length === 1 && unflipped[0] === '金蟾') {
+                    } else if (unflipped.length === 1 && unflipped[0] === 'frog') {
                         parts.push('路师傅低头看了看金蟾：\n「这小东西——它得跟着老者的方向走。你看看它……脸朝哪边了？」\n（视线落在金蟾肩头的红线上）「杆能动，试试看？」');
                     } else {
                         // 老者+金蟾都没翻
