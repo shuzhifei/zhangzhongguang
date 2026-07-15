@@ -753,10 +753,10 @@ body {
     background-position: center;
     filter: blur(8px);
 }
-/* 第二场（信中之秘）开场标题卡：背景用大栅栏街景图 */
+/* 第二场（信中之秘）开场标题卡：背景直接、干净地呈现第二场幕中背景，不做重度压暗/模糊 */
 .act-title-overlay.act2 .act-title-bg {
     background:
-        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(20,12,6,0.45) 0%, rgba(8,4,2,0.82) 72%),
+        radial-gradient(ellipse 75% 65% at 50% 50%, rgba(10,6,3,0.35) 0%, rgba(6,3,1,0.72) 75%),
         url('assets/images/stage-bg-act2.jpg');
     background-size: cover;
     background-position: center bottom;
@@ -1298,8 +1298,8 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
 }
 
 /* 帘子合上后再拉开（展示皮影戏过渡：合拢 → 停1秒 → 拉开） */
-.curtain-open-active .curtain-close-left  { animation: curtainOpenLeft 1.0s ease-in-out forwards; }
-.curtain-open-active .curtain-close-right { animation: curtainOpenRight 1.0s ease-in-out forwards; }
+.curtain-open-active .curtain-close-left  { animation: curtainOpenLeft 1.6s ease-in-out forwards; }
+.curtain-open-active .curtain-close-right { animation: curtainOpenRight 1.6s ease-in-out forwards; }
 @keyframes curtainOpenLeft  { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-100%); opacity: 1; } }
 @keyframes curtainOpenRight { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(100%); opacity: 1; } }
 
@@ -4739,16 +4739,6 @@ const ShadowJudge = {
 
     // ===== 第一场→第二场「正规剧情流程」：信发亮 → 点信 → 信全屏打开 → 白光 → 进第二场 =====
     // 与「跳到第二场」调试按钮并存，两条路径都能进第二场。
-    function showActTitle(actTitle) {
-        var ov = document.createElement('div');
-        ov.className = 'act-title-overlay act2';
-        ov.innerHTML = '<div class="act-title-bg"></div><div class="act-title-text">'+actTitle+'</div>';
-        document.body.appendChild(ov);
-        requestAnimationFrame(function(){ requestAnimationFrame(function(){ ov.classList.add('visible'); }); });
-        setTimeout(function(){ ov.classList.add('fade-out'); }, 1300);
-        setTimeout(function(){ if (ov.parentNode) ov.parentNode.removeChild(ov); }, 2300);
-    }
-
     // ===== 第一幕评分卡：根据剩余灯油给出五段位评价 =====
     function showAct1ScoreCard(onDone) {
         var oil = (gameState && gameState.lampOil != null) ? gameState.lampOil : 0;
@@ -4803,9 +4793,20 @@ const ShadowJudge = {
     }
     window.showAct1ScoreCard = showAct1ScoreCard;
 
-    // 点击信件后：全屏展示信的正面 → 信从中线打开 → 背景渐白 → 维持 → 淡出还原；白光铺满后叠加场次标题卡
-    // 点击信件后：信正面铺满→打开→白光→标题卡；白光铺满时先在幕中放下「合拢」的帘子，
-    // 标题卡淡出后帘子缓缓拉开，同时进入第二场、对话框开始生成「信中之秘……」台词
+    // 场次标题卡（复用 act-title-overlay 组件）
+    function showActTitle(actTitle) {
+        var ov = document.createElement('div');
+        ov.className = 'act-title-overlay act2';
+        ov.innerHTML = '<div class="act-title-bg"></div><div class="act-title-text">'+actTitle+'</div>';
+        document.body.appendChild(ov);
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){ ov.classList.add('visible'); }); });
+        setTimeout(function(){ ov.classList.add('fade-out'); }, 1300);
+        setTimeout(function(){ if (ov.parentNode) ov.parentNode.removeChild(ov); }, 2300);
+    }
+
+    // 点击信件后的转场：信正面铺满→打开→白光→标题卡；白光铺满时先在幕中放下「合拢」的帘子，
+    // 标题卡淡出后帘子缓缓拉开（放慢），拉开过半后再开启第二场剧情（生成「信中之秘……」台词）。
+    // 整体时长已调长，留足「揭幕 → 开口」的呼吸感；背景在帘子合拢期间切到第二场幕中背景(stage-bg-act2)。
     function playLetterReveal(onDone, actTitle) {
         var overlay = document.createElement('div');
         overlay.id = 'letterReveal';
@@ -4817,9 +4818,9 @@ const ShadowJudge = {
             + '</div>';
         document.body.appendChild(overlay);
         var curtainWrap = null;
-        setTimeout(function() { overlay.classList.add('play'); }, 450);
-        setTimeout(function() { overlay.classList.add('to-white'); }, 1450);
-        // 白光铺满后，在幕中放下「合拢」的帘子（此刻仍被白光盖住，玩家看不见）
+        setTimeout(function() { overlay.classList.add('play'); }, 600);
+        setTimeout(function() { overlay.classList.add('to-white'); }, 1900);
+        // 白光铺满后，在幕中放下「合拢」的帘子（多留约 300ms 全白，让转场更沉得住气）
         setTimeout(function() {
             clearStrayCurtains(); // 先清掉任何遗留帘子，本场帘子独占舞台
             curtainWrap = document.createElement('div');
@@ -4829,11 +4830,11 @@ const ShadowJudge = {
             var stageEl = document.getElementById('stage');
             (stageEl || document.body).appendChild(curtainWrap);
             void curtainWrap.offsetHeight;
-        }, 1500);
+        }, 2300);
         // 标题卡（第二场场次名）
-        if (actTitle) setTimeout(function() { showActTitle(actTitle); }, 1900);
-        setTimeout(function() { overlay.classList.add('fading'); }, 2300);
-        setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 3200);
+        if (actTitle) setTimeout(function() { showActTitle(actTitle); }, 2500);
+        setTimeout(function() { overlay.classList.add('fading'); }, 3100);
+        setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 4000);
         // 帘子还合着时，提前把舞台背景切到第二场（大栅栏街景），拉开瞬间不会露馅
         setTimeout(function() {
             var stageElS = document.getElementById('stage');
@@ -4844,13 +4845,17 @@ const ShadowJudge = {
                 stageElS.style.backgroundSize = 'cover';
                 stageElS.style.backgroundPosition = 'center bottom';
             }
-        }, 3000);
-        // 标题卡淡出 → 帘子缓缓拉开，同时进入第二场、对话框生成「信中之秘……」
+        }, 4200);
+        // 标题卡淡出后：帘子拉开前先清掉第一场皮影，确保帘子一拉开只见第二场背景（无遗留皮影）
         setTimeout(function() {
+            if (window.TheaterSystem && window.TheaterSystem.clearStage) window.TheaterSystem.clearStage();
             if (curtainWrap) curtainWrap.classList.add('curtain-open-active');
+        }, 5600);
+        // 帘子拉开过半后再进第二场、对话框生成「信中之秘……」，留出「揭幕 → 开口」的呼吸感
+        setTimeout(function() {
             if (onDone) onDone();
-            setTimeout(function() { if (curtainWrap && curtainWrap.parentNode) curtainWrap.parentNode.removeChild(curtainWrap); }, 1300);
-        }, 3700);
+            setTimeout(function() { if (curtainWrap && curtainWrap.parentNode) curtainWrap.parentNode.removeChild(curtainWrap); }, 2200);
+        }, 7200);
     }
 
     // 舞台聚焦「信」：背景虚化压暗，唯有信发亮，引导玩家点击信件
@@ -4860,6 +4865,9 @@ const ShadowJudge = {
         var letter = stage.querySelector('.stage-puppet[data-puppet="letter"]');
         if (!letter) { if (onDone) onDone(); return; }   // 没有信则直接进下一场
         stage.classList.add('letter-focus');
+        // 信聚焦期间锁定左侧皮影箱，防止误拖拽
+        var _pb = document.getElementById('puppetBox');
+        if (_pb) _pb.classList.add('intermission-lock');
         // 引导文字
         var hint = document.createElement('div');
         hint.className = 'letter-focus-hint';
@@ -4881,19 +4889,28 @@ const ShadowJudge = {
             if (e) { e.stopPropagation(); e.preventDefault(); }
             hot.removeEventListener('click', done);
             stage.classList.remove('letter-focus');
+            // 解锁皮影箱（信已被点击，即将进入转场）
+            var _pb2 = document.getElementById('puppetBox');
+            if (_pb2) _pb2.classList.remove('intermission-lock');
             var h = document.getElementById('letterFocusHint'); if (h) h.remove();
             var hs = document.getElementById('letterFocusHotspot'); if (hs) hs.remove();
-            // 点击信件 → 信的正面铺满全屏、打开、背景变白，再进下一场
-            playLetterReveal(onDone, '第一幕—第二场&nbsp;&nbsp;·&nbsp;&nbsp;信中之秘');
+            // 点击信件 → 恢复「以前的那个转场效果」：信正面铺满→打开→白光→标题卡「信中之秘」→合拢帘子→拉开→开启第二场剧情。
+            // 时长已调长（标题卡2500ms、背景切第二场4200ms、拉帘5600ms、开剧情7200ms）；背景在帘子合拢期间切到第二场幕中背景(stage-bg-act2)，
+            // 白光/合拢帘子覆盖下第一场皮影不露馅，帘子拉开即露出干净的第二场。
+            var _revealFn = (window.playLetterReveal || playLetterReveal);
+            _revealFn(onDone, '第一幕&nbsp;&nbsp;·&nbsp;&nbsp;第二场&nbsp;&nbsp;·&nbsp;&nbsp;信中之秘');
         };
         hot.addEventListener('click', done);
     }
 
     // 进第二场（信中之秘）：设置场景后走统一入口 startCurrentScene（含 act2-bg 背景切换 + 完整旁白）
+    // 信转场专属开关：为 true 时进入第二场只露背景、不自动出任何开场台词/AI旁白
+    var _silentAct2Enter = false;
     function enterAct2Directly() {
         try {
             gameState.currentAct = 1;
             gameState.currentScene = 1;
+            _silentAct2Enter = true;
             if (window.startCurrentScene) window.startCurrentScene();
             else startCurrentScene();
         } catch(e) {
@@ -5252,14 +5269,21 @@ const ShadowJudge = {
     function startCurrentScene() {
         try {
             resetSceneState();
+            // 进入场景时清掉转场期间可能残留的锁定态（皮影箱/舞台变暗、全局打字锁），
+            // 否则第二场会看到皮影箱像"影子"一样灰暗且不可交互。
+            var _pb = document.getElementById('puppetBox');
+            var _st = document.getElementById('stage');
+            if (_pb) _pb.classList.remove('intermission-lock', 'speaking-lock');
+            if (_st) _st.classList.remove('intermission-lock', 'speaking-lock');
+            document.body.classList.remove('typing-lock');
             EventBus.emit('countdown_stop_request');
             var act = ACTS_DATA.acts[gameState.currentAct-1];
             var scene = act.scenes[gameState.currentScene];
             updateHeader();
             if (window.TheaterSystem&&window.TheaterSystem.clearStage) window.TheaterSystem.clearStage();
-            // 进入第二场（信中之秘）：切换为 stage-bg-act2.jpg 背景。
+            // 进入「信中之秘(第一幕第二场)」与整个「第二幕(大栅栏)」：统一切换为 stage-bg-act2.jpg 大栅栏街景背景。
             // 内联兜底（优先级最高），绕开 .stage.night 覆盖 / 缓存问题，确保图一定显示。
-            if (gameState.currentAct===1 && gameState.currentScene===1) {
+            if ((gameState.currentAct===1 && gameState.currentScene===1) || gameState.currentAct===2) {
                 var stageElS = document.getElementById('stage');
                 if (stageElS) {
                     stageElS.classList.remove('night');
@@ -5271,6 +5295,9 @@ const ShadowJudge = {
             }
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
+            // 信转场（_silentAct2Enter=true）时：帘子拉开后只露第二场背景，不自动出任何开场台词/AI旁白。
+            // 其它入口进入第二场时仍按原逻辑生成开场白。
+            if (!_silentAct2Enter) {
             // 第二场专属：开场先用「信中之秘……」点题，再接路师傅的引子（与帘子拉开同步生成）
             if (gameState.currentAct===1 && gameState.currentScene===1) {
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:'信中之秘……', speed:60 });
@@ -5291,6 +5318,8 @@ const ShadowJudge = {
             } else {
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:80 });
             }
+            }
+            _silentAct2Enter = false;  // 用完即复位，避免影响后续其它入口
 
             // 第一场开场：场景描述后接游戏规则
             if (gameState.currentAct===1 && gameState.currentScene===0) {
@@ -5525,15 +5554,33 @@ const ShadowJudge = {
                                 if (_wrap && _wrap.parentNode) _wrap.parentNode.removeChild(_wrap);
                                 if (_puppetBox) _puppetBox.classList.remove('intermission-lock');
                                 if (window.NarrationCtl) window.NarrationCtl.reset();
-                                advanceToNextAct();
+                                // 始终定格在第二幕（currentAct=2），不依赖当前 currentAct 做 +1，
+                                // 防止从第二幕点"跳到幕间休息"时被 advanceToNextAct 误加到第三幕导致皮影只剩4个。
+                                gameState.currentAct = 2;
+                                gameState.currentScene = 0;
+                                EventBus.emit('act_intermission');
+                                updatePuppetCards(2);
+                                updateHeader();
+                                var _nextAct = ACTS_DATA.acts[1]; // 第二幕
+                                if (_nextAct && window.NarrationCtl) {
+                                    window.NarrationCtl.enqueueAction(startCurrentScene);
+                                    if (!narrationActive) window.NarrationCtl.pump();
+                                } else {
+                                    startCurrentScene();
+                                }
                             });
                         }, 1100); // 拉开动画时长
                     });
                 } else {
-                    // 没有帘子 wrap 时直接进第二幕（降级路径）
+                    // 没有帘子 wrap 时直接进第二幕（降级路径）：同样强制定格在第二幕
                     if (_puppetBox) _puppetBox.classList.remove('intermission-lock');
                     if (window.NarrationCtl) window.NarrationCtl.reset();
-                    advanceToNextAct();
+                    gameState.currentAct = 2;
+                    gameState.currentScene = 0;
+                    EventBus.emit('act_intermission');
+                    updatePuppetCards(2);
+                    updateHeader();
+                    startCurrentScene();
                 }
             }
             // 台词全部打完后自动进入"等待点击帘子"状态
@@ -5545,7 +5592,7 @@ const ShadowJudge = {
                     prepareCurtainTransition();
                 }
             }, 15000);
-        } catch(e) { console.warn('[showAct1Intermission]', e.message); advanceToNextAct(); }
+        } catch(e) { console.warn('[showAct1Intermission]', e.message); gameState.currentAct=2; gameState.currentScene=0; updatePuppetCards(2); updateHeader(); startCurrentScene(); }
     }
 
     // 显示 "第 X 幕 · 第 Y 场 · 场景名" 标题卡片（复用 act-title-overlay 组件）
