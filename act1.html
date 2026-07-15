@@ -1683,48 +1683,15 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
                 <div class="puppet-name">灯</div>
             </div>
 
-            <!-- 白骨精（无图片，内联SVG） -->
+            <!-- 白骨精（皮影剪纸图） -->
             <div class="puppet-card" data-puppet="demon" data-act="2">
-                <div class="puppet-icon"><svg viewBox="0 0 100 140">
-<defs><linearGradient id="demonGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#d4c8b8"/><stop offset="40%" stop-color="#a89888"/><stop offset="100%" stop-color="#6a5a4a"/></linearGradient></defs>
-<path d="M35,52 L28,135 Q26,139 32,140 L68,140 Q74,139 72,135 L65,52 Z" fill="url(#demonGrad)" stroke="#4a3a2a" stroke-width="1.5" opacity="0.85"/>
-<path d="M38,65 Q43,60 48,65" fill="none" stroke="#4a3a2a" stroke-width="0.8" opacity="0.6"/>
-<path d="M52,65 Q57,60 62,65" fill="none" stroke="#4a3a2a" stroke-width="0.8" opacity="0.6"/>
-<path d="M36,75 Q43,70 50,75" fill="none" stroke="#4a3a2a" stroke-width="0.8" opacity="0.5"/>
-<path d="M50,75 Q57,70 64,75" fill="none" stroke="#4a3a2a" stroke-width="0.8" opacity="0.5"/>
-<path d="M34,44 Q32,24 50,18 Q68,24 66,44 Z" fill="#c4b8a0" stroke="#4a3a2a" stroke-width="1.5"/>
-<ellipse cx="42" cy="32" rx="6" ry="7" fill="#2a1a0a" stroke="#4a3a2a" stroke-width="1"/>
-<ellipse cx="58" cy="32" rx="6" ry="7" fill="#2a1a0a" stroke="#4a3a2a" stroke-width="1"/>
-<ellipse cx="42" cy="36" rx="3" ry="2" fill="#e8a040" opacity="0.4"/>
-<ellipse cx="58" cy="36" rx="3" ry="2" fill="#e8a040" opacity="0.4"/>
-<path d="M48,40 L50,44 L52,40" fill="#2a1a0a" stroke="#4a3a2a" stroke-width="0.6"/>
-<path d="M44,47 L46,50 L48,47" fill="none" stroke="#4a3a2a" stroke-width="0.7"/>
-<path d="M52,47 L54,50 L56,47" fill="none" stroke="#4a3a2a" stroke-width="0.7"/>
-<path d="M12,68 L8,75" stroke="#c4b8a0" stroke-width="1.5" stroke-linecap="round"/>
-<path d="M14,66 L11,74" stroke="#c4b8a0" stroke-width="1.3" stroke-linecap="round"/>
-<path d="M16,65 L14,73" stroke="#c4b8a0" stroke-width="1.2" stroke-linecap="round"/>
-<path d="M88,68 L92,75" stroke="#c4b8a0" stroke-width="1.5" stroke-linecap="round"/>
-<path d="M86,66 L89,74" stroke="#c4b8a0" stroke-width="1.3" stroke-linecap="round"/>
-<path d="M84,65 L86,73" stroke="#c4b8a0" stroke-width="1.2" stroke-linecap="round"/>
-                </svg></div>
+                <div class="puppet-icon"><img src="assets/images/demon.png" alt="白骨精" draggable="false"></div>
                 <div class="puppet-name">白骨精</div>
             </div>
 
-            <!-- 孙悟空（无图片，内联SVG） -->
+            <!-- 孙悟空（皮影剪纸图） -->
             <div class="puppet-card" data-puppet="monkey" data-act="2">
-                <div class="puppet-icon"><svg viewBox="0 0 110 140">
-<defs><linearGradient id="monkeyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8a5a30"/><stop offset="100%" stop-color="#4a2a10"/></linearGradient></defs>
-<path d="M30,55 Q25,80 28,105 Q30,120 38,138 L68,138 Q76,120 78,105 Q80,80 78,55 Z" fill="url(#monkeyGrad)" stroke="#2a1508" stroke-width="1.5"/>
-<path d="M30,85 Q25,105 28,115 L78,115 Q80,105 78,85 Z" fill="#c49a30" opacity="0.45" stroke="#8a6514" stroke-width="0.8"/>
-<ellipse cx="55" cy="34" rx="18" ry="16" fill="#d4a878" stroke="#2a1508" stroke-width="1.5"/>
-<path d="M37,22 Q55,14 73,22" fill="none" stroke="#d4a040" stroke-width="2.5"/>
-<circle cx="55" cy="16" r="2" fill="#d4a040"/>
-<ellipse cx="48" cy="32" rx="4" ry="3" fill="#e8a040" stroke="#2a1508" stroke-width="1"/>
-<ellipse cx="62" cy="32" rx="4" ry="3" fill="#e8a040" stroke="#2a1508" stroke-width="1"/>
-<circle cx="49" cy="32" r="2" fill="#2a1508"/>
-<circle cx="63" cy="32" r="2" fill="#2a1508"/>
-<path d="M48,40 Q55,43 62,40" fill="none" stroke="#2a1508" stroke-width="1.2"/>
-                </svg></div>
+                <div class="puppet-icon"><img src="assets/images/monkey.png" alt="孙悟空" draggable="false"></div>
                 <div class="puppet-name">孙悟空</div>
             </div>
 
@@ -2269,8 +2236,8 @@ const PuppetImageMap = {
     frog:    'assets/images/frog.png',
     lamp:    'assets/images/lamp.png',
     master:  'assets/images/master.png',
-    demon:   null,
-    monkey:  null,
+    demon:   'assets/images/demon.png',
+    monkey:  'assets/images/monkey.png',
     bamboo:  null,
     boat:    null,
 };
