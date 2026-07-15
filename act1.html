@@ -5334,6 +5334,11 @@ const ShadowJudge = {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
                     '（从皮影箱里，选合适的皮影，把这出戏接着演下去。）', speed:68 });
             }
+            // —— 第一场：位置提示（接在"选一枚皮影"之后，对应 POSITION_RULES.act1_scene1）——
+            if (gameState.currentAct===1 && gameState.currentScene===0) {
+                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
+                    '（望着白布像望记忆）「槐树在右下方，影儿铺一地；书生挨着槐树站着，等他那一封信。月亮挂上去，天一黑，戏就活了。」', speed:54 });
+            }
             // —— 第二场：位置提示（接在通用"选皮影"之后、场景专属描述之前）——
             if (gameState.currentAct===1 && gameState.currentScene===1) {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
