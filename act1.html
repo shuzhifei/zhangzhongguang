@@ -770,6 +770,91 @@ body {
     transform: scale(1);
 }
 
+/* ---- 第一幕评分卡 ---- */
+.act1-score-card {
+    position: fixed;
+    inset: 0;
+    z-index: 220;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.8s ease;
+}
+.act1-score-card.visible { opacity: 1; pointer-events: auto; }
+.act1-score-card.fade-out { opacity: 0; pointer-events: none; }
+.act1-score-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 65% 55% at 50% 48%, rgba(15,10,5,0.55) 0%, rgba(5,3,1,0.92) 72%);
+    backdrop-filter: blur(6px);
+}
+.act1-score-inner {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 36px 52px 32px;
+    border: 1px solid rgba(232,200,96,0.25);
+    border-radius: 14px;
+    background: linear-gradient(160deg, rgba(30,20,12,0.92) 0%, rgba(18,12,7,0.96) 100%);
+    max-width: 480px;
+    box-shadow:
+        0 0 60px rgba(232,200,96,0.08),
+        inset 0 1px 0 rgba(255,220,140,0.08);
+    transform: translateY(16px) scale(0.97);
+    opacity: 0;
+    transition: transform 0.8s ease 0.15s, opacity 0.8s ease 0.15s;
+}
+.act1-score-card.visible .act1-score-inner {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+.act1-score-label {
+    font-family: 'STKaiti','KaiTi','楷体',serif;
+    font-size: 13px;
+    color: #a08858;
+    letter-spacing: 0.35em;
+    margin-bottom: 6px;
+}
+.act1-score-tier {
+    font-family: 'STKaiti','KaiTi','楷体',serif;
+    font-size: 2.4rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    margin-bottom: 4px;
+}
+.act1-score-tier.ss { color: #c9a8ff; text-shadow: 0 0 30px rgba(201,168,255,0.35); }
+.act1-score-tier.s  { color: #7ee8c4; text-shadow: 0 0 30px rgba(126,232,196,0.35); }
+.act1-score-tier.a  { color: #f5c77a; text-shadow: 0 0 30px rgba(245,199,122,0.35); }
+.act1-score-tier.b  { color: #f0b89a; text-shadow: 0 0 28px rgba(240,184,154,0.28); }
+.act1-score-tier.c  { color: #e88a7a; text-shadow: 0 0 28px rgba(232,138,122,0.28); }
+.act1-score-oil {
+    font-family: 'STKaiti','KaiTi','楷体',serif;
+    font-size: 14px;
+    color: #bba67a;
+    margin-bottom: 14px;
+}
+.act1-score-comment {
+    font-family: 'STKaiti','KaiTi','楷体',serif;
+    font-size: 15px;
+    line-height: 1.85;
+    color: #d4c49a;
+    max-width: 400px;
+    margin: 0 auto 20px;
+}
+.act1-score-hint {
+    font-size: 12px;
+    color: rgba(200,180,130,0.45);
+    letter-spacing: 0.15em;
+    animation: score-hint-pulse 2.2s ease-in-out infinite;
+}
+@keyframes score-hint-pulse {
+    0%,100% { opacity: 0.35; }
+    50% { opacity: 0.75; }
+}
+
 
 /* ---- 底部字幕 ---- */
 .intro-subtitle {
@@ -4181,23 +4266,23 @@ const ShadowJudge = {
             + '<div class="show-video-hint">点击跳过</div>';
         // 挂载到 #stage 内：动画只在幕中区域播放，不遮挡对话框/皮影箱等外围 UI
         var stageEl = document.getElementById('stage');
-        // 播放动画前隐藏幕中玩家摆放的皮影，避免与视频画面穿帮（播完进下一场会自动清空）
+        // 播放动画前隐藏幕中玩家摆放的皮影与操纵杆，避免与视频画面穿帮（播完进下一场会自动清空/恢复）
         if (stageEl) {
             stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
+            stageEl.querySelectorAll('.elder-rod-ctrl').forEach(function(r){ r.style.display = 'none'; });
             var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
         }
         (stageEl || document.body).appendChild(ov);
-        // 演出是纯动画：播放时清空对话框，避免残留台词干扰
-        if (dialogueText) dialogueText.textContent = '';
-        if (speaker) speaker.textContent = '';
+        // 演出是纯动画：播放动画期间不再清空对话框，已生成的台词保留在框内（玩家要求：生成的话不要消失）
         var v = ov.querySelector('video');
         var finished = false;
         function finish() {
             if (finished) return; finished = true;
             try { v.pause(); } catch (e) {}
             if (ov.parentNode) ov.parentNode.removeChild(ov);
-            // 视频结束：把播放前为防穿帮隐藏的幕中皮影(.stage-puppet)与提示(.stage-hint)恢复显示，
-            // 让后续「点对话框→路师傅点评→信发亮(聚焦)」流程里人物与信都正常可见、可点击
+            // 视频结束：恢复播放前隐藏的幕中皮影(.stage-puppet)与提示(.stage-hint)，
+            // 让后续「点对话框→路师傅点评→信发亮(聚焦)」流程里人物与信都正常可见、可点击。
+            // 操纵杆(.elder-rod-ctrl)不在此恢复——它只在需要时（摆放老者/金蟾等）自行生成显示。
             if (stageEl) {
                 stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
                 var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
@@ -4218,23 +4303,23 @@ const ShadowJudge = {
             + '<div class="show-video-hint">点击跳过</div>';
         // 挂载到 #stage 内：动画只在幕中区域播放，不遮挡对话框/皮影箱等外围 UI
         var stageEl = document.getElementById('stage');
-        // 播放动画前隐藏幕中玩家摆放的皮影，避免与视频画面穿帮（播完进下一场会自动清空）
+        // 播放动画前隐藏幕中玩家摆放的皮影与操纵杆，避免与视频画面穿帮（播完进下一场会自动清空/恢复）
         if (stageEl) {
             stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
+            stageEl.querySelectorAll('.elder-rod-ctrl').forEach(function(r){ r.style.display = 'none'; });
             var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
         }
         (stageEl || document.body).appendChild(ov);
-        // 演出是纯动画：播放时清空对话框，避免残留台词干扰
-        if (dialogueText) dialogueText.textContent = '';
-        if (speaker) speaker.textContent = '';
+        // 演出是纯动画：播放动画期间不再清空对话框，已生成的台词保留在框内（玩家要求：生成的话不要消失）
         var v = ov.querySelector('video');
         var finished = false;
         function finish() {
             if (finished) return; finished = true;
             try { v.pause(); } catch (e) {}
             if (ov.parentNode) ov.parentNode.removeChild(ov);
-            // 视频结束：把播放前为防穿帮隐藏的幕中皮影(.stage-puppet)与提示(.stage-hint)恢复显示，
-            // 让后续「点对话框→路师傅点评→信发亮(聚焦)」流程里人物与信都正常可见、可点击
+            // 视频结束：恢复播放前隐藏的幕中皮影(.stage-puppet)与提示(.stage-hint)，
+            // 让后续「点对话框→路师傅点评→信发亮(聚焦)」流程里人物与信都正常可见、可点击。
+            // 操纵杆(.elder-rod-ctrl)不在此恢复——它只在需要时（摆放老者/金蟾等）自行生成显示。
             if (stageEl) {
                 stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
                 var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
@@ -4253,10 +4338,8 @@ const ShadowJudge = {
         var btn = document.getElementById('showPlayBtn');
         if (!btn) { console.warn('[onShowPlayClick] 按钮不存在'); return; }
         if (btn.disabled) { console.warn('[onShowPlayClick] 重复触发, 已忽略(按钮双绑定防护)'); return; }  // 防止双击/重复绑定导致两次播放
-        btn.disabled = true;  // 防连点
-            // 点击即清空对话框：避免帘子/动画期间仍显示上一场台词
-            if (dialogueText) dialogueText.textContent = '';
-            if (speaker) speaker.textContent = '';
+            btn.disabled = true;  // 防连点
+            // 保留对话框里已生成的台词，不主动清空（玩家要求：生成的话不要消失）
             console.log('[onShowPlayClick] 点击生效, currentAct='+gameState.currentAct+' currentScene='+gameState.currentScene);
 
             var isFirstScene = (gameState.currentAct === 1 && gameState.currentScene === 0);
@@ -4332,17 +4415,39 @@ const ShadowJudge = {
                             speaker.textContent = '路师傅';
                             typewriter(dialogueText, '这出戏，你接住了。信里写的不是词，是路子——当年我师傅也是这么教我的。\n（他收起影人，忽然皱眉）……大栅栏那头，听说有人打着我的名号。戏台子支起来了，可那影子，不对。', 50);
                             typingDoneCb = function() {
-                                var nh = document.getElementById('narrationHint');
-                                if (nh) nh.style.display = '';
-                                var dlg = document.querySelector('.dialogue-area');
-                                if (!dlg) { if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap); if (window.advanceScene) window.advanceScene(); return; }
-                                function onCont(e) {
-                                    if (e.target && (e.target.id === 'btnEnterAct2' || e.target.id === 'showPlayBtn')) return;
-                                    dlg.removeEventListener('click', onCont);
-                                    if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
-                                    if (window.advanceScene) window.advanceScene();
-                                }
-                                dlg.addEventListener('click', onCont);
+                                // 路师傅说完"可那影子，不对。"后 → 稍作停顿 → 弹出第一幕段位评分卡
+                                setTimeout(function() {
+                                    var _scoreFn = window.showAct1ScoreCard;
+                                    if (_scoreFn) {
+                                        _scoreFn(function() {
+                                            // 评分卡关闭后 → 进幕间休息
+                                            var _nh2 = document.getElementById('narrationHint');
+                                            if (_nh2) _nh2.style.display = '';
+                                            var _dlg2 = document.querySelector('.dialogue-area');
+                                            if (!_dlg2) { if (window.advanceScene) window.advanceScene(); return; }
+                                            function _onCont2(e) {
+                                                if (e.target && (e.target.id === 'btnEnterAct2' || e.target.id === 'showPlayBtn')) return;
+                                                _dlg2.removeEventListener('click', _onCont2);
+                                                window._pendingClosedCurtain = wrap;
+                                                if (window.advanceScene) window.advanceScene();
+                                            }
+                                            _dlg2.addEventListener('click', _onCont2);
+                                        });
+                                    } else {
+                                        // fallback：没有评分函数时直接走原来的流程
+                                        var nh = document.getElementById('narrationHint');
+                                        if (nh) nh.style.display = '';
+                                        var dlg = document.querySelector('.dialogue-area');
+                                        if (!dlg) { if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap); if (window.advanceScene) window.advanceScene(); return; }
+                                        function onCont(e) {
+                                            if (e.target && (e.target.id === 'btnEnterAct2' || e.target.id === 'showPlayBtn')) return;
+                                            dlg.removeEventListener('click', onCont);
+                                            window._pendingClosedCurtain = wrap;
+                                            if (window.advanceScene) window.advanceScene();
+                                        }
+                                        dlg.addEventListener('click', onCont);
+                                    }
+                                }, 800);
                             };
                         });
                     } else {
@@ -4375,6 +4480,60 @@ const ShadowJudge = {
         setTimeout(function(){ ov.classList.add('fade-out'); }, 1300);
         setTimeout(function(){ if (ov.parentNode) ov.parentNode.removeChild(ov); }, 2300);
     }
+
+    // ===== 第一幕评分卡：根据剩余灯油给出五段位评价 =====
+    function showAct1ScoreCard(onDone) {
+        var oil = (gameState && gameState.lampOil != null) ? gameState.lampOil : 0;
+        var tier, tierClass, comment;
+        if (oil >= 75) {
+            tier = 'SS · 掌灯大师';  tierClass = 'ss';
+            comment = '油如满月，影随心走。\n你这双手，是老天爷赏饭吃。';
+        } else if (oil >= 55) {
+            tier = 'S · 传灯弟子';   tierClass = 's';
+            comment = '油量尚可，火候到位。\n照这个路子练下去，不出三年你能独当一面。';
+        } else if (oil >= 35) {
+            tier = 'A · 影坛新秀';   tierClass = 'a';
+            comment = '油烧得有点快，但戏没散。\n记住——省油就是省命，每一滴都要用在刀刃上。';
+        } else if (oil >= 15) {
+            tier = 'B · 初学乍练';   tierClass = 'b';
+            comment = '油都快见底了……\n不过能演完第一幕，也算没白来。\n下次悠着点。';
+        } else {
+            tier = 'C · 灯火将尽';   tierClass = 'c';
+            comment = '油……就剩这么点了。\n还好灯没灭——\n但再这么演下去，怕是连影都留不住。';
+        }
+
+        var card = document.createElement('div');
+        card.className = 'act1-score-card';
+        card.id = 'act1ScoreCard';
+        card.innerHTML = '<div class="act1-score-bg"></div>'
+            + '<div class="act1-score-inner">'
+            +   '<div class="act1-score-label">第一幕 · 演毕</div>'
+            +   '<div class="act1-score-tier '+tierClass+'">'+tier+'</div>'
+            +   '<div class="act1-score-oil">剩余灯油：'+oil+' / 100</div>'
+            +   '<div class="act1-score-comment">'+comment.replace(/\n/g,'<br>')+'</div>'
+            +   '<div class="act1-score-hint">▸ 点击任意处继续</div>'
+            + '</div>';
+        document.body.appendChild(card);
+
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){
+            card.classList.add('visible');
+        }); });
+
+        function dismiss() {
+            card.removeEventListener('click', dismiss);
+            card.removeEventListener('pointerdown', dismiss);
+            card.classList.add('fade-out');
+            setTimeout(function(){
+                if (card.parentNode) card.parentNode.removeChild(card);
+                if (onDone) onDone();
+            }, 900);
+        }
+        setTimeout(function(){
+            card.addEventListener('click', dismiss);
+            card.addEventListener('pointerdown', dismiss);
+        }, 600);  // 等动画基本完成后再允许点击
+    }
+    window.showAct1ScoreCard = showAct1ScoreCard;
 
     // 点击信件后：全屏展示信的正面 → 信从中线打开 → 背景渐白 → 维持 → 淡出还原；白光铺满后叠加场次标题卡
     // 点击信件后：信正面铺满→打开→白光→标题卡；白光铺满时先在幕中放下「合拢」的帘子，
@@ -4982,10 +5141,16 @@ const ShadowJudge = {
     function showAct1Intermission() {
         try {
             EventBus.emit('act_intermission');
-            // 幕间休息：合拢帘子盖住舞台
-            var _curtainFn = window.playCurtainCloseOnly;
+            // 幕间休息：帘子盖住舞台
+            // 若第二场结尾（"…可那影子，不对。"）帘子已合拢，直接复用它，不再重播一遍合拢动画
             var _wrap = null;
-            if (_curtainFn) _curtainFn(function(w) { _wrap = w; });
+            if (window._pendingClosedCurtain && window._pendingClosedCurtain.parentNode) {
+                _wrap = window._pendingClosedCurtain;
+                window._pendingClosedCurtain = null;
+            } else {
+                var _curtainFn = window.playCurtainCloseOnly;
+                if (_curtainFn) _curtainFn(function(w) { _wrap = w; });
+            }
             var text = ['—— 幕 间 休 息 ——','','你打开皮影箱，发现多了一个皮影——一条船。',
                 '「船能带你走水路。」',
                 '师傅望着远方，轻声说：「我那大师兄，民国二十六年就失踪了，再没回来。」',
