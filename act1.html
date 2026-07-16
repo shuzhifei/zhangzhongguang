@@ -753,8 +753,17 @@ body {
     background-position: center;
     filter: blur(8px);
 }
-/* 第二场（信中之秘）开场标题卡：背景直接、干净地呈现第二场幕中背景，不做重度压暗/模糊 */
+/* 第二场（信中之秘）开场标题卡：背景为琉璃厂街景（荣宝斋/大渊阁），虚化浮现 */
 .act-title-overlay.act2 .act-title-bg {
+    background:
+        radial-gradient(ellipse 75% 65% at 50% 50%, rgba(10,6,3,0.35) 0%, rgba(6,3,1,0.72) 75%),
+        url('assets/images/stage-bg-scene2.jpg');
+    background-size: cover;
+    background-position: center bottom;
+    filter: blur(7px);
+}
+/* 第二幕（大栅栏）标题卡：背景为街景戏台（观众/灯笼/同仁堂），虚化浮现 */
+.act-title-overlay.act2-title .act-title-bg {
     background:
         radial-gradient(ellipse 75% 65% at 50% 50%, rgba(10,6,3,0.35) 0%, rgba(6,3,1,0.72) 75%),
         url('assets/images/stage-bg-act2.jpg');
@@ -766,18 +775,16 @@ body {
     position: relative;
     z-index: 1;
     font-family: 'STKaiti', 'KaiTi', '楷体', serif;
-    font-size: 3rem;
+    font-size: 3.6rem;
     color: #e8c860;
     text-shadow: 0 0 40px rgba(255,200,100,0.5), 0 0 80px rgba(200,160,80,0.3);
-    letter-spacing: 0.4em;
+    letter-spacing: 0.35em;
     white-space: nowrap;
-    transform: scale(0.9);
     opacity: 0;
     transition: opacity 1.2s ease 0.3s, transform 1.2s ease 0.3s;
 }
 .act-title-overlay.visible .act-title-text {
     opacity: 1;
-    transform: scale(1);
 }
 
 /* ---- 第一幕评分卡 ---- */
@@ -911,11 +918,11 @@ body {
     overflow: hidden;
 }
 
-/* 第二场（信中之秘）：大栅栏街景背景 */
+/* 第一幕第二场（信中之秘）：琉璃厂街景背景（荣宝斋/大渊阁） */
 .stage.act2-bg {
     background:
         radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%),
-        url('assets/images/stage-bg-act2.jpg');
+        url('assets/images/stage-bg-scene2.jpg');
     background-size: cover;
     background-position: center bottom;
     box-shadow:
@@ -1575,6 +1582,59 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: #0a0502; }
 ::-webkit-scrollbar-thumb { background: #4a2512; border-radius: 3px; }
+
+/* ===== 油灯耗尽·强制重开遮罩 ===== */
+.oil-depleted-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(10,6,3,0.92) 0%, rgba(4,2,1,0.98) 80%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.2s ease;
+}
+.oil-depleted-overlay.visible { opacity: 1; pointer-events: auto; }
+.oil-depleted-overlay .odo-flame {
+    font-size: 64px;
+    filter: grayscale(1) brightness(0.4);
+}
+.oil-depleted-overlay .odo-title {
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 2.4rem;
+    color: #c4503a;
+    letter-spacing: 0.5em;
+    text-shadow: 0 0 30px rgba(160,40,20,0.5);
+}
+.oil-depleted-overlay .odo-desc {
+    max-width: 520px;
+    text-align: center;
+    color: #b89a78;
+    font-size: 15px;
+    line-height: 1.9;
+    padding: 0 24px;
+}
+.oil-depleted-overlay .odo-restart {
+    margin-top: 8px;
+    padding: 12px 42px;
+    font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 18px;
+    letter-spacing: 0.4em;
+    color: #f0d9a8;
+    background: linear-gradient(180deg, rgba(120,60,28,0.9), rgba(74,31,10,0.95));
+    border: 1px solid #8a4e26;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.25s ease, transform 0.15s ease;
+}
+.oil-depleted-overlay .odo-restart:hover {
+    background: linear-gradient(180deg, rgba(150,78,36,1), rgba(96,42,14,1));
+    transform: translateY(-2px);
+}
 </style>
 </head>
 <body>
@@ -4825,13 +4885,13 @@ const ShadowJudge = {
         if (actTitle) setTimeout(function() { showActTitle(actTitle); }, 2500);
         setTimeout(function() { overlay.classList.add('fading'); }, 3100);
         setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 4000);
-        // 帘子还合着时，提前把舞台背景切到第二场（大栅栏街景），拉开瞬间不会露馅
+        // 帘子还合着时，提前切到信中之秘背景（琉璃厂街景 stage-bg-scene2.jpg）
         setTimeout(function() {
             var stageElS = document.getElementById('stage');
             if (stageElS) {
                 stageElS.classList.remove('night');
                 stageElS.classList.add('act2-bg');
-                stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
+                stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-scene2.jpg')";
                 stageElS.style.backgroundSize = 'cover';
                 stageElS.style.backgroundPosition = 'center bottom';
             }
@@ -5128,7 +5188,39 @@ const ShadowJudge = {
         if(flame)flame.classList.add('flame-gone');
         speaker.textContent='路师傅'; if(typewriterTimer)clearInterval(typewriterTimer);
         typewriter(dialogueText, '灯——灭了。', 45); btnConfirm.disabled=true; btnAsk.disabled=true;
+        // 灯油耗尽 → 玩家只能重新开始：弹出强制重开遮罩
+        showOilDepletedOverlay();
     });
+
+    // 油灯耗尽遮罩：全屏覆盖，仅允许「重新开始」；同时锁死皮影箱/舞台，玩家无法进行任何其它操作
+    function showOilDepletedOverlay() {
+        var _puppetBox = document.getElementById('puppetBox');
+        if (_puppetBox) _puppetBox.classList.add('intermission-lock');
+        var overlay = document.getElementById('oilDepletedOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'oilDepletedOverlay';
+            overlay.className = 'oil-depleted-overlay';
+            overlay.innerHTML =
+                '<div class="odo-flame">🪔</div>' +
+                '<div class="odo-title">灯 灭 了</div>' +
+                '<div class="odo-desc">油灯耗尽，白布上一片漆黑。<br>这一幕的故事，到此为止。<br><br>——要再看一遍，只能从头开始。</div>' +
+                '<button class="odo-restart" id="btnOilRestart">重 新 开 始</button>';
+            document.body.appendChild(overlay);
+            overlay.querySelector('#btnOilRestart').addEventListener('click', restartGame);
+        }
+        // 强制重排后再加 visible，确保过渡动画生效
+        void overlay.offsetHeight;
+        overlay.classList.add('visible');
+    }
+
+    // 重新开始：整局状态全清（无自动存档，reload 即回到开场点灯）
+    function restartGame() {
+        try {
+            if (typeof SaveSystem !== 'undefined') SaveSystem.clear();
+        } catch(e) {}
+        window.location.reload();
+    }
 
     // 把油灯拖到幕中：路师傅即时提示（与熄灭机制呼应——点一下即可让其消失）
     EventBus.on('lamp_placed_on_stage', function() {
@@ -5271,17 +5363,23 @@ const ShadowJudge = {
             var scene = act.scenes[gameState.currentScene];
             updateHeader();
             if (window.TheaterSystem&&window.TheaterSystem.clearStage) window.TheaterSystem.clearStage();
-            // 进入「信中之秘(第一幕第二场)」与整个「第二幕(大栅栏)」：统一切换为 stage-bg-act2.jpg 大栅栏街景背景。
-            // 内联兜底（优先级最高），绕开 .stage.night 覆盖 / 缓存问题，确保图一定显示。
-            if ((gameState.currentAct===1 && gameState.currentScene===1) || gameState.currentAct===2) {
-                var stageElS = document.getElementById('stage');
-                if (stageElS) {
-                    stageElS.classList.remove('night');
+            // 进入第一幕第二场（信中之秘）：切换为琉璃厂街景（stage-bg-scene2.jpg）
+            // 进入第二幕（大栅栏）：切换为街景戏台（stage-bg-act2.jpg）
+            // 内联兜底（优先级最高），绕开 .stage.night 覆盖 / 缓存问题
+            var stageElS = document.getElementById('stage');
+            if (stageElS) {
+                stageElS.classList.remove('night');
+                if (gameState.currentAct === 1 && gameState.currentScene === 1) {
+                    // 信中之秘：琉璃厂街景
                     stageElS.classList.add('act2-bg');
+                    stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-scene2.jpg')";
+                } else if (gameState.currentAct === 2) {
+                    // 第二幕·大栅栏：街景戏台
+                    stageElS.classList.remove('act2-bg');
                     stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
-                    stageElS.style.backgroundSize = 'cover';
-                    stageElS.style.backgroundPosition = 'center bottom';
                 }
+                stageElS.style.backgroundSize = 'cover';
+                stageElS.style.backgroundPosition = 'center bottom';
             }
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
@@ -5452,6 +5550,15 @@ const ShadowJudge = {
             }
             EventBus.emit('oil_changed', { oil: 100, reason: 'intermission_refill' });
 
+            // ★ 幕间休息时提前切到第二幕背景（戏台+观众图），这样帘子半透明透出来的就是大栅栏街景
+            var _interStage = document.getElementById('stage');
+            if (_interStage) {
+                _interStage.classList.remove('night', 'act2-bg');
+                _interStage.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
+                _interStage.style.backgroundSize = 'cover';
+                _interStage.style.backgroundPosition = 'center bottom';
+            }
+
             // 帘子盖住舞台
             // 若第二场结尾（"…可那影子，不对。"）帘子已合拢，直接复用它，不再重播一遍合拢动画
             var _wrap = null;
@@ -5599,7 +5706,7 @@ const ShadowJudge = {
     function showAct2SceneTitleCard(onDone) {
         try {
             var ov = document.createElement('div');
-            ov.className = 'act-title-overlay act2';
+            ov.className = 'act-title-overlay act2-title';
             ov.innerHTML = '<div class="act-title-bg"></div><div class="act-title-text">第二幕&nbsp;&nbsp;·&nbsp;&nbsp;第一场&nbsp;&nbsp;·&nbsp;&nbsp;真假传人</div>';
             document.body.appendChild(ov);
             void ov.offsetHeight;
