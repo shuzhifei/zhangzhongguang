@@ -4961,6 +4961,7 @@ const ShadowJudge = {
             gameState.currentAct = 1;
             gameState.currentScene = 1;
             _silentAct2Enter = true;
+            window._silentAct2Enter = true;  // 写入 window，让 startCurrentScene（另一IIFE）能读到
             if (window.startCurrentScene) window.startCurrentScene();
             else startCurrentScene();
         } catch(e) {
@@ -5379,12 +5380,52 @@ const ShadowJudge = {
                     stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
                 }
                 stageElS.style.backgroundSize = 'cover';
-                stageElS.style.backgroundPosition = 'center bottom';
+                // background-position 不在此统一设；各场景沿用 CSS 默认值（.stage=center, .act2-bg=center bottom）
             }
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
+            // _silentAct2Enter: 信转场静默进入第二场的标志（由 playLetterReveal 通过 window 桥接设置）
+            // ⚠ 必须在 startCurrentScene 内部声明，因为外部 IIFE 的 var 声明跨闭包不可见（ReferenceError）
+            // 默认 false：正常入场会播开场白+四条规矩
+            if (typeof window._silentAct2Enter === 'undefined') window._silentAct2Enter = false;
+            var _silentAct2Enter = window._silentAct2Enter;
             // 信转场（_silentAct2Enter=true）时：帘子拉开后只露第二场背景，不自动出任何开场台词/AI旁白。
             // 其它入口进入第二场时仍按原逻辑生成开场白。
+            // 第一场专属：扣油机制介绍（四条规矩）→ 选皮影提示 → 位置提示
+            // 必须放在 AI 开场白返回之后才入队，否则会抢到异步 AI 回复之前。
+            // 用 enqueueChunk 直接以「数据行」入队（不走 enqueueAction 再 emit 的重入链路），最稳。
+            var _firstScenePostNarration = function() {
+                if (gameState.currentAct!==1 || gameState.currentScene!==0) return;
+                var _oilRulesText =
+                    '演皮影，有四条规矩——\n'+
+                    '一、从皮影箱把人拖上幕布（扣3滴油）；\n'+
+                    '二、在幕上挪动位置（扣1滴油）；\n'+
+                    '三、点一下让皮影翻个身（扣1滴油）；\n'+
+                    '四、拖回箱子收回（扣3滴油）。\n\n'+
+                    '油用完了，戏也就停了。';
+                var _pickPuppetText = '（从皮影箱里，选一枚皮影，放在白布上——接住这出戏。）';
+                var _posHintText = '（望着白布像望记忆）「槐树在右下方，影儿铺一地；书生挨着槐树站着，等他那一封信。月亮挂上去，天一黑，戏就活了。」';
+                var _chunks = [
+                    { speaker:'路师傅', text:_oilRulesText, speed:38 },
+                    { speaker:'路师傅', text:_pickPuppetText, speed:68 },
+                    { speaker:'路师傅', text:_posHintText, speed:54 }
+                ];
+                try {
+                    if (window.NarrationCtl && window.NarrationCtl.enqueueChunk) {
+                        _chunks.forEach(function(c){ window.NarrationCtl.enqueueChunk(c); });
+                    } else {
+                        _chunks.forEach(function(c){ EventBus.emit('narration_chunk', c); });
+                    }
+                } catch(e) {
+                    // 任何意外都直发兜底，确保台词至少进队列
+                    _chunks.forEach(function(c){ EventBus.emit('narration_chunk', c); });
+                }
+                // 安全泵：入队后如果当前空闲就立即泵一次，防止 chunk 永远停在队列里没人取
+                setTimeout(function(){
+                    if (window.NarrationCtl && !window.NarrationCtl.isSpeaking()) window.NarrationCtl.pump();
+                }, 200);
+            };
+
             if (!_silentAct2Enter) {
             // 第二场专属：开场先用「信中之秘……」点题，再接路师傅的引子（与帘子拉开同步生成）
             if (gameState.currentAct===1 && gameState.currentScene===1) {
@@ -5399,49 +5440,29 @@ const ShadowJudge = {
                     {temperature:0.8, maxTokens:300, model:AI.MODEL_DEFAULT}
                 ).then(function(reply){
                     EventBus.emit('narration_chunk', { speaker:'路师傅', text:reply, speed:48 });
-                    playTTS(reply); // 语音同步
+                    if (window.playTTS) { try { playTTS(reply); } catch(e) {} } // 语音同步；绝不因 TTS 失败阻断后续台词
+                    _firstScenePostNarration();  // ← 开场白入队后再追加四条规矩+选皮影+位置
                 }).catch(function(){
                     EventBus.emit('narration_chunk', { speaker:'路师傅', text:scene.description, speed:80 });
+                    _firstScenePostNarration();  // ← catch 分支同样追加
                 });
             } else {
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:80 });
+                _firstScenePostNarration();  // ← 离线分支同样追加
             }
-            }
-            _silentAct2Enter = false;  // 用完即复位，避免影响后续其它入口
-
-            // 第一场开场：场景描述后接游戏规则
-            if (gameState.currentAct===1 && gameState.currentScene===0) {
-                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
-                    '\n演皮影，有四条规矩——\n'+
-                    '一、从皮影箱把人拖上幕布（扣3滴油）；\n'+
-                    '二、在幕上挪动位置（扣1滴油）；\n'+
-                    '三、点一下让皮影翻个身（扣1滴油）；\n'+
-                    '四、拖回箱子收回（扣3滴油）。\n\n'+
-                    '油用完了，戏也就停了。', speed:38 });
-            }
-
-            // —— 脚本提示：直接入队，玩家点字幕才出下一条（不再自动跳）——
-            if (gameState.currentAct===1 && gameState.currentScene===0) {
-                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
-                    '（从皮影箱里，选一枚皮影，放在白布上——接住这出戏。）', speed:68 });
-            } else {
-                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
-                    '（从皮影箱里，选合适的皮影，把这出戏接着演下去。）', speed:68 });
-            }
-            // —— 第一场：位置提示（接在"选一枚皮影"之后，对应 POSITION_RULES.act1_scene1）——
-            if (gameState.currentAct===1 && gameState.currentScene===0) {
-                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
-                    '（望着白布像望记忆）「槐树在右下方，影儿铺一地；书生挨着槐树站着，等他那一封信。月亮挂上去，天一黑，戏就活了。」', speed:54 });
             }
             // —— 第二场：位置提示（接在通用"选皮影"之后、场景专属描述之前）——
             if (gameState.currentAct===1 && gameState.currentScene===1) {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
                     '大渊阁？那是他常演的地方；金蟾不上台面，就趴在老者脚边跟着；书生看着信，也陷入了信中，第一眼就是他喜欢的珍奇阁。三人各占一方，这出戏就立住了。', speed:54 });
             }
-            if (gameState.currentAct===1 && gameState.currentScene===1) {
+            _silentAct2Enter = false;  // 用完即复位，避免影响后续其它入口
+            window._silentAct2Enter = false;  // 同步写回 window（下次 startCurrentScene 读取）
+
+            // —— 非第一场的通用选皮影提示 ——
+            if (!(gameState.currentAct===1 && gameState.currentScene===0)) {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
-                    '（戏词里夹着不属于这个故事的东西……你听出来了吗？）\n'+
-                    '摆出你理解的那一幕——老者、三根线、金蟾——让我看看你听懂了没有。', speed:56 });
+                    '（从皮影箱里，选合适的皮影，把这出戏接着演下去。）', speed:68 });
             }
             if (scene.is_improvisation&&scene.keywords) {
                 EventBus.emit('narration_chunk',{speaker:'路师傅',text:'三个词——'+scene.keywords.join('、')+'。\n\n剩下的——该你了。',speed:52});
@@ -5451,7 +5472,7 @@ const ShadowJudge = {
             // 线索谜底改为「摆对/追问才揭晓」：由 triggerClue 在触发时正经念出 reveal_content，
             // 不再于开场剧透（保持两场一致、保留悬念）
         } catch(e) {
-            console.warn('[startCurrentScene]', e.message);
+            console.error('[startCurrentScene] 异常（开场旁白/四条规矩可能未执行）:', e);
             var sc = (ACTS_DATA&&ACTS_DATA.acts&&ACTS_DATA.acts[gameState.currentAct-1]&&ACTS_DATA.acts[gameState.currentAct-1].scenes&&ACTS_DATA.acts[gameState.currentAct-1].scenes[gameState.currentScene]);
             if (sc) {
                 showDialogue('路师傅', '（师傅看着白布，缓缓开口）\n\n「' + sc.name + '」\n\n' + sc.description);
