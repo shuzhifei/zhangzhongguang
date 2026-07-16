@@ -654,6 +654,17 @@ body {
     background: rgba(28,16,5,0.85);
     opacity: 1;
 }
+/* 直接进第二幕按钮：置于「快速进入」上方，避免重叠 */
+.intro-enter-act2 {
+    bottom: 19%;
+    color: #d8b070;
+    border-color: rgba(190,150,70,0.6);
+}
+.intro-enter-act2:hover {
+    color: #f3d789;
+    border-color: rgba(230,190,90,0.8);
+    background: rgba(28,16,5,0.85);
+}
 
 /* ====== 黑屏字幕滚动 ====== */
 .story-intro-overlay {
@@ -1661,6 +1672,7 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
     <div class="intro-subtitle" id="introSubtitle">点燃油灯吧</div>
     <div class="intro-start-hint" id="introStartHint">▷ 点击屏幕任意处开始</div>
     <button class="intro-quick-enter" id="introQuickEnter" type="button">快 速 进 入 ▸</button>
+    <button class="intro-quick-enter intro-enter-act2" id="introEnterAct2" type="button">直 进 第 二 幕 ▸（第一幕满分）</button>
 </div>
 
 <!-- ====== 油灯点亮后扩散的光圈 ====== -->
@@ -2061,6 +2073,7 @@ class GameState {
         this.currentScene = 0;
         this.isGameOver = false;
         this.lampOil = 100;
+        this.act1Perfect = false;   // 直接进第二幕时：标记第一幕为满分通关（默认第一幕满分）
         this.totalOilBurned = 0;
         this.ownedPuppets = ["scholar","tree","moon","elder","oldman","frog","letter","lamp","demon","monkey","bamboo","master"];
         this.stagedPuppets = [];
@@ -3800,6 +3813,53 @@ const ShadowJudge = {
         quickEnterBtn.addEventListener('pointerdown', onQuickDown, true);
         quickEnterBtn.addEventListener('touchstart', onQuickDown, true);
         quickEnterBtn.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+
+    // ---- 直接进第二幕（第一幕满分）：跳过第一幕，进入时第一幕记为满分通关 ----
+    function quickEnterAct2() {
+        if (quickEntered) return;            // 已被任一快速入口占用
+        quickEntered = true;
+        // 锁定开场流程状态，避免正常流程时序干扰
+        openingStarted = true; advanced = true; isLit = true; lampReady = true; bgSkipped = true; bgAfterRan = true;
+        ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev) {
+            document.removeEventListener(ev, onFirstGesture);
+        });
+        // 隐藏所有开场层
+        if (startHint) startHint.style.display = 'none';
+        if (overlay) overlay.classList.add('hidden');
+        if (storyOverlay) { storyOverlay.classList.remove('visible'); storyOverlay.style.display = 'none'; }
+        if (actTitleOverlay) { actTitleOverlay.classList.remove('visible'); actTitleOverlay.style.display = 'none'; }
+        var bloom = document.getElementById('lampBloom');
+        if (bloom) bloom.style.display = 'none';
+        // 音频：停开场 BGM，拉幕并播舞台 BGM
+        try { AudioManager.stopBGM(0); } catch (e) {}
+        panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+        AudioManager.playSFX('sfx_curtain');
+        setTimeout(function() { AudioManager.playBGM('bgm_stage'); }, 1800);
+        // —— 标记「第一幕满分」：满油 + 解锁第一幕三核心暗语（等同完美通关第一幕）——
+        gameState.act1Perfect = true;
+        gameState.lampOil = 100;
+        if (typeof updateOilUI === 'function') updateOilUI();
+        if (!gameState.unlockedCiphers) gameState.unlockedCiphers = [];
+        ['槐树', '三根线', '金蟾碎了'].forEach(function(c) {
+            if (gameState.unlockedCiphers.indexOf(c) < 0) gameState.unlockedCiphers.push(c);
+        });
+        // 直接进入第二幕（直接调用已暴露的 startCurrentScene，绕过 opening_complete 的 once 时序限制）
+        gameState.currentAct = 2;
+        gameState.currentScene = 0;
+        if (window.updatePuppetCards) window.updatePuppetCards(2); // 切到第二幕皮影箱卡片（白骨精/孙悟空/老者等）
+        if (window.startCurrentScene) window.startCurrentScene();
+    }
+    var enterAct2BtnNew = document.getElementById('introEnterAct2');
+    if (enterAct2BtnNew) {
+        function onAct2Down(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            quickEnterAct2();
+        }
+        enterAct2BtnNew.addEventListener('pointerdown', onAct2Down, true);
+        enterAct2BtnNew.addEventListener('touchstart', onAct2Down, true);
+        enterAct2BtnNew.addEventListener('click', function(e) { e.stopPropagation(); });
     }
 
     // 幕布动画结束后彻底移除，避免遮挡交互
