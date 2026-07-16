@@ -2655,6 +2655,17 @@ const ShadowJudge = {
             elder:   { type:'abs', cx:0.28, cy:0.72, r:0.13, label:'老者·大渊阁底下' },
             frog:    { type:'rel', to:'elder', dx:0.02, dy:0.09, r:0.07, label:'金蟾·老者线下' },
             scholar: { type:'abs', cx:0.82, cy:0.68, r:0.12, label:'书生·珍奇斋旁' }
+        },
+        // —— 第二幕：大栅栏·真假传人 / 揭穿之后 —— 与开场位置提示、_posHint 一致
+        //   act2_scene2（影速对决）为限时组合场，不定义位置规则，仅按数量判定
+        'act2_scene1': {
+            elder:   { type:'abs', cx:0.22, cy:0.70, r:0.13, label:'老者·戏台左侧观戏' },
+            demon:   { type:'abs', cx:0.55, cy:0.55, r:0.12, label:'白骨精·台中' },
+            monkey:  { type:'abs', cx:0.80, cy:0.62, r:0.12, label:'孙悟空·台右' }
+        },
+        'act2_scene3': {
+            elder:   { type:'abs', cx:0.24, cy:0.70, r:0.13, label:'老者·左侧立定' },
+            demon:   { type:'abs', cx:0.76, cy:0.66, r:0.12, label:'白骨精·右侧戳立' }
         }
     },
 
@@ -2714,6 +2725,15 @@ const ShadowJudge = {
                 return '（师傅低头看了看地面）金蟾——它从来不上台面的，就趴在老者脚边跟着走。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就在那儿趴着。');
             if (pid === 'scholar')
                 return '（师傅沉默了一会儿）书生……他最熟悉的，就是珍奇斋。\n每次看戏前总得去那转转，看点新奇玩意儿。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，从他的角度望过去正好能看见。');
+        }
+        // ===== 第二幕（大栅栏）· 间接叙事化位置提示：用角色习惯/站位暗示方位 + 给方向（仿信中之秘）=====
+        if (sceneId === 'act2_scene1' || sceneId === 'act2_scene3') {
+            if (pid === 'elder')
+                return '（师傅指了指戏台左边）真传人——得在左边盯着。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就站那儿看戏。');
+            if (pid === 'demon')
+                return '（师傅瞥了眼台中）白骨精——戏核儿在中间。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，正中正好。');
+            if (pid === 'monkey')
+                return '（师傅下巴一扬）孙悟空——在右边跟白骨精对戏。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，右边立着。');
         }
         // 金蟾三级判定（rel→elder 时）：很远→"在老者线下面"(不给方向)；近但没到位→"跟着老者"+方向
         if (rule.type === 'rel' && rule.to === 'elder') {
@@ -2776,6 +2796,10 @@ const ShadowJudge = {
         var okComments = {
             'act1_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，眯着眼细细打量了一番）\n月夜下等人——老者在左，金蟾在旁，书生远远候着。\n这出戏的味道，有了。',
             'act1_scene2': '好！这一面，齐了。\n\n（师傅点了点头）\n书生读着信——犹如身临其境，仿佛置身于他熟悉的珍奇斋下。\n老者在大渊阁阶前，金蟾伏在他脚边。\n这封信里的秘密，你看见了。',
+            // —— 第二幕过关评语（仿第一幕 okComments，路师傅口吻）——
+            'act2_scene1': '（师傅盯着那人的影，半晌）手法花哨，可杆是飘的。\n真正的路派——杆在皮影后头，人在戏外头。\n你方才摆的，是戏；我教你的，是骨。',
+            'act2_scene2': '（师傅掷下操纵杆）十息，够了。\n你手比脑子快——这才是操影人的本事。\n下一出，该你来辨真假了。',
+            'act2_scene3': '（师傅缓缓直起身）他不肯认，可白布不撒谎。\n老者立着，白骨精戳着——谁是真的，影子早说了。\n这出戏，你接住了。'
         };
         return {
             score: score, correct: correct,
@@ -4186,6 +4210,30 @@ const ShadowJudge = {
                 return '路师傅低头看了看：\n「金蟾——得跟着老者走。它自己不会动的。」';
             return '路师傅点了点头：继续摆。';
         }
+        // —— ②.5 第二幕（大栅栏）专属叙事提示：按摆的组合给对应叙事（仿信中之秘）——
+        if (sceneId === 'act2_scene1') {
+            if (placedIds.indexOf('elder')!==-1 && placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1)
+                return '（师傅抱着胳膊）白骨精在中间翻，孙悟空在右边打，真传人在左边看。\n你摆的——是戏。可杆后头那个人，你看清没？';
+            if (placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1)
+                return '（师傅摇头）光有白骨精和孙悟空，那是戏班子。\n少了一个在左边盯着的人——这出戏，没魂。';
+            if (placedIds.indexOf('elder')!==-1)
+                return '（师傅眯眼）光一个真传人在左边站着，戏呢？\n《三打白骨精》——白骨精、孙悟空，得让他瞧着。';
+            return '路师傅点了点头：接着摆。';
+        }
+        if (sceneId === 'act2_scene2') {
+            if (placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1)
+                return '（师傅手指一点）对——白骨精、孙悟空，就这俩。\n十息之内摆齐，才算接住了我这口传授。';
+            return '（师傅）白骨精、孙悟空——摆上！';
+        }
+        if (sceneId === 'act2_scene3') {
+            if (placedIds.indexOf('elder')!==-1 && placedIds.indexOf('demon')!==-1)
+                return '（师傅缓缓直起身）老者立在左，白骨精戳在右。\n他不肯认——可白布不撒谎，谁是真的，影子早说了。';
+            if (placedIds.indexOf('elder')!==-1)
+                return '（师傅）光一个老者立着，假传人呢？\n把白骨精——戳到他右边去。';
+            if (placedIds.indexOf('demon')!==-1)
+                return '（师傅）白骨精自己戳着，没人立着揭他。\n把老者——请到左边来。';
+            return '路师傅点了点头：接着摆。';
+        }
         // —— ③ 全对（或即兴场无阵容要求）：念戏词，把线索点出来 ——
         if (placedIds.indexOf('elder')!==-1&&placedIds.indexOf('letter')!==-1) return '路师傅停了一下：这根杆——本来有三根的。我师父当年……算了。';
         if (placedIds.indexOf('frog')!==-1&&placedIds.indexOf('elder')!==-1) return '路师傅的声音变了：金蟾碎了。戏里是这么写的——但戏外——也碎了。';
@@ -5409,6 +5457,16 @@ const ShadowJudge = {
             if (gameState.currentAct===1 && gameState.currentScene===1) {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
                     '大渊阁？那是他常演的地方；金蟾不上台面，就趴在老者脚边跟着；书生看着信，也陷入了信中，第一眼就是他喜欢的珍奇阁。三人各占一方，这出戏就立住了。', speed:54 });
+            }
+            // —— 第二幕：开场位置/摆法提示（仿第一场"位置提示"独立 narration 块，接在通用"选皮影"之后）——
+            if (gameState.currentAct === 2) {
+                var _act2OpenHints = {
+                    'act2_scene1': '（师傅抱着手站在戏台边）「大栅栏的夜市，最不缺假把式。那个人演的《三打白骨精》——白骨精在台中翻，孙悟空在右边打，真传人在左边盯着。你看的是戏，我让你看的，是杆后头的人。」',
+                    'act2_scene2': '（师傅手指一点）「真传人和假传人，同时演——我念一句，你十息之内把对的皮影摆上。白骨精、孙悟空，就这俩，别多想。」',
+                    'act2_scene3': '（师傅站定了）「揭穿了，他也不认。老者立在左边，白骨精戳在右边——你看清了，这出戏里谁是真的。」'
+                };
+                var _h2 = _act2OpenHints[scene.id];
+                if (_h2) EventBus.emit('narration_chunk', { speaker:'路师傅', text:_h2, speed:54 });
             }
             _silentAct2Enter = false;  // 用完即复位，避免影响后续其它入口
             window._silentAct2Enter = false;  // 同步写回 window（下次 startCurrentScene 读取）
