@@ -2805,12 +2805,26 @@ const ShadowJudge = {
                          comment: '路师傅没点头：「差着呢，要不再试试呢。有啥拿不准的，问我便是。」', needFlip: true };
             }
         }
+        // 第二幕第一场：老者必须面朝戏台（朝向白骨精和孙悟空）才通过
+        if (correct && currentSceneId === 'act2_scene1') {
+            var _a2u = [];
+            stagedPuppets.forEach(function(p) {
+                if (p.puppetId === 'elder' && !ShadowJudge._isFlipped(p.puppetId)) _a2u.push('elder');
+            });
+            console.log('[quickJudge] act2s1 unflipped=', _a2u);
+            ShadowJudge._dbgFlip('[QJ-act2s1] unflipped=' + JSON.stringify(_a2u));
+            if (_a2u.length > 0) {
+                correct = false;
+                return { score: Math.max(0, score - 15), correct: false,
+                         comment: '路师傅没点头：「差着呢，要再试试呢。有啥拿不准的，问我便是。」', needFlip: true };
+            }
+        }
         // ===== 确认按钮只说简短判断（对/不对），具体提示留给"追问师傅" =====
         var okComments = {
             'act1_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，眯着眼细细打量了一番）\n月夜下等人——老者在左，金蟾在旁，书生远远候着。\n这出戏的味道，有了。',
             'act1_scene2': '好！这一面，齐了。\n\n（师傅点了点头）\n书生读着信——犹如身临其境，仿佛置身于他熟悉的珍奇斋下。\n老者在大渊阁阶前，金蟾伏在他脚边。\n这封信里的秘密，你看见了。',
             // —— 第二幕过关评语（仿第一幕 okComments，路师傅口吻）——
-            'act2_scene1': '（师傅盯着那人的影，半晌）手法花哨，可杆是飘的。\n真正的路派——杆在皮影后头，人在戏外头。\n你方才摆的，是戏；我教你的，是骨。',
+            'act2_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，目光从左到右扫过一遍——老者在左边立着，面朝台上；白骨精在当中翻着身；孙悟空在右边接住招）\n大栅栏的夜市灯火通明，可这方戏台上的真假——一目了然。\n老者看的是戏。你看的，是杆后头的人。',
             'act2_scene2': '（师傅掷下操纵杆）十息，够了。\n你手比脑子快——这才是操影人的本事。\n下一出，该你来辨真假了。',
             'act2_scene3': '（师傅缓缓直起身）他不肯认，可白布不撒谎。\n老者立着，白骨精戳着——谁是真的，影子早说了。\n这出戏，你接住了。'
         };
@@ -3216,8 +3230,10 @@ const ShadowJudge = {
         // 跨作用域取场景ID：本 IIFE(2474-2978)拿不到 getCurrentSceneId 裸函数，经 TheaterSystem 桥接
         var _sid = (window.TheaterSystem && window.TheaterSystem.getCurrentSceneId)
                    ? window.TheaterSystem.getCurrentSceneId() : '';
-        // 第二场：老者/金蟾默认面朝左（玩家需手动拖动操纵杆才转向右）
-        if (_sid === 'act1_scene2' && (puppetId === 'elder' || puppetId === 'frog')) {
+        // 第二场：老者/金蟾默认面朝左（玩家需手动拖动操纵杆才转向右）；
+        // act2_scene1 的老者同理——需翻转面朝戏台（朝向白骨精+孙悟空）才通过
+        if ((_sid === 'act1_scene2' && (puppetId === 'elder' || puppetId === 'frog')) ||
+            (_sid === 'act2_scene1' && puppetId === 'elder')) {
             setupPuppetRods(pup, puppetId);
         }
 
@@ -4272,8 +4288,12 @@ const ShadowJudge = {
         }
         // —— ②.5 第二幕（大栅栏）专属叙事提示：按摆的组合给对应叙事（仿信中之秘）——
         if (sceneId === 'act2_scene1') {
-            if (placedIds.indexOf('elder')!==-1 && placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1)
-                return '（师傅抱着胳膊）白骨精在中间翻，孙悟空在右边打，真传人在左边看。\n你摆的——是戏。可杆后头那个人，你看清没？';
+            // 三者全齐 → 先查老者是否面朝戏台（翻转），翻转不对给翻转提示
+            if (placedIds.indexOf('elder')!==-1 && placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1) {
+                if (!ShadowJudge._isFlipped('elder'))
+                    return '（师傅盯着老者的影，眉头微皱）人站对了——可脸呢？\n真传人看戏，得面朝台上的角儿。\n（他指了指红线）杆能动，把他转过来——让他看着戏。';
+                return '（师傅凑近白布，目光从左到右扫过一遍）嗯……白骨精在台中翻着，孙悟空在右边接住招，老者在左边——面朝台上，盯着这出戏。\n（他点了点头）位置对了，朝向也对了。可你再看看——这个"真传人"的影，杆是不是飘的？';
+            }
             if (placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1)
                 return '（师傅摇头）光有白骨精和孙悟空，那是戏班子。\n少了一个在左边盯着的人——这出戏，没魂。';
             if (placedIds.indexOf('elder')!==-1)
@@ -5531,7 +5551,7 @@ const ShadowJudge = {
                         '（师父路春福，已经走了。\n可这方白布一亮，他的声音又在耳边响起——不是人回来了，是记忆，是心念，是他留在影里的那一缕魂。\n他还想再陪你演最后一场，看你能不能，真正接住这盏灯。）', speed:52 });
                 }
                 var _act2OpenHints = {
-                    'act2_scene1': '（师傅抱着手站在戏台边）「大栅栏的夜市，最不缺假把式。那个人演的《三打白骨精》——白骨精在台中翻，孙悟空在右边打，真传人在左边盯着。你看的是戏，我让你看的，是杆后头的人。」',
+                    'act2_scene1': '（师傅抱着手站在戏台边）「大栅栏的夜市，最不缺假把式。那个人演的《三打白骨精》——白骨精在台中翻，孙悟空在右边打，真传人在左边——面朝台上盯着。（记着：老者得脸朝戏台，背对观众可不行。）你看的是戏，我让你看的，是杆后头的人。」',
                     'act2_scene2': '（师傅手指一点）「真传人和假传人，同时演——我念一句，你十息之内把对的皮影摆上。白骨精、孙悟空，就这俩，别多想。」',
                     'act2_scene3': '（师傅站定了）「揭穿了，他也不认。老者立在左边，白骨精戳在右边——你看清了，这出戏里谁是真的。」'
                 };
