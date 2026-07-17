@@ -654,6 +654,17 @@ body {
     background: rgba(28,16,5,0.85);
     opacity: 1;
 }
+/* 直接进第二幕按钮：置于「快速进入」上方，避免重叠 */
+.intro-enter-act2 {
+    bottom: 19%;
+    color: #d8b070;
+    border-color: rgba(190,150,70,0.6);
+}
+.intro-enter-act2:hover {
+    color: #f3d789;
+    border-color: rgba(230,190,90,0.8);
+    background: rgba(28,16,5,0.85);
+}
 
 /* ====== 黑屏字幕滚动 ====== */
 .story-intro-overlay {
@@ -1661,6 +1672,7 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
     <div class="intro-subtitle" id="introSubtitle">点燃油灯吧</div>
     <div class="intro-start-hint" id="introStartHint">▷ 点击屏幕任意处开始</div>
     <button class="intro-quick-enter" id="introQuickEnter" type="button">快 速 进 入 ▸</button>
+    <button class="intro-quick-enter intro-enter-act2" id="introEnterAct2" type="button">直 进 第 二 幕 ▸（第一幕满分）</button>
 </div>
 
 <!-- ====== 油灯点亮后扩散的光圈 ====== -->
@@ -1755,43 +1767,15 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
                 <div class="puppet-name">孙悟空</div>
             </div>
 
-            <!-- 老人（无图片，内联SVG，占位；第二幕专用） -->
+            <!-- 老人（真实图片；第二幕专用） -->
             <div class="puppet-card" data-puppet="oldman" data-act="2">
-                <div class="puppet-icon"><svg viewBox="0 0 100 140">
-<defs><linearGradient id="oldmanGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9a8a78"/><stop offset="100%" stop-color="#5a4a3a"/></linearGradient></defs>
-<!-- 长袍 -->
-<path d="M34,58 Q28,85 30,120 Q32,134 40,138 L66,138 Q74,134 72,120 Q74,85 66,58 Z" fill="url(#oldmanGrad)" stroke="#3a2a1a" stroke-width="1.5"/>
-<!-- 头 -->
-<ellipse cx="50" cy="38" rx="13" ry="14" fill="#d8c4a8" stroke="#3a2a1a" stroke-width="1.5"/>
-<!-- 白发 -->
-<path d="M37,34 Q50,18 63,34 Q60,28 50,26 Q40,28 37,34 Z" fill="#e8e4dc" stroke="#9a9078" stroke-width="0.8"/>
-<!-- 眼 -->
-<circle cx="45" cy="38" r="1.6" fill="#2a1a0a"/>
-<circle cx="55" cy="38" r="1.6" fill="#2a1a0a"/>
-<!-- 弯眉（显老态） -->
-<path d="M41,34 Q45,32 49,34" fill="none" stroke="#6a5a3a" stroke-width="1"/>
-<path d="M51,34 Q55,32 59,34" fill="none" stroke="#6a5a3a" stroke-width="1"/>
-<!-- 白须 -->
-<path d="M46,46 Q50,58 54,46 Q50,52 46,46 Z" fill="#e8e4dc" stroke="#9a9078" stroke-width="0.6"/>
-<!-- 拐杖 -->
-<line x1="74" y1="20" x2="74" y2="120" stroke="#7a6048" stroke-width="2.4" stroke-linecap="round"/>
-<path d="M74,20 Q68,20 68,26" fill="none" stroke="#7a6048" stroke-width="2.4" stroke-linecap="round"/>
-                </svg></div>
+                <div class="puppet-icon"><img src="assets/images/oldman.png" alt="oldman" draggable="false"></div>
                 <div class="puppet-name">老 人</div>
             </div>
 
-            <!-- 竹子（无图片，内联SVG） -->
+            <!-- 竹子（真实图片） -->
             <div class="puppet-card" data-puppet="bamboo" data-act="2">
-                <div class="puppet-icon"><svg viewBox="0 0 100 140">
-<defs><linearGradient id="bambooGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#4a6a2a"/><stop offset="40%" stop-color="#6a8a40"/><stop offset="100%" stop-color="#4a6a2a"/></linearGradient></defs>
-<rect x="22" y="10" width="10" height="130" rx="2" fill="url(#bambooGrad)" stroke="#2a4a15" stroke-width="1.2"/>
-<rect x="20" y="42" width="14" height="5" rx="1" fill="#3a5a1a" stroke="#2a4a15" stroke-width="0.6"/>
-<rect x="20" y="78" width="14" height="5" rx="1" fill="#3a5a1a" stroke="#2a4a15" stroke-width="0.6"/>
-<rect x="44" y="5" width="10" height="135" rx="2" fill="url(#bambooGrad)" stroke="#2a4a15" stroke-width="1.2"/>
-<rect x="42" y="35" width="14" height="5" rx="1" fill="#3a5a1a" stroke="#2a4a15" stroke-width="0.6"/>
-<rect x="42" y="72" width="14" height="5" rx="1" fill="#3a5a1a" stroke="#2a4a15" stroke-width="0.6"/>
-<path d="M72,8 L82,138" fill="none" stroke="#4a6a2a" stroke-width="9" stroke-linecap="round"/>
-                </svg></div>
+                <div class="puppet-icon"><img src="assets/images/bamboo.png" alt="bamboo" draggable="false"></div>
                 <div class="puppet-name">竹 子</div>
             </div>
 
@@ -1801,28 +1785,9 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
                 <div class="puppet-name">路师傅</div>
             </div>
 
-            <!-- 船（内联SVG，幕间休息时动态显示） -->
+            <!-- 船（真实图片，幕间休息时动态显示） -->
             <div class="puppet-card hidden" id="boatPuppetCard" data-puppet="boat" data-act="2">
-                <div class="puppet-icon"><svg viewBox="0 0 140 100">
-<defs><linearGradient id="boatGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#b8a078"/><stop offset="50%" stop-color="#9a8060"/><stop offset="100%" stop-color="#6a5440"/></linearGradient></defs>
-<!-- 船身 -->
-<path d="M10,62 Q5,68 8,74 L132,74 Q135,68 130,62 Z" fill="url(#boatGrad)" stroke="#4a3828" stroke-width="1.2"/>
-<path d="M15,62 L125,62 L120,52 L20,52 Z" fill="#c4a878" stroke="#4a3828" stroke-width="0.8"/>
-<!-- 船头 -->
-<path d="M128,62 L140,55 Q142,58 138,66 L130,62 Z" fill="#a08860" stroke="#4a3828" stroke-width="0.8"/>
-<!-- 船尾 -->
-<path d="M12,62 L2,56 Q0,59 4,65 L10,62 Z" fill="#a08860" stroke="#4a3828" stroke-width="0.8"/>
-<!-- 桅杆 -->
-<line x1="70" y1="52" x2="70" y2="14" stroke="#7a6048" stroke-width="2.2" stroke-linecap="round"/>
-<!-- 帆（半展开） -->
-<path d="M72,18 Q95,22 98,46 L72,44 Z" fill="#e8dcc8" stroke="#9a8870" stroke-width="0.8" opacity="0.85"/>
-<path d="M68,18 Q45,24 42,48 L68,45 Z" fill="#e0d4bc" stroke="#9a8870" stroke-width="0.8" opacity="0.82"/>
-<!-- 帆上折痕 -->
-<line x1="72" y1="20" x2="96" y2="43" stroke="#b8a888" stroke-width="0.4" opacity="0.5"/>
-<line x1="68" y1="21" x2="44" y2="46" stroke="#b8a888" stroke-width="0.4" opacity="0.5"/>
-<!-- 船舱（小） -->
-<rect x="48" y="54" width="28" height="8" rx="1.5" fill="#8a7860" stroke="#4a3828" stroke-width="0.6"/>
-                </svg></div>
+                <div class="puppet-icon"><img src="assets/images/boat.png" alt="boat" draggable="false"></div>
                 <div class="puppet-name">船</div>
             </div>
         </div>
@@ -2108,8 +2073,9 @@ class GameState {
         this.currentScene = 0;
         this.isGameOver = false;
         this.lampOil = 100;
+        this.act1Perfect = false;   // 直接进第二幕时：标记第一幕为满分通关（默认第一幕满分）
         this.totalOilBurned = 0;
-        this.ownedPuppets = ["scholar","tree","moon","elder","frog","letter","lamp","demon","monkey","bamboo","master"];
+        this.ownedPuppets = ["scholar","tree","moon","elder","oldman","frog","letter","lamp","demon","monkey","bamboo","master"];
         this.stagedPuppets = [];
         this.usedPuppets = [];
         this.triggeredClues = [];
@@ -2298,8 +2264,9 @@ const PuppetImageMap = {
     master:  'assets/images/master.png',
     demon:   'assets/images/demon.png',
     monkey:  'assets/images/monkey.png',
-    bamboo:  null,
-    boat:    null,
+    bamboo:  'assets/images/bamboo.png',
+    boat:    'assets/images/boat.png',
+    oldman:  'assets/images/oldman.png',
 };
 const PUPPET_EMOJI = { scholar:'📜', elder:'👴', tree:'🌳', moon:'🌙', letter:'✉️', frog:'🐸', demon:'👹', monkey:'🐵', lamp:'💡', master:'👨‍🏫', bamboo:'🎋', boat:'⛵', oldman:'🧓' };
 
@@ -2599,7 +2566,7 @@ const ShadowJudge = {
     },
 
     _puppetName(id) {
-        var NAMES = { scholar:'书生', tree:'槐树', moon:'月亮', elder:'老者', letter:'信', frog:'金蟾', lamp:'灯', demon:'白骨精', monkey:'孙悟空', bamboo:'竹子', master:'路师傅' };
+        var NAMES = { scholar:'书生', tree:'槐树', moon:'月亮', elder:'老者', oldman:'老人', letter:'信', frog:'金蟾', lamp:'灯', demon:'白骨精', monkey:'孙悟空', bamboo:'竹子', master:'路师傅' };
         return NAMES[id] || id;
     },
 
@@ -2701,6 +2668,17 @@ const ShadowJudge = {
             elder:   { type:'abs', cx:0.28, cy:0.72, r:0.13, label:'老者·大渊阁底下' },
             frog:    { type:'rel', to:'elder', dx:0.02, dy:0.09, r:0.07, label:'金蟾·老者线下' },
             scholar: { type:'abs', cx:0.82, cy:0.68, r:0.12, label:'书生·珍奇斋旁' }
+        },
+        // —— 第二幕：大栅栏·真假传人 / 揭穿之后 —— 与开场位置提示、_posHint 一致
+        //   act2_scene2（影速对决）为限时组合场，不定义位置规则，仅按数量判定
+        'act2_scene1': {
+            elder:   { type:'abs', cx:0.22, cy:0.70, r:0.13, label:'老者·戏台左侧观戏' },
+            demon:   { type:'abs', cx:0.55, cy:0.55, r:0.12, label:'白骨精·台中' },
+            monkey:  { type:'abs', cx:0.80, cy:0.62, r:0.12, label:'孙悟空·台右' }
+        },
+        'act2_scene3': {
+            elder:   { type:'abs', cx:0.24, cy:0.70, r:0.13, label:'老者·左侧立定' },
+            demon:   { type:'abs', cx:0.76, cy:0.66, r:0.12, label:'白骨精·右侧戳立' }
         }
     },
 
@@ -2760,6 +2738,15 @@ const ShadowJudge = {
                 return '（师傅低头看了看地面）金蟾——它从来不上台面的，就趴在老者脚边跟着走。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就在那儿趴着。');
             if (pid === 'scholar')
                 return '（师傅沉默了一会儿）书生……他最熟悉的，就是珍奇斋。\n每次看戏前总得去那转转，看点新奇玩意儿。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，从他的角度望过去正好能看见。');
+        }
+        // ===== 第二幕（大栅栏）· 间接叙事化位置提示：用角色习惯/站位暗示方位 + 给方向（仿信中之秘）=====
+        if (sceneId === 'act2_scene1' || sceneId === 'act2_scene3') {
+            if (pid === 'elder')
+                return '（师傅指了指戏台左边）真传人——得在左边盯着。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就站那儿看戏。');
+            if (pid === 'demon')
+                return '（师傅瞥了眼台中）白骨精——戏核儿在中间。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，正中正好。');
+            if (pid === 'monkey')
+                return '（师傅下巴一扬）孙悟空——在右边跟白骨精对戏。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，右边立着。');
         }
         // 金蟾三级判定（rel→elder 时）：很远→"在老者线下面"(不给方向)；近但没到位→"跟着老者"+方向
         if (rule.type === 'rel' && rule.to === 'elder') {
@@ -2822,6 +2809,10 @@ const ShadowJudge = {
         var okComments = {
             'act1_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，眯着眼细细打量了一番）\n月夜下等人——老者在左，金蟾在旁，书生远远候着。\n这出戏的味道，有了。',
             'act1_scene2': '好！这一面，齐了。\n\n（师傅点了点头）\n书生读着信——犹如身临其境，仿佛置身于他熟悉的珍奇斋下。\n老者在大渊阁阶前，金蟾伏在他脚边。\n这封信里的秘密，你看见了。',
+            // —— 第二幕过关评语（仿第一幕 okComments，路师傅口吻）——
+            'act2_scene1': '（师傅盯着那人的影，半晌）手法花哨，可杆是飘的。\n真正的路派——杆在皮影后头，人在戏外头。\n你方才摆的，是戏；我教你的，是骨。',
+            'act2_scene2': '（师傅掷下操纵杆）十息，够了。\n你手比脑子快——这才是操影人的本事。\n下一出，该你来辨真假了。',
+            'act2_scene3': '（师傅缓缓直起身）他不肯认，可白布不撒谎。\n老者立着，白骨精戳着——谁是真的，影子早说了。\n这出戏，你接住了。'
         };
         return {
             score: score, correct: correct,
@@ -3824,6 +3815,53 @@ const ShadowJudge = {
         quickEnterBtn.addEventListener('click', function(e) { e.stopPropagation(); });
     }
 
+    // ---- 直接进第二幕（第一幕满分）：跳过第一幕，进入时第一幕记为满分通关 ----
+    function quickEnterAct2() {
+        if (quickEntered) return;            // 已被任一快速入口占用
+        quickEntered = true;
+        // 锁定开场流程状态，避免正常流程时序干扰
+        openingStarted = true; advanced = true; isLit = true; lampReady = true; bgSkipped = true; bgAfterRan = true;
+        ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev) {
+            document.removeEventListener(ev, onFirstGesture);
+        });
+        // 隐藏所有开场层
+        if (startHint) startHint.style.display = 'none';
+        if (overlay) overlay.classList.add('hidden');
+        if (storyOverlay) { storyOverlay.classList.remove('visible'); storyOverlay.style.display = 'none'; }
+        if (actTitleOverlay) { actTitleOverlay.classList.remove('visible'); actTitleOverlay.style.display = 'none'; }
+        var bloom = document.getElementById('lampBloom');
+        if (bloom) bloom.style.display = 'none';
+        // 音频：停开场 BGM，拉幕并播舞台 BGM
+        try { AudioManager.stopBGM(0); } catch (e) {}
+        panels.forEach(function(p) { p.classList.add('curtain-opening'); });
+        AudioManager.playSFX('sfx_curtain');
+        setTimeout(function() { AudioManager.playBGM('bgm_stage'); }, 1800);
+        // —— 标记「第一幕满分」：满油 + 解锁第一幕三核心暗语（等同完美通关第一幕）——
+        gameState.act1Perfect = true;
+        gameState.lampOil = 100;
+        if (typeof updateOilUI === 'function') updateOilUI();
+        if (!gameState.unlockedCiphers) gameState.unlockedCiphers = [];
+        ['槐树', '三根线', '金蟾碎了'].forEach(function(c) {
+            if (gameState.unlockedCiphers.indexOf(c) < 0) gameState.unlockedCiphers.push(c);
+        });
+        // 直接进入第二幕（直接调用已暴露的 startCurrentScene，绕过 opening_complete 的 once 时序限制）
+        gameState.currentAct = 2;
+        gameState.currentScene = 0;
+        if (window.updatePuppetCards) window.updatePuppetCards(2); // 切到第二幕皮影箱卡片（白骨精/孙悟空/老者等）
+        if (window.startCurrentScene) window.startCurrentScene();
+    }
+    var enterAct2BtnNew = document.getElementById('introEnterAct2');
+    if (enterAct2BtnNew) {
+        function onAct2Down(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            quickEnterAct2();
+        }
+        enterAct2BtnNew.addEventListener('pointerdown', onAct2Down, true);
+        enterAct2BtnNew.addEventListener('touchstart', onAct2Down, true);
+        enterAct2BtnNew.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+
     // 幕布动画结束后彻底移除，避免遮挡交互
     var count = 0;
     panels.forEach(function(p) {
@@ -4231,6 +4269,30 @@ const ShadowJudge = {
             if (placedIds.indexOf('frog')!==-1)
                 return '路师傅低头看了看：\n「金蟾——得跟着老者走。它自己不会动的。」';
             return '路师傅点了点头：继续摆。';
+        }
+        // —— ②.5 第二幕（大栅栏）专属叙事提示：按摆的组合给对应叙事（仿信中之秘）——
+        if (sceneId === 'act2_scene1') {
+            if (placedIds.indexOf('elder')!==-1 && placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1)
+                return '（师傅抱着胳膊）白骨精在中间翻，孙悟空在右边打，真传人在左边看。\n你摆的——是戏。可杆后头那个人，你看清没？';
+            if (placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1)
+                return '（师傅摇头）光有白骨精和孙悟空，那是戏班子。\n少了一个在左边盯着的人——这出戏，没魂。';
+            if (placedIds.indexOf('elder')!==-1)
+                return '（师傅眯眼）光一个真传人在左边站着，戏呢？\n《三打白骨精》——白骨精、孙悟空，得让他瞧着。';
+            return '路师傅点了点头：接着摆。';
+        }
+        if (sceneId === 'act2_scene2') {
+            if (placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1)
+                return '（师傅手指一点）对——白骨精、孙悟空，就这俩。\n十息之内摆齐，才算接住了我这口传授。';
+            return '（师傅）白骨精、孙悟空——摆上！';
+        }
+        if (sceneId === 'act2_scene3') {
+            if (placedIds.indexOf('elder')!==-1 && placedIds.indexOf('demon')!==-1)
+                return '（师傅缓缓直起身）老者立在左，白骨精戳在右。\n他不肯认——可白布不撒谎，谁是真的，影子早说了。';
+            if (placedIds.indexOf('elder')!==-1)
+                return '（师傅）光一个老者立着，假传人呢？\n把白骨精——戳到他右边去。';
+            if (placedIds.indexOf('demon')!==-1)
+                return '（师傅）白骨精自己戳着，没人立着揭他。\n把老者——请到左边来。';
+            return '路师傅点了点头：接着摆。';
         }
         // —— ③ 全对（或即兴场无阵容要求）：念戏词，把线索点出来 ——
         if (placedIds.indexOf('elder')!==-1&&placedIds.indexOf('letter')!==-1) return '路师傅停了一下：这根杆——本来有三根的。我师父当年……算了。';
@@ -5455,6 +5517,16 @@ const ShadowJudge = {
             if (gameState.currentAct===1 && gameState.currentScene===1) {
                 EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
                     '大渊阁？那是他常演的地方；金蟾不上台面，就趴在老者脚边跟着；书生看着信，也陷入了信中，第一眼就是他喜欢的珍奇阁。三人各占一方，这出戏就立住了。', speed:54 });
+            }
+            // —— 第二幕：开场位置/摆法提示（仿第一场"位置提示"独立 narration 块，接在通用"选皮影"之后）——
+            if (gameState.currentAct === 2) {
+                var _act2OpenHints = {
+                    'act2_scene1': '（师傅抱着手站在戏台边）「大栅栏的夜市，最不缺假把式。那个人演的《三打白骨精》——白骨精在台中翻，孙悟空在右边打，真传人在左边盯着。你看的是戏，我让你看的，是杆后头的人。」',
+                    'act2_scene2': '（师傅手指一点）「真传人和假传人，同时演——我念一句，你十息之内把对的皮影摆上。白骨精、孙悟空，就这俩，别多想。」',
+                    'act2_scene3': '（师傅站定了）「揭穿了，他也不认。老者立在左边，白骨精戳在右边——你看清了，这出戏里谁是真的。」'
+                };
+                var _h2 = _act2OpenHints[scene.id];
+                if (_h2) EventBus.emit('narration_chunk', { speaker:'路师傅', text:_h2, speed:54 });
             }
             _silentAct2Enter = false;  // 用完即复位，避免影响后续其它入口
             window._silentAct2Enter = false;  // 同步写回 window（下次 startCurrentScene 读取）

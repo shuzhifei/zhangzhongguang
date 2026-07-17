@@ -1247,7 +1247,7 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
 #puppetBox.narration-lock, #stage.narration-lock { pointer-events: none !important; }
 #puppetBox.narration-lock { opacity: .4; filter: grayscale(.35); transition: opacity .25s, filter .25s; }
 .narration-hint {
-    display: none; text-align: right; padding: 4px 6px 0;
+    display: none; text-align: right; padding: 4px 2px 0;
     color: #e8c860; font-size: 13px; letter-spacing: 2px; cursor: pointer;
     animation: hintBlink 1.1s ease-in-out infinite;
 }
@@ -1829,7 +1829,7 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
             很多年前，琉璃厂旧书街。<br><br>
             一个书生在等人——但他等的不是人，是一封永远不会寄到的信。
         </div>
-        <div class="narration-hint" id="narrationHint">▸ 点击继续</div>
+        <div class="narration-hint" id="narrationHint">• 点击对话框继续</div>
         <button class="show-play-btn" id="showPlayBtn">展示皮影戏</button>
     </div>
     <div class="btn-col">
@@ -4466,7 +4466,7 @@ const ShadowJudge = {
         if (!typewriterTimer && !speakingFlag) { cb(); return; }
         setTimeout(function(){ waitForTypingDoneThen(cb); }, 200);
     }
-    function finishTyping() { if (twEntry) twEntry.classList.remove('current'); twEntry=null; twFull=''; setSpeaking(false); if (typingDoneCb) { var cb = typingDoneCb; typingDoneCb = null; cb(); } }
+    function finishTyping() { if (twEntry) twEntry.classList.remove('current'); twEntry=null; twFull=''; setSpeaking(false); if (typingDoneCb) { var cb = typingDoneCb; typingDoneCb = null; cb(); } showNarrationHint(); }
 
     // 生成中点击对话框空白处 → 当前语句瞬间生成完毕（跳过打字动画）
     function fastForwardTyping() {
@@ -4513,8 +4513,9 @@ const ShadowJudge = {
     }
     function showNarrationHint() {
         if (narrationHintEl === null) narrationHintEl = document.getElementById('narrationHint');
-        if (narrationQueue.length === 0) { hideNarrationHint(); return; }
-        if (narrationHintEl) narrationHintEl.style.display = '';
+        // 不再因 narrationQueue 为空而隐藏——评分类/说戏类旁白不在队列里，
+        // 但其结束后仍需「点击对话框继续」提示（否则玩家只能盲点对话框）。是否显示由调用方门控。
+        if (narrationHintEl) narrationHintEl.style.display = 'block';
     }
     function hideNarrationHint() {
         if (narrationHintEl === null) narrationHintEl = document.getElementById('narrationHint');
@@ -4552,7 +4553,7 @@ const ShadowJudge = {
         setNarrationLock(true);
         hideShowPlayBtn();
         speaker.textContent = item.sp;
-        typingDoneCb = function() { showNarrationHint(); };
+        typingDoneCb = function() { /* finishTyping 会自动调用 showNarrationHint() */ };
         typewriter(dialogueText, item.text, item.speed);
     }
     function showShowPlayBtn() {
@@ -4736,8 +4737,9 @@ const ShadowJudge = {
                     document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.add('locked'); });
                     var dlgArea = document.querySelector('.dialogue-area');
                     var cmtHint = document.createElement('div');
-                    cmtHint.textContent = '▸ 点击对话框继续';
-                    cmtHint.style.cssText = 'text-align:center;color:#e8c97a;font-size:13px;letter-spacing:2px;padding:8px 0;opacity:.85;';
+                    cmtHint.className = 'narration-hint';
+                    cmtHint.textContent = '• 点击对话框继续';
+                    cmtHint.style.display = 'block';
                     if (dlgArea) dlgArea.appendChild(cmtHint);
                     var cmtStarted = false;
                     function startComment() {
@@ -4801,8 +4803,9 @@ const ShadowJudge = {
                                     if (_scoreFn) {
                                         _scoreFn(function() {
                                             // 评分卡关闭后 → 进幕间休息
+                                            // 评分卡关闭后 → 显示「点击继续」提示，等玩家点击进幕间
                                             var _nh2 = document.getElementById('narrationHint');
-                                            if (_nh2) _nh2.style.display = '';
+                                            if (_nh2) _nh2.style.display = 'block';
                                             var _dlg2 = document.querySelector('.dialogue-area');
                                             if (!_dlg2) { if (window.advanceScene) window.advanceScene(); return; }
                                             function _onCont2(e) {
@@ -4815,8 +4818,9 @@ const ShadowJudge = {
                                         });
                                     } else {
                                         // fallback：没有评分函数时直接走原来的流程
+                                        // fallback：没有评分函数时直接走原来的流程 → 显示「点击继续」提示
                                         var nh = document.getElementById('narrationHint');
-                                        if (nh) nh.style.display = '';
+                                        if (nh) nh.style.display = 'block';
                                         var dlg = document.querySelector('.dialogue-area');
                                         if (!dlg) { if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap); if (window.advanceScene) window.advanceScene(); return; }
                                         function onCont(e) {
