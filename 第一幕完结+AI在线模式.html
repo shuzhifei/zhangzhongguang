@@ -5290,6 +5290,36 @@ const ShadowJudge = {
 
     function resetSceneState() { sceneConfirmCount=0; scenePassed=false; advancing=false; }
 
+    // 在线模式：AI 有根据生成台词；离线模式：回退固定文本。
+    // 返回 Promise，便于用 .then 串接多条台词、保证顺序（离线时会立即 resolve，顺序同样安全）。
+    function _isAIFallback(t) { return /网络不太顺畅|油灯爆了一个灯花|请稍后再试/.test(t||''); }
+    function aiNarrate(speaker, fixed, promptBuilder, speed) {
+        speed = speed || 50;
+        var emit = function(text) {
+            var chunk = { speaker: speaker || '路师傅', text: text || '', speed: speed };
+            if (window.NarrationCtl && window.NarrationCtl.enqueueChunk) window.NarrationCtl.enqueueChunk(chunk);
+            else EventBus.emit('narration_chunk', chunk);
+        };
+        var online = (typeof window.OFFLINE_MODE === 'undefined') ? false : !window.OFFLINE_MODE;
+        if (online && typeof AI !== 'undefined' && typeof promptBuilder === 'function') {
+            var p; try { p = promptBuilder() || {}; } catch(e) { p = {}; }
+            var sys = p.sys || (typeof PROMPTS_DATA !== 'undefined' ? PROMPTS_DATA.baseSystemPrompt : '');
+            var user = p.user || '';
+            return AI.call(sys, user, p.ai || { temperature:0.85, maxTokens:340, model:AI.MODEL_DEFAULT })
+                .then(function(reply){
+                    if (!reply || _isAIFallback(reply)) reply = fixed;   // AI 出错/掉线 → 回退固定台词，保证不丢信息
+                    reply = String(reply).trim();
+                    emit(reply);
+                    if (window.playTTS) { try { window.playTTS(reply); } catch(e){} }
+                    setTimeout(function(){ if (window.NarrationCtl && !window.NarrationCtl.isSpeaking()) window.NarrationCtl.pump(); }, 200);
+                    return reply;
+                })
+                .catch(function(){ emit(fixed); return fixed; });
+        }
+        emit(fixed);
+        return Promise.resolve(fixed);
+    }
+
     function updateHeader() {
         var header = document.querySelector('.header');
         var sceneInfo = document.getElementById('sceneInfo');
@@ -5395,7 +5425,7 @@ const ShadowJudge = {
             // 必须放在 AI 开场白返回之后才入队，否则会抢到异步 AI 回复之前。
             // 用 enqueueChunk 直接以「数据行」入队（不走 enqueueAction 再 emit 的重入链路），最稳。
             var _firstScenePostNarration = function() {
-                if (gameState.currentAct!==1 || gameState.currentScene!==0) return;
+                if (gameState.currentAct!==1 || gameState.currentScene!==0) return Promise.resolve();
                 var _oilRulesText =
                     '演皮影，有四条规矩——\n'+
                     '一、从皮影箱把人拖上幕布（扣3滴油）；\n'+
@@ -5405,25 +5435,20 @@ const ShadowJudge = {
                     '油用完了，戏也就停了。';
                 var _pickPuppetText = '（从皮影箱里，选一枚皮影，放在白布上——接住这出戏。）';
                 var _posHintText = '（望着白布像望记忆）「槐树在右下方，影儿铺一地；书生挨着槐树站着，等他那一封信。月亮挂上去，天一黑，戏就活了。」';
-                var _chunks = [
-                    { speaker:'路师傅', text:_oilRulesText, speed:38 },
-                    { speaker:'路师傅', text:_pickPuppetText, speed:68 },
-                    { speaker:'路师傅', text:_posHintText, speed:54 }
-                ];
-                try {
-                    if (window.NarrationCtl && window.NarrationCtl.enqueueChunk) {
-                        _chunks.forEach(function(c){ window.NarrationCtl.enqueueChunk(c); });
-                    } else {
-                        _chunks.forEach(function(c){ EventBus.emit('narration_chunk', c); });
-                    }
-                } catch(e) {
-                    // 任何意外都直发兜底，确保台词至少进队列
-                    _chunks.forEach(function(c){ EventBus.emit('narration_chunk', c); });
-                }
-                // 安全泵：入队后如果当前空闲就立即泵一次，防止 chunk 永远停在队列里没人取
-                setTimeout(function(){
-                    if (window.NarrationCtl && !window.NarrationCtl.isSpeaking()) window.NarrationCtl.pump();
-                }, 200);
+                var _base = (typeof PROMPTS_DATA !== 'undefined') ? PROMPTS_DATA.baseSystemPrompt : '';
+                // 在线模式：AI 有根据生成（油数写进提示词，机制不丢）；离线：回退上面的固定原文
+                var pRules = function(){ return {
+                    sys: _base + '\n\n【当前任务】以路师傅口吻，向头回摆影的学徒讲解皮影戏「四条规矩」（操影铁律），必须逐条点明、且必须包含油数：一、从皮影箱把人拖上幕布（扣3滴油）；二、在幕上挪动位置（扣1滴油）；三、点一下让皮影翻个身（扣1滴油）；四、拖回箱子收回（扣3滴油）；末了说「油用完了，戏也就停了」。用老北京腔、口语自然带出，不要列点，80-140字。',
+                    user: '学徒头回摆影，你给他立立规矩。' }; };
+                var pPick = function(){ return {
+                    sys: _base + '\n\n【当前任务】以路师傅口吻，自然地请学徒从皮影箱里选一枚皮影、放到白布上，说一句带分量的引子（不要出现「规矩」二字）。30-60字。',
+                    user: '白布空着，等学徒上手，你引他一句。' }; };
+                var pPos = function(){ return {
+                    sys: _base + '\n\n【当前任务】以路师傅口吻，给第一幕第一场「月夜等人」的位置点拨：槐树在右下方，影儿铺一地；书生挨着槐树站着等信；月亮挂上去天一黑戏就活了。用口语、带画面感地说，不要罗列坐标。60-110字。',
+                    user: '学徒不知影往哪儿摆，你点拨他位置。' }; };
+                return aiNarrate('路师傅', _oilRulesText, pRules, 38)
+                    .then(function(){ return aiNarrate('路师傅', _pickPuppetText, pPick, 68); })
+                    .then(function(){ return aiNarrate('路师傅', _posHintText, pPos, 54); });
             };
 
             if (!_silentAct2Enter) {
@@ -5451,21 +5476,30 @@ const ShadowJudge = {
                 _firstScenePostNarration();  // ← 离线分支同样追加
             }
             }
-            // —— 第二场：位置提示（接在通用"选皮影"之后、场景专属描述之前）——
+            // —— 第二场：位置提示（在线模式由 AI 有根据生成，离线回退固定文本）——
             if (gameState.currentAct===1 && gameState.currentScene===1) {
-                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
-                    '大渊阁？那是他常演的地方；金蟾不上台面，就趴在老者脚边跟着；书生看着信，也陷入了信中，第一眼就是他喜欢的珍奇阁。三人各占一方，这出戏就立住了。', speed:54 });
+                var _s2posFixed = '大渊阁？那是他常演的地方；金蟾不上台面，就趴在老者脚边跟着；书生看着信，也陷入了信中，第一眼就是他喜欢的珍奇阁。三人各占一方，这出戏就立住了。';
+                aiNarrate('路师傅', _s2posFixed, function(){ return {
+                    sys: ((typeof PROMPTS_DATA!=='undefined')?PROMPTS_DATA.baseSystemPrompt:'') + '\n\n【当前任务】第一幕第二场「信中之秘」。以路师傅口吻给学徒位置点拨：大渊阁是他常演的台口；金蟾不上台面、趴在老者脚边；书生盯着信、陷在信里、第一眼瞧见的是珍奇阁。三个人各占一方，这出戏才立得住。口语、带画面感，不要罗列坐标。60-110字。',
+                    user: '学徒要把书生、老者、金蟾往哪儿摆，你点拨。' }; }, 54);
             }
             _silentAct2Enter = false;  // 用完即复位，避免影响后续其它入口
             window._silentAct2Enter = false;  // 同步写回 window（下次 startCurrentScene 读取）
 
-            // —— 非第一场的通用选皮影提示 ——
+            // —— 非第一场的通用选皮影提示（在线模式 AI 生成，离线回退）——
             if (!(gameState.currentAct===1 && gameState.currentScene===0)) {
-                EventBus.emit('narration_chunk',{ speaker:'路师傅', text:
-                    '（从皮影箱里，选合适的皮影，把这出戏接着演下去。）', speed:68 });
+                var _pickFixed = '（从皮影箱里，选合适的皮影，把这出戏接着演下去。）';
+                var _curSceneName = (scene && scene.name) ? scene.name : '这场';
+                aiNarrate('路师傅', _pickFixed, function(){ return {
+                    sys: ((typeof PROMPTS_DATA!=='undefined')?PROMPTS_DATA.baseSystemPrompt:'') + '\n\n【当前任务】以路师傅口吻，自然地请学徒从皮影箱里挑合适的皮影，把这出《'+_curSceneName+'》接着演下去。说一句带分量的引子，不要出现「规矩」二字。30-60字。',
+                    user: '白布空着，等学徒接着摆，你引他一句。' }; }, 68);
             }
             if (scene.is_improvisation&&scene.keywords) {
-                EventBus.emit('narration_chunk',{speaker:'路师傅',text:'三个词——'+scene.keywords.join('、')+'。\n\n剩下的——该你了。',speed:52});
+                var _improvFixed = '三个词——'+scene.keywords.join('、')+'。\n\n剩下的——该你了。';
+                var _kw = scene.keywords.join('、');
+                aiNarrate('路师傅', _improvFixed, function(){ return {
+                    sys: ((typeof PROMPTS_DATA!=='undefined')?PROMPTS_DATA.baseSystemPrompt:'') + '\n\n【当前任务】以路师傅口吻，给学徒抛三个关键词：'+_kw+'。说完关键词，留白一句「剩下的——该你了」，把戏交还给学徒。口语、有重量。40-80字。',
+                    user: '这场是即兴，你给学徒三个词开路。' }; }, 52);
             }
             if (scene.time_limit&&window.LampSystem) { setTimeout(function(){LampSystem.startCountdown();},5000); }
 
@@ -5548,9 +5582,13 @@ const ShadowJudge = {
             updatePuppetCards(gameState.currentAct);
             updateHeader();
             var nextAct = ACTS_DATA.acts[gameState.currentAct-1];
-            var text = ['','—— 第'+getActNum(gameState.currentAct)+'幕 ——','',nextAct.intro].join('\n');
-            EventBus.emit('narration_chunk',{speaker:'',text:text,speed:36});
-            if (window.NarrationCtl) window.NarrationCtl.enqueueAction(startCurrentScene);
+            // 转场标题固定（舞台提示），幕间开场白在线模式由 AI 生成、离线回退原文
+            var _headerText = '—— 第'+getActNum(gameState.currentAct)+'幕 ——';
+            EventBus.emit('narration_chunk',{ speaker:'', text:_headerText, speed:36 });
+            aiNarrate('', nextAct.intro, function(){ return {
+                sys: ((typeof PROMPTS_DATA!=='undefined')?PROMPTS_DATA.baseSystemPrompt:'') + '\n\n【当前任务】以路师傅口吻，说一段第'+nextAct.id+'幕《'+nextAct.name+'》的幕间开场白，自然带出这幕背景：'+nextAct.intro+'（60-120字）。',
+                user: '幕间休息结束，请路师傅开这幕的场。' }; }, 36)
+                .then(function(){ if (window.NarrationCtl) window.NarrationCtl.enqueueAction(startCurrentScene); });
         } catch(e) { console.warn('[goAct2]', e.message); showDialogue('路师傅', '（幕布重新拉开）下一幕——请接着摆。'); }
     }
 
