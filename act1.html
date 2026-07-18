@@ -2286,7 +2286,8 @@ const PUPPET_EMOJI = { scholar:'📜', elder:'👴', tree:'🌳', moon:'🌙', l
 const SCHOLAR_RENDER_H = 100 * (1920 / 1373);   // 书生渲染宽100 时的显示高 ≈ 139.8px
 const PUPPET_SIZE = {
     letter: { w: 42 },
-    tree:   { w: Math.round(SCHOLAR_RENDER_H * 2), h: Math.round(SCHOLAR_RENDER_H * 2) } // 280×280
+    tree:   { w: Math.round(SCHOLAR_RENDER_H * 2), h: Math.round(SCHOLAR_RENDER_H * 2) }, // 280×280
+    boat:   { w: 160 },   // 船：幕中显示宽度 160px，高度按原图比例自动
 };
 function puppetRenderWidth(id)  { return (PUPPET_SIZE[id] && PUPPET_SIZE[id].w) || 100; }
 function puppetRenderHeight(id) { return (PUPPET_SIZE[id] && PUPPET_SIZE[id].h) || 'auto'; }
@@ -2366,6 +2367,7 @@ const ACTS_DATA = {
         "shadow_master": {"name":"影子师傅","condition":"隐藏","description":"你走了自己的路——成为了非传统的传承人。"}
     }
 };
+window.ACTS_DATA = ACTS_DATA;
 </script>
 
 <script>
@@ -4030,10 +4032,14 @@ const ShadowJudge = {
         interBtn.onmouseenter = function() { interBtn.style.background = 'rgba(100,45,18,0.9)'; };
         interBtn.onmouseleave = function() { interBtn.style.background = 'rgba(74,31,10,0.7)'; };
         interBtn.onclick = function() {
-            if (window.stopAllDialogue) window.stopAllDialogue();
-            EventBus.emit('countdown_stop_request');
-            if (window.NarrationCtl) window.NarrationCtl.reset();
-            if (window.showAct1Intermission) window.showAct1Intermission();
+            try {
+                console.log('[interBtn] 点击：跳到幕间休息');
+                if (window.stopAllDialogue) window.stopAllDialogue();
+                EventBus.emit('countdown_stop_request');
+                if (window.NarrationCtl) window.NarrationCtl.reset();
+                if (window.showAct1Intermission) window.showAct1Intermission();
+                else console.error('[interBtn] showAct1Intermission 未暴露(window 桥接缺失)');
+            } catch(e) { console.error('[interBtn] 跳到幕间休息异常:', e && e.stack ? e.stack : e); }
         };
         container.appendChild(interBtn);
 
@@ -4108,7 +4114,11 @@ const ShadowJudge = {
                 var scoreMatch = reply.match(/\[SCORE:(\d+)\]/);
                 var correctMatch = reply.match(/\[CORRECT:(true|false)\]/);
                 var score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
-                var correct = correctMatch ? correctMatch[1] === 'true' : false;
+                // ★ 关键修复：只有 localResult.correct=true（本地已验证阵容/位置/翻转全对）才会走到这个 AI 在线路径
+                //   若 AI 未返回 [CORRECT:true] 标记（常见：AI 只返回纯文本评语忘记带标记），
+                //   默认以本地结果为准（true），否则 result.correct=false 导致 _showPlayPending 不设置
+                //   → 「展示皮影戏」按钮不出现 → 玩家卡住无法进下一场
+                var correct = correctMatch ? (correctMatch[1] === 'true') : (localResult.correct || true);
                 var comment = reply.replace(/\[SCORE:\s*\d+\s*\]/g, '').replace(/\[CORRECT:\s*(true|false)\s*\]/g, '').trim();
                 var result = { score: score, correct: correct, comment: comment };
 
@@ -4522,6 +4532,7 @@ const ShadowJudge = {
         if (twEntry && twEntry.parentNode) twEntry.parentNode.removeChild(twEntry); // 移除正在逐字的半句，避免残留冻结文字
         twEntry = null; twFull = '';
         narrationQueue = [];
+        narrationActive = false;   // 彻底复位旁白态：否则残留 true 会让后续 narration_chunk 的 pump 条件(!narrationActive)不满足，台词停在队列里不显示
         setSpeaking(false);
         if (typeof hideNarrationHint === 'function') hideNarrationHint();
         if (typeof stopTTS === 'function') stopTTS();
@@ -4806,11 +4817,18 @@ const ShadowJudge = {
             setNarrationLock(false);
             playCurtainCloseThenOpen(function() {
                 playAct1ShowVideo(function() {
-                    console.log('[onShowPlayClick] 终场视频播完, 帘子收尾后结算');
-                    // 动画播完：帘子合拢收尾 → 拉开时露出结局画面
-                    playCurtainCloseThenOpen(null, function() {
-                        if (window.advanceScene) window.advanceScene();
-                    });
+                    console.log('[onShowPlayClick] 终场视频播完, 弹第二幕评分卡');
+                    // 第二次（也是最后一次）评分：第二幕演毕 → 段位评分卡 → 点击关闭后帘子收尾进结局
+                    var _showAct2Score = window.showActScoreCard;
+                    function _afterAct2Score() {
+                        console.log('[onShowPlayClick] 第二幕评分卡关闭, 帘子收尾后结算');
+                        // 动画播完：帘子合拢收尾 → 拉开时露出结局画面
+                        playCurtainCloseThenOpen(null, function() {
+                            if (window.advanceScene) window.advanceScene();
+                        });
+                    }
+                    if (_showAct2Score) _showAct2Score(2, _afterAct2Score);
+                    else _afterAct2Score();
                 });
             });
         } else {
@@ -4873,9 +4891,29 @@ const ShadowJudge = {
                         });
                     } else {
                         console.log('[onShowPlayClick] 中间场次视频播完, 帘子收尾后进下一场');
-                        // 动画播完：帘子合拢收尾 → 拉开时露出下一场
+                        // ★ 彻底修复：不再依赖 NarrationCtl 队列/泵/pump 时序（它们因 _busy/narrationActive 可能延迟或跳过执行）
+                        // 直接在 onClosed 回调里同步完成：场景号递增 + 场景初始化，保证帘子拉开时下一场已就绪
                         playCurtainCloseThenOpen(null, function() {
-                            if (window.advanceScene) window.advanceScene();
+                            try {
+                                // ① 直接递增场次（不经过 advanceScene 的队列）
+                                if (window.gameState && ACTS_DATA) {
+                                    var _act = ACTS_DATA.acts[window.gameState.currentAct - 1];
+                                    if (_act && window.gameState.currentScene + 1 < _act.scenes.length) {
+                                        window.gameState.currentScene++;
+                                        console.log('[onShowPlayClick] 场景递增→currentScene=' + window.gameState.currentScene);
+                                    }
+                                }
+                                // ② 直接调用场景初始化（IIFE-B 函数，走 window 桥接）
+                                // startCurrentScene 内部会：resetSceneState → _doStartCurrentScene(背景切换+皮影箱+台词) → 标题卡
+                                if (window.startCurrentScene) {
+                                    window.startCurrentScene();
+                                    console.log('[onShowPlayClick] startCurrentScene 已直接调用');
+                                }
+                            } catch(_directErr) {
+                                console.error('[onShowPlayClick] 直接场景切换异常:', _directErr);
+                                // 兜底：尝试通过原 advanceScene 路径恢复
+                                if (window.advanceScene) window.advanceScene();
+                            }
                         });
                     }
                 });
@@ -4892,33 +4930,41 @@ const ShadowJudge = {
 
     // ===== 第一场→第二场「正规剧情流程」：信发亮 → 点信 → 信全屏打开 → 白光 → 进第二场 =====
     // 与「跳到第二场」调试按钮并存，两条路径都能进第二场。
-    // ===== 第一幕评分卡：根据剩余灯油给出五段位评价 =====
-    function showAct1ScoreCard(onDone) {
+    // ===== 段位评分卡：根据剩余灯油给出五段位评价（第一幕 / 第二幕通用）=====
+    // 全局只评两次分：第一幕演毕(showActScoreCard(1)) + 第二幕演毕(showActScoreCard(2))
+    function showActScoreCard(actNum, onDone) {
+        var isAct2 = (actNum === 2);
         var oil = (gameState && gameState.lampOil != null) ? gameState.lampOil : 0;
         var tier, tierClass, comment;
         if (oil >= 75) {
             tier = 'SS · 掌灯大师';  tierClass = 'ss';
-            comment = '油如满月，影随心走。\n你这双手，是老天爷赏饭吃。';
+            comment = isAct2 ? '油如满月，影随心走。\n真假一辨即明——这盏灯，往后你来掌。'
+                             : '油如满月，影随心走。\n你这双手，是老天爷赏饭吃。';
         } else if (oil >= 55) {
             tier = 'S · 传灯弟子';   tierClass = 's';
-            comment = '油量尚可，火候到位。\n照这个路子练下去，不出三年你能独当一面。';
+            comment = isAct2 ? '油量尚可，火候到位。\n大栅栏这一场，你稳稳接住了。'
+                             : '油量尚可，火候到位。\n照这个路子练下去，不出三年你能独当一面。';
         } else if (oil >= 35) {
             tier = 'A · 影坛新秀';   tierClass = 'a';
-            comment = '油烧得有点快，但戏没散。\n记住——省油就是省命，每一滴都要用在刀刃上。';
+            comment = isAct2 ? '油烧得有点快，但真假没看走眼。\n记住——省油就是省命。'
+                             : '油烧得有点快，但戏没散。\n记住——省油就是省命，每一滴都要用在刀刃上。';
         } else if (oil >= 15) {
             tier = 'B · 初学乍练';   tierClass = 'b';
-            comment = '油都快见底了……\n不过能演完第一幕，也算没白来。\n下次悠着点。';
+            comment = isAct2 ? '油都快见底了……\n不过这场硬仗，你也扛下来了。'
+                             : '油都快见底了……\n不过能演完第一幕，也算没白来。\n下次悠着点。';
         } else {
             tier = 'C · 灯火将尽';   tierClass = 'c';
-            comment = '油……就剩这么点了。\n还好灯没灭——\n但再这么演下去，怕是连影都留不住。';
+            comment = isAct2 ? '油……就剩这么点了。\n还好灯没灭——影，总算留住了。'
+                             : '油……就剩这么点了。\n还好灯没灭——\n但再这么演下去，怕是连影都留不住。';
         }
+        var label = isAct2 ? '第二幕 · 演毕' : '第一幕 · 演毕';
 
         var card = document.createElement('div');
         card.className = 'act1-score-card';
         card.id = 'act1ScoreCard';
         card.innerHTML = '<div class="act1-score-bg"></div>'
             + '<div class="act1-score-inner">'
-            +   '<div class="act1-score-label">第一幕 · 演毕</div>'
+            +   '<div class="act1-score-label">'+label+'</div>'
             +   '<div class="act1-score-tier '+tierClass+'">'+tier+'</div>'
             +   '<div class="act1-score-oil">剩余灯油：'+oil+' / 100</div>'
             +   '<div class="act1-score-comment">'+comment.replace(/\n/g,'<br>')+'</div>'
@@ -4944,6 +4990,9 @@ const ShadowJudge = {
             card.addEventListener('pointerdown', dismiss);
         }, 600);  // 等动画基本完成后再允许点击
     }
+    window.showActScoreCard = showActScoreCard;
+    // 兼容旧调用：第一幕评分卡
+    function showAct1ScoreCard(onDone) { return showActScoreCard(1, onDone); }
     window.showAct1ScoreCard = showAct1ScoreCard;
 
     // 场次标题卡（复用 act-title-overlay 组件）
@@ -5061,8 +5110,9 @@ const ShadowJudge = {
     var _silentAct2Enter = false;
     function enterAct2Directly() {
         try {
-            gameState.currentAct = 1;
-            gameState.currentScene = 1;
+            gameState.currentAct = 2;
+            gameState.currentScene = 0;
+            if (window.updatePuppetCards) window.updatePuppetCards(2); // 切到第二幕皮影箱卡片（白骨精/孙悟空/老者等）
             _silentAct2Enter = true;
             window._silentAct2Enter = true;  // 写入 window，让 startCurrentScene（另一IIFE）能读到
             if (window.startCurrentScene) window.startCurrentScene();
@@ -5453,8 +5503,38 @@ const ShadowJudge = {
     }
 
     function startCurrentScene() {
+        // ★ 健壮性原则：场景初始化永远最先执行，绝不依赖标题卡成败 ★
+        // 任何途径(正规流程/跳到第二场/信转场/跳到幕间)进入本场，都先保证场景就绪(背景/皮影箱/台词)，
+        // 标题卡只是锦上添花的视觉过渡，单独 try 包裹——它挂了也不影响核心场景。
         try {
             resetSceneState();
+            console.log('[startCurrentScene] 开始场景初始化, currentAct=' + gameState.currentAct + ' currentScene=' + gameState.currentScene);
+            _doStartCurrentScene();
+            console.log('[startCurrentScene] _doStartCurrentScene 执行完毕');
+        } catch(e) {
+            console.error('[startCurrentScene] 场景初始化异常(背景/台词可能异常):', e && e.stack ? e.stack : e);
+        }
+        // 场间标题卡（非首场时弹出），独立 try——失败不影响场景
+        try {
+            if (gameState.currentScene > 0 && ACTS_DATA && ACTS_DATA.acts) {
+                var _actInfo = ACTS_DATA.acts[gameState.currentAct - 1];
+                if (_actInfo && _actInfo.scenes) {
+                    var _sceneInfo = _actInfo.scenes[gameState.currentScene];
+                    if (_sceneInfo) {
+                        var _cardBg = (gameState.currentAct === 2 && gameState.currentScene === 1)
+                            ? 'assets/images/stage-bg-act2-scene2.jpg' : null;
+                        showTransitionTitleCard(gameState.currentAct, gameState.currentScene + 1, _sceneInfo.name, null, _cardBg);
+                    }
+                }
+            }
+        } catch(e) {
+            console.error('[startCurrentScene] 标题卡异常(不影响场景初始化):', e && e.stack ? e.stack : e);
+        }
+    }
+
+    // 场景实际初始化逻辑（由 startCurrentScene 在标题卡完成后调用，或首场时直接调用）
+    function _doStartCurrentScene() {
+        try {
             // 进入场景时清掉转场期间可能残留的锁定态（皮影箱/舞台变暗、全局打字锁），
             // 否则第二场会看到皮影箱像"影子"一样灰暗且不可交互。
             var _pb = document.getElementById('puppetBox');
@@ -5493,9 +5573,16 @@ const ShadowJudge = {
                     stageElS.classList.add('act2-bg');
                     stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-scene2.jpg')";
                 } else if (gameState.currentAct === 2) {
-                    // 第二幕·大栅栏：街景戏台
+                    // 第二幕·大栅栏
                     stageElS.classList.remove('act2-bg');
-                    stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
+                    if (gameState.currentScene === 1) {
+                        // 第二场（影速对决）：擂台对决图——真传人假传人同台比影
+                        stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2-scene2.jpg')";
+                        console.log('[_doStartCurrentScene] ★ 第二场背景已切换为擂台图, currentScene=' + gameState.currentScene);
+                    } else {
+                        // 第一场/第三场：街景戏台
+                        stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
+                    }
                 }
                 stageElS.style.backgroundSize = 'cover';
                 // background-position 不在此统一设；各场景沿用 CSS 默认值（.stage=center, .act2-bg=center bottom）
@@ -5673,6 +5760,24 @@ const ShadowJudge = {
                     // 启动队列：startCurrentScene 内会 emit narration_chunk 接力 pump；
                     // 此处首次 pump 触发它执行（仅当前叙事空闲时）
                     if (!window.NarrationCtl.isActive()) window.NarrationCtl.pump();
+                    // ★ 安全泵兜底：pump 可能因 typewriterTimer/speakingFlag 为 true 而直接 return，
+                    //   导致队首 action(startCurrentScene) 暂不执行。延时重试保证下一场一定启动，
+                    //   避免任何途径下"帘子拉开后卡住进不了第二场"。
+                    var _safePump = function(tries) {
+                        tries = tries || 0;
+                        try {
+                            // 场景已正常初始化（背景已切到任何 stage-bg 图）即视为成功，停止重试
+                            // 注意：不看 narrationActive——台词播不播不影响"场景已就绪"
+                            var _stageEl = document.getElementById('stage');
+                            var _bgOk = _stageEl && _stageEl.style.backgroundImage &&
+                                        _stageEl.style.backgroundImage.indexOf('stage-bg') !== -1;
+                            if (_bgOk) return; // 已就绪，停止安全泵
+                            if (tries > 8) { console.error('[advanceScene] 安全泵超限, 强制直接启动下一场'); startCurrentScene(); return; }
+                            window.NarrationCtl.pump();
+                            setTimeout(function(){ _safePump(tries+1); }, 250);
+                        } catch(e) { console.error('[advanceScene] 安全泵异常:', e); }
+                    };
+                    setTimeout(function(){ _safePump(0); }, 400);
                 }
             } else {
                 // 可提交范围：到达本构建最后可玩幕 → 直接结算（支持"只交第一幕"）
@@ -5742,6 +5847,12 @@ const ShadowJudge = {
                 '他顿了顿：「你方才摆的每一个影，我都认得——槐树是东街的老地方，信是师父留下的戏谱，三根线是我和两位师兄，金蟾碎了……是传承断了。」',
                 '「信的最后一笔，指向大栅栏。听说，那儿有人打着我的名号。」'].join('\n');
             EventBus.emit('narration_chunk',{ speaker:'', text:text, speed:38 });
+            // 安全泵：入队后若当前空闲则立即泵一次，防止幕间台词停在队列里不显示
+            // （与 _firstScenePostNarration 同款兜底：直接调 pump 只查 typewriterTimer/speakingFlag，
+            //  绕过 narrationActive 条件，确保无论点「跳到幕间休息」前处于何种旁白状态都能打出幕间台词）
+            setTimeout(function(){
+                if (window.NarrationCtl && !window.NarrationCtl.isSpeaking()) window.NarrationCtl.pump();
+            }, 200);
 
             // 台词说到"发现多了一个皮影——一条船"时，皮影箱里动态出现船卡片
             // 前面两行（标题+空行）约11个字符，speed=38 → 约420ms后开始打船这行
@@ -5865,7 +5976,7 @@ const ShadowJudge = {
                     prepareCurtainTransition();
                 }
             }, 15000);
-        } catch(e) { console.warn('[showAct1Intermission]', e.message); gameState.currentAct=2; gameState.currentScene=0; updatePuppetCards(2); updateHeader(); startCurrentScene(); }
+        } catch(e) { console.error('[showAct1Intermission] 异常(幕间台词可能未播):', e && e.stack ? e.stack : e); gameState.currentAct=2; gameState.currentScene=0; if (window.updatePuppetCards) window.updatePuppetCards(2); else updatePuppetCards(2); updateHeader(); if (window.startCurrentScene) window.startCurrentScene(); else startCurrentScene(); }
     }
 
     // 显示 "第 X 幕 · 第 Y 场 · 场景名" 标题卡片（复用 act-title-overlay 组件）
@@ -5883,6 +5994,36 @@ const ShadowJudge = {
             }, 2800); // 标题卡停留时间
         } catch(e) { if (onDone) onDone(); }
     }
+
+    // 通用「第 X 幕 · 第 Y 场 · 场景名」标题卡（用于幕内场间过渡，例如第二幕第一场→第二场）
+    // bgImage 可选：指定标题卡背景图（不传则用 CSS 默认的 .act2-title 样式）
+    function showTransitionTitleCard(actNum, sceneNum, sceneName, onDone, bgImage) {
+        try {
+            var ov = document.createElement('div');
+            ov.className = 'act-title-overlay act2-title';
+            var actCn = ['','一','二','三','四','五'][actNum] || actNum;
+            var scCn = ['','一','二','三','四','五'][sceneNum] || sceneNum;
+            ov.innerHTML = '<div class="act-title-bg"></div><div class="act-title-text">第'+actCn+'幕&nbsp;&nbsp;·&nbsp;&nbsp;第'+scCn+'场&nbsp;&nbsp;·&nbsp;&nbsp;'+sceneName+'</div>';
+            document.body.appendChild(ov);
+            // 若指定了自定义背景图，覆盖 CSS 默认
+            if (bgImage) {
+                var _bgEl = ov.querySelector('.act-title-bg');
+                if (_bgEl) {
+                    _bgEl.style.background =
+                        "radial-gradient(ellipse 75% 65% at 50% 50%, rgba(10,6,3,0.35) 0%, rgba(6,3,1,0.72) 75%), url('" + bgImage + "')";
+                    _bgEl.style.backgroundSize = 'cover';
+                    _bgEl.style.backgroundPosition = 'center bottom';
+                }
+            }
+            void ov.offsetHeight;
+            ov.classList.add('visible');
+            setTimeout(function() {
+                ov.classList.add('fade-out');
+                setTimeout(function() { if (ov.parentNode) ov.parentNode.removeChild(ov); if (onDone) onDone(); }, 1500);
+            }, 2800); // 标题卡停留时间
+        } catch(e) { if (onDone) onDone(); }
+    }
+    window.showTransitionTitleCard = showTransitionTitleCard;
 
     function endGame() {
         try {
