@@ -2191,8 +2191,8 @@ const LampSystem = {
         updateOilUI();
         EventBus.emit("oil_changed", { oil: gameState.lampOil, reason });
     },
-    startCountdown() {
-        secondsLeft = 10;
+    // 内部：真正跑秒的 interval（startCountdown 与 resumeCountdown 共用，不重置 secondsLeft）
+    _runTimer() {
         if (countdownTimer) clearInterval(countdownTimer);
         countdownTimer = setInterval(function() {
             secondsLeft--;
@@ -2201,9 +2201,24 @@ const LampSystem = {
             if (secondsLeft <= 0) { clearInterval(countdownTimer); countdownTimer = null; EventBus.emit("countdown_expired"); }
         }, 1000);
     },
+    startCountdown() {
+        secondsLeft = 10;
+        this._runTimer();
+    },
     stopCountdown() {
         if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
         secondsLeft = 0;
+    },
+    // 暂停：清掉 interval 但保留剩余秒数（确认摆影判定期间用）
+    pauseCountdown() {
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        // 保留 secondsLeft，倒计时显示停在当前值
+    },
+    // 恢复：从剩余秒数继续跑（摆错后继续计时用）
+    resumeCountdown() {
+        if (countdownTimer) return;          // 已在跑，避免重复
+        if (secondsLeft <= 0) return;        // 没剩余时间可跑
+        this._runTimer();
     }
 };
 window.LampSystem = LampSystem;
@@ -4059,6 +4074,15 @@ const ShadowJudge = {
         speaker.textContent='路师傅'; typewriter(dialogueText, '（师傅凑近白布，眯着眼细细端详……）', 30);
         EventBus.emit('stage_confirmed', { puppets: staged });
         var sceneId = getCurrentSceneId();
+        // ★ 限时场（影速对决）：点击确认摆影的瞬间暂停计时——判定期间不扣时间。
+        //   判定结果由 scene_judged 监听器决定：摆对→彻底停表(通过)；摆错→恢复计时继续摆。
+        (function(){
+            var _sm = ShadowJudge._getSceneData(sceneId);
+            if (_sm && _sm.time_limit && window.LampSystem && window.LampSystem.pauseCountdown) {
+                window.LampSystem.pauseCountdown();
+                console.log('[countdown] 确认摆影→暂停计时, 等待判定');
+            }
+        })();
         var _sceneMeta = ShadowJudge._getSceneData(sceneId);
         var isImprov = !!(_sceneMeta && _sceneMeta.is_improvisation);
 
@@ -5690,7 +5714,46 @@ const ShadowJudge = {
             if (scene.is_improvisation&&scene.keywords) {
                 EventBus.emit('narration_chunk',{speaker:'路师傅',text:'三个词——'+scene.keywords.join('、')+'。\n\n剩下的——该你了。',speed:52});
             }
-            if (scene.time_limit&&window.LampSystem) { setTimeout(function(){LampSystem.startCountdown();},5000); }
+            // ★ 影速对决等限时场：不固定延迟启动倒计时，而是等路师傅全部台词说完后再计时
+            // 流程：所有台词打完 → 路师傅喊"十息——开始！" → 这句也打完 → 启动倒计时
+            if (scene.time_limit && window.LampSystem) {
+                (function _deferCountdown() {
+                    var _reminded = false;
+                    function _poll() {
+                        try {
+                            var _nc = window.NarrationCtl;
+                            // 不在打字 + 队列空闲 = 全部台词已完毕
+                            if (_nc && !_nc.isSpeaking() && !_nc.isActive()) {
+                                if (!_reminded) {
+                                    // 第一次空闲：先让路师傅喊一句提醒
+                                    _reminded = true;
+                                    console.log('[countdown] 台词全部完毕, 路师傅提醒「十息——开始！」');
+                                    EventBus.emit('narration_chunk', {
+                                        speaker: '路师傅',
+                                        text: '（师傅目光一沉，声音压低）「十息——开始！」',
+                                        speed: 35
+                                    });
+                                    // 确保提醒入队后 pump 能接上
+                                    setTimeout(function() { if (_nc && !_nc.isSpeaking()) try{ _nc.pump(); }catch(e){} }, 100);
+                                    setTimeout(_poll, 600);  // 继续等提醒台词也打完
+                                } else {
+                                    // 第二次空闲（提醒也说完了）：真正启动倒计时
+                                    console.log('[countdown] 提醒台词也打完了, LampSystem.startCountdown()');
+                                    window.LampSystem.startCountdown();
+                                }
+                            } else {
+                                // 还在说话，继续轮询
+                                setTimeout(_poll, 300);
+                            }
+                        } catch(_e) {
+                            console.warn('[countdown] 轮询异常，fallback 直接启动:', _e);
+                            try { window.LampSystem.startCountdown(); } catch(__e) {}
+                        }
+                    }
+                    // 初始延迟：等场景初始化 + AI 开场白生成 + 首句台词入队（约 1.5s）
+                    setTimeout(_poll, 1500);
+                })();
+            }
 
             // ★ 第二幕安全泵：确保入场 emit 全部入队后，NarrationCtl 一定启动泵送
             // （某些路径下 EventBus.emit 的自动 pump 可能被跳过，导致 chunk 堆在队列里不打字）
@@ -5736,8 +5799,19 @@ const ShadowJudge = {
                 accumulateEndingStats(data);   // 按"本场满分 − 本场错试扣分"累计该幕还原度
                 // 通关：等路师傅台词（如"那棵树——比我还老"）打完后，玩家点击对话框 → 显示「展示皮影戏」按钮
                 window._showPlayPending = true;
+                // ★ 限时场摆对了：彻底停表（通过），清掉倒计时显示
+                if (scene && scene.time_limit && window.LampSystem && window.LampSystem.stopCountdown) {
+                    window.LampSystem.stopCountdown();
+                    var _cdOK = document.getElementById('countdownDisplay'); if (_cdOK) _cdOK.remove();
+                    console.log('[countdown] 摆对通过→停表');
+                }
             } else {
                 // 摆错了：displayJudgeResult 已通过 typewriter 给出"不对"提示，此处不再重复显示
+                // ★ 限时场摆错了：恢复计时，从暂停处的剩余秒数继续跑，直到耗尽（countdown_expired → 灯灭）
+                if (scene && scene.time_limit && window.LampSystem && window.LampSystem.resumeCountdown) {
+                    window.LampSystem.resumeCountdown();
+                    console.log('[countdown] 摆错→恢复计时继续');
+                }
             }
         } catch(e) { scenePassed=false; advancing=false; }
     });
