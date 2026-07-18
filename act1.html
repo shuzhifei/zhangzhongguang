@@ -2683,9 +2683,9 @@ const ShadowJudge = {
         // —— 第二幕：大栅栏·真假传人 / 揭穿之后 —— 与开场位置提示、_posHint 一致
         //   act2_scene2（影速对决）为限时组合场，不定义位置规则，仅按数量判定
         'act2_scene1': {
-            oldman:  { type:'abs', cx:0.22, cy:0.70, r:0.13, label:'老人·戏台左侧观戏' },
-            demon:   { type:'abs', cx:0.55, cy:0.55, r:0.12, label:'白骨精·台中' },
-            monkey:  { type:'abs', cx:0.80, cy:0.62, r:0.12, label:'孙悟空·台右' }
+            oldman:  { type:'abs', cx:0.20, cy:0.74, r:0.09, label:'老人·台下观戏' },
+            demon:   { type:'abs', cx:0.41, cy:0.49, r:0.09, label:'白骨精·台左' },
+            monkey:  { type:'abs', cx:0.62, cy:0.49, r:0.09, label:'孙悟空·台右' }
         },
         'act2_scene3': {
             elder:   { type:'abs', cx:0.24, cy:0.70, r:0.13, label:'老者·左侧立定' },
@@ -2751,11 +2751,15 @@ const ShadowJudge = {
                 return '（师傅沉默了一会儿）书生……他最熟悉的，就是珍奇斋。\n每次看戏前总得去那转转，看点新奇玩意儿。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，从他的角度望过去正好能看见。');
         }
         // ===== 第二幕（大栅栏）· 间接叙事化位置提示：用角色习惯/站位暗示方位 + 给方向（仿信中之秘）=====
-        if (sceneId === 'act2_scene1' || sceneId === 'act2_scene3') {
-            if (pid === 'elder')
-                return '（师傅指了指戏台左边）真传人——得在左边盯着。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就站那儿看戏。');
+        if (sceneId === 'act2_scene1') {
+            if (pid === 'oldman')
+                return '（师傅指了指台前左边）老人——得在台下左边盯着。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就站那儿看戏。');
             if (pid === 'demon')
-                return '（师傅瞥了眼台中）白骨精——戏核儿在中间。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，正中正好。');
+                return '（师傅瞥了眼台左侧）白骨精——在台上左边翻。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就在那儿。');
+            if (pid === 'monkey')
+                return '（师傅下巴一扬）孙悟空——在右边跟白骨精对戏。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，右边立着。');
+        }
+        if (sceneId === 'act2_scene3') {
             if (pid === 'monkey')
                 return '（师傅下巴一扬）孙悟空——在右边跟白骨精对戏。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，右边立着。');
         }
