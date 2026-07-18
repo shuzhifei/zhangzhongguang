@@ -5668,7 +5668,7 @@ const ShadowJudge = {
                     window.NarrationCtl.enqueueAction(startCurrentScene);
                     // 启动队列：startCurrentScene 内会 emit narration_chunk 接力 pump；
                     // 此处首次 pump 触发它执行（仅当前叙事空闲时）
-                    if (!narrationActive) window.NarrationCtl.pump();
+                    if (!window.NarrationCtl.isActive()) window.NarrationCtl.pump();
                 }
             } else {
                 // 可提交范围：到达本构建最后可玩幕 → 直接结算（支持"只交第一幕"）
@@ -5833,7 +5833,7 @@ const ShadowJudge = {
                                 var _nextAct = ACTS_DATA.acts[1]; // 第二幕
                                 if (_nextAct && window.NarrationCtl) {
                                     window.NarrationCtl.enqueueAction(startCurrentScene);
-                                    if (!narrationActive) window.NarrationCtl.pump();
+                                    if (!window.NarrationCtl.isActive()) window.NarrationCtl.pump();
                                 } else {
                                     startCurrentScene();
                                 }
