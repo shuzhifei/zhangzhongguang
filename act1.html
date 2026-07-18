@@ -5459,6 +5459,23 @@ const ShadowJudge = {
             if (_st) _st.classList.remove('intermission-lock', 'speaking-lock');
             document.body.classList.remove('typing-lock');
             EventBus.emit('countdown_stop_request');
+            // ★ 第二幕入场防御性清理：确保对话区域是空白状态，避免从幕间/评分卡继承残留文本
+            // （正常路径：幕间休息→帘子→进第二幕 时，dialogueText 可能积攒了多段旧文本，
+            //   导致新台词被追加而非替换，视觉上看起来像"没出台词"）
+            if (gameState.currentAct >= 2) {
+                var _dlgEl = document.getElementById('dialogueText');
+                var _spkEl = document.getElementById('speaker');
+                if (_dlgEl) _dlgEl.textContent = '';
+                if (_spkEl) _spkEl.textContent = '';
+                // 强制终止任何残留的打字动画
+                if (typeof typewriterTimer !== 'undefined' && typewriterTimer) { clearTimeout(typewriterTimer); typewriterTimer = null; }
+                if (typeof speakingFlag !== 'undefined') speakingFlag = false;
+                // 确保 NarrationCtl 处于可接收新内容的状态
+                if (window.NarrationCtl && !window.NarrationCtl.isActive()) {
+                    // 队列非空但 pump 卡死时，强制清空重置
+                    window.NarrationCtl.reset();
+                }
+            }
             var act = ACTS_DATA.acts[gameState.currentAct-1];
             var scene = act.scenes[gameState.currentScene];
             updateHeader();
