@@ -4250,6 +4250,64 @@ const ShadowJudge = {
         };
         container.appendChild(interBtn);
 
+        // 「跳到第二幕第二场 / 第三场」按钮：直接进入第二幕指定场次（调试用，发布前删除）
+        // 注意：进入第二幕必须切皮影箱(updatePuppetCards(2))与头部(updateHeader)，
+        // 并 emit('act_intermission') 清场恢复按钮，否则皮影箱仍停在第一幕导致无法摆第二幕皮影。
+        function makeAct2Btn(label, sceneIndex) {
+            var btn = document.createElement('button');
+            btn.textContent = label;
+            btn.style.cssText = 'padding:6px 10px;font-size:12px;color:#e8c97a;background:rgba(74,31,10,0.7);border:1px solid #6b3a1f;border-radius:3px;cursor:pointer;font-family:inherit;letter-spacing:2px;transition:background 0.2s;';
+            btn.onmouseenter = function() { btn.style.background = 'rgba(100,45,18,0.9)'; };
+            btn.onmouseleave = function() { btn.style.background = 'rgba(74,31,10,0.7)'; };
+            btn.onclick = function() {
+                try {
+                    if (window.stopAllDialogue) window.stopAllDialogue();
+                    // 保持通关状态一致：进入第二幕某场前，之前的场次视为已通关
+                    gameState.passedScenes = gameState.passedScenes || {};
+                    gameState.passedScenes['act1_scene1'] = true;
+                    gameState.passedScenes['act1_scene2'] = true;
+                    gameState.passedScenes['act1_scene3'] = true;
+                    if (sceneIndex >= 1) gameState.passedScenes['act2_scene1'] = true;
+                    if (sceneIndex >= 2) gameState.passedScenes['act2_scene2'] = true;
+                    // 清目标场次已触发 clue，使暗语可再次触发
+                    var _sid = 'act2_scene' + (sceneIndex + 1);
+                    try {
+                        (getActClues(1) || []).forEach(function(c){
+                            if (c.scene_id === _sid) {
+                                var _i = gameState.triggeredClues.indexOf(c.id);
+                                if (_i !== -1) gameState.triggeredClues.splice(_i, 1);
+                            }
+                        });
+                    } catch(e) { /* clue 清除失败不阻断跳场 */ }
+                    // 进入第二幕指定场
+                    gameState.currentAct = 2;
+                    gameState.currentScene = sceneIndex;
+                    EventBus.emit('act_intermission'); // 清场 + 恢复按钮
+                    if (window.updatePuppetCards) window.updatePuppetCards(2); else updatePuppetCards(2);
+                    if (window.updateHeader) window.updateHeader(); else updateHeader();
+                    var doJump = function() {
+                        try {
+                            if (window.stopAllDialogue) window.stopAllDialogue();
+                            EventBus.emit('countdown_stop_request');
+                            if (window.resetSceneState) window.resetSceneState(); else resetSceneState();
+                            if (window.NarrationCtl) window.NarrationCtl.reset();
+                            if (window.startCurrentScene) window.startCurrentScene(); else startCurrentScene();
+                        } catch(e) { console.error('[jumpAct2] 跳场失败:', e); }
+                    };
+                    try {
+                        if (window.playCurtainCloseThenOpen) {
+                            window.playCurtainCloseThenOpen(null, doJump);
+                        } else {
+                            doJump();
+                        }
+                    } catch(e) { console.error('[jumpAct2] 帘子过渡异常, 直接跳:', e); doJump(); }
+                } catch(e) { console.error('[jumpAct2] 异常:', e); }
+            };
+            return btn;
+        }
+        container.appendChild(makeAct2Btn('跳到第二幕第二场', 1));
+        container.appendChild(makeAct2Btn('跳到第二幕第三场', 2));
+
         infoPanel.appendChild(container);
     })();
 
