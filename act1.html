@@ -1882,10 +1882,10 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
                 <div class="puppet-name">孙悟空</div>
             </div>
 
-            <!-- 老人（真实图片；第二幕专用） -->
+            <!-- 假传人（真实图片；第二幕专用） -->
             <div class="puppet-card" data-puppet="oldman" data-act="2">
                 <div class="puppet-icon"><img src="assets/images/oldman.png" alt="oldman" draggable="false"></div>
-                <div class="puppet-name">老 人</div>
+                <div class="puppet-name">假传人</div>
             </div>
 
             <!-- 竹子（真实图片） -->
@@ -2745,7 +2745,7 @@ const ShadowJudge = {
     },
 
     _puppetName(id) {
-        var NAMES = { scholar:'书生', tree:'槐树', moon:'月亮', elder:'老者', oldman:'老人', letter:'信', frog:'金蟾', lamp:'灯', demon:'白骨精', monkey:'孙悟空', bamboo:'竹子', master:'路师傅' };
+        var NAMES = { scholar:'书生', tree:'槐树', moon:'月亮', elder:'老者', oldman:'假传人', letter:'信', frog:'金蟾', lamp:'灯', demon:'白骨精', monkey:'孙悟空', bamboo:'竹子', master:'路师傅' };
         return NAMES[id] || id;
     },
 
@@ -2851,12 +2851,12 @@ const ShadowJudge = {
         // —— 第二幕：大栅栏·真假传人 / 揭穿之后 —— 与开场位置提示、_posHint 一致
         //   act2_scene2（影速对决）：左侧白骨精、中间竹子、右侧孙悟空（限时组合场，也按位置判定）
         'act2_scene2': {
-            demon:   { type:'abs', cx:0.25, cy:0.65, r:0.12, label:'白骨精·左侧' },
-            bamboo:  { type:'abs', cx:0.50, cy:0.72, r:0.10, label:'竹子·中间' },
-            monkey:  { type:'abs', cx:0.75, cy:0.65, r:0.12, label:'孙悟空·右侧' }
+            demon:   { type:'abs', cx:0.38, cy:0.63, r:0.05, label:'白骨精·左中' },
+            bamboo:  { type:'abs', cx:0.50, cy:0.63, r:0.05, label:'竹子·正中' },
+            monkey:  { type:'abs', cx:0.62, cy:0.63, r:0.05, label:'孙悟空·右中' }
         },
         'act2_scene1': {
-            oldman:  { type:'abs', cx:0.18, cy:0.82, r:0.07, label:'老人·台下观戏' },
+            oldman:  { type:'abs', cx:0.18, cy:0.82, r:0.07, label:'假传人·台下观戏' },
             demon:   { type:'abs', cx:0.45, cy:0.63, r:0.07, label:'白骨精·台左' },
             monkey:  { type:'abs', cx:0.58, cy:0.63, r:0.07, label:'孙悟空·台右' }
         },
@@ -2926,7 +2926,7 @@ const ShadowJudge = {
         // ===== 第二幕（大栅栏）· 间接叙事化位置提示：用角色习惯/站位暗示方位 + 给方向（仿信中之秘）=====
         if (sceneId === 'act2_scene1') {
             if (pid === 'oldman')
-                return '（师傅指了指台前左边）老人——得在台下左边盯着。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就站那儿看戏。');
+                return '（师傅指了指台前左边）假传人——得在台下左边盯着。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就站那儿看戏。');
             if (pid === 'demon')
                 return '（师傅瞥了眼台左侧）白骨精——在台上左边翻。\n' + (move ? '你试试再往' + move + '挪挪？' : '对，就在那儿。');
             if (pid === 'monkey')
@@ -3015,14 +3015,40 @@ const ShadowJudge = {
                          comment: '路师傅没点头：「差着呢，要再试试呢。有啥拿不稳的，问我便是。」', needFlip: true };
             }
         }
+        // 第二幕第二场：白骨精必须翻转（面朝台心，与竹子/孙悟空照面）才通过
+        if (correct && currentSceneId === 'act2_scene2') {
+            var _a2s2u = [];
+            stagedPuppets.forEach(function(p) {
+                if (p.puppetId === 'demon' && !ShadowJudge._isFlipped(p.puppetId)) _a2s2u.push(p.puppetId);
+            });
+            ShadowJudge._dbgFlip('[QJ-act2s2] unflipped=' + JSON.stringify(_a2s2u));
+            if (_a2s2u.length > 0) {
+                correct = false;
+                return { score: Math.max(0, score - 15), correct: false,
+                         comment: '路师傅没点头：「差着呢，要再试试呢。白骨精那根杆——得把他转过来。」', needFlip: true };
+            }
+        }
+        // 第二幕第三场：老者必须翻转（面朝白骨精/戏台）才通过
+        if (correct && currentSceneId === 'act2_scene3') {
+            var _a2s3u = [];
+            stagedPuppets.forEach(function(p) {
+                if (p.puppetId === 'elder' && !ShadowJudge._isFlipped(p.puppetId)) _a2s3u.push(p.puppetId);
+            });
+            ShadowJudge._dbgFlip('[QJ-act2s3] unflipped=' + JSON.stringify(_a2s3u));
+            if (_a2s3u.length > 0) {
+                correct = false;
+                return { score: Math.max(0, score - 15), correct: false,
+                         comment: '路师傅没点头：「差着呢，要再试试呢。老者那根杆——得把他转过来。」', needFlip: true };
+            }
+        }
         // ===== 确认按钮只说简短判断（对/不对），具体提示留给"追问师傅" =====
         var okComments = {
             'act1_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，眯着眼细细打量了一番）\n月夜下等人——老者在左，金蟾在旁，书生远远候着。\n这出戏的味道，有了。',
             'act1_scene2': '好！这一面，齐了。\n\n（师傅点了点头）\n书生读着信——犹如身临其境，仿佛置身于他熟悉的珍奇斋下。\n老者在大渊阁阶前，金蟾伏在他脚边。\n这封信里的秘密，你看见了。',
             // —— 第二幕过关评语（仿第一幕 okComments，路师傅口吻）——
-            'act2_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，目光从左到右扫过一遍——老人在左边立着，面朝台上；白骨精在台中转过身，正对着右边的孙悟空；孙悟空在右边接住招）\n大栅栏的夜市灯火通明，可这方戏台上的真假——一目了然。\n老人看的是戏，白骨精对着猴子——你看的，是杆后头的人。',
-            'act2_scene2': '（师傅掷下操纵杆）三十息，够了。\n你手比脑子快——这才是操影人的本事。\n左侧白骨精、中间竹子、右侧孙悟空，这出戏，你接住了。',
-            'act2_scene3': '（师傅缓缓直起身）他不肯认，可白布不撒谎。\n老者立着，白骨精戳着——谁是真的，影子早说了。\n这出戏，你接住了。'
+            'act2_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，目光从左到右扫过一遍——假传人在左边立着，面朝台上；白骨精在台中转过身，正对着右边的孙悟空；孙悟空在右边接住招）\n大栅栏的夜市灯火通明，可这方戏台上的真假——一目了然。\n假传人看的是戏，白骨精对着猴子——你看的，是杆后头的人。',
+            'act2_scene2': '（师傅掷下操纵杆）三十息，够了。\n你手比脑子快——这才是操影人的本事。\n左侧白骨精翻过身正对着台心的竹子、中间竹子、右侧孙悟空，这出对决，你接住了。',
+            'act2_scene3': '（师傅缓缓直起身）他不肯认，可白布不撒谎。\n老者转过身面朝着白骨精、白骨精戳着——谁是真的，影子早说了。\n这出戏，你接住了。'
         };
         return {
             score: score, correct: correct,
@@ -3429,7 +3455,9 @@ const ShadowJudge = {
         // 第二场：老者/金蟾默认面朝左（玩家需手动拖动操纵杆才转向右）；
         // act2_scene1 的老者同理——需翻转面朝戏台（朝向白骨精+孙悟空）才通过
         if ((_sid === 'act1_scene2' && (puppetId === 'elder' || puppetId === 'frog')) ||
-            (_sid === 'act2_scene1' && (puppetId === 'oldman' || puppetId === 'demon'))) {
+            (_sid === 'act2_scene1' && (puppetId === 'oldman' || puppetId === 'demon')) ||
+            (_sid === 'act2_scene2' && puppetId === 'demon') ||
+            (_sid === 'act2_scene3' && puppetId === 'elder')) {
             setupPuppetRods(pup, puppetId);
         }
 
@@ -4478,6 +4506,26 @@ const ShadowJudge = {
             }
         }
 
+        // —— 翻转判定（第二幕 scene2 白骨精 / scene3 老者 必须翻转；阵容+位置都对了才查）——
+        if ((sceneId === 'act2_scene2' || sceneId === 'act2_scene3') && missing.length === 0 && extra.length === 0) {
+            var pcF = ShadowJudge._checkPositions(staged, sceneId);
+            if (pcF && pcF.ok) {
+                var _flipReq = (sceneId === 'act2_scene2') ? ['demon'] : ['elder'];
+                var _unflipped = [];
+                staged.forEach(function(p) {
+                    if (_flipReq.indexOf(p.puppetId) !== -1 && !ShadowJudge._isFlipped(p.puppetId)) _unflipped.push(p.puppetId);
+                });
+                ShadowJudge._dbgFlip('[BOH-act2] unflipped=' + JSON.stringify(_unflipped));
+                if (_unflipped.length > 0) {
+                    if (sceneId === 'act2_scene2') {
+                        parts.push('（师傅盯着白骨精的影，眯了眯眼）白骨精——你瞧他现在背冲着竹子呢。\n这出《三打》的对决，白骨精得跟那竹子、猴子照面才打得起来。\n（他点了点白骨精肩头的红线）杆能动，把他转过来——让他对着台心。');
+                    } else {
+                        parts.push('（师傅盯着老者的影，眉头微皱）人站对了——可脸呢？\n老者立着，得面朝着右边的白骨精。\n（他指了指红线）杆能动，把他转过来——让他看着戏。');
+                    }
+                }
+            }
+        }
+
         // 有任何问题 → 按顺序拼接返回（数量→位置→翻转）
         if (parts.length > 0) return parts.join('\n\n');
         // —— ②.5 第二场（信中之秘）专属叙事提示：按摆的组合给对应叙事 ——
@@ -4501,18 +4549,18 @@ const ShadowJudge = {
         }
         // —— ②.5 第二幕（大栅栏）专属叙事提示：按摆的组合给对应叙事（仿信中之秘）——
         if (sceneId === 'act2_scene1') {
-            // 三者全齐 → 先查老人是否面朝戏台（翻转），翻转不对给翻转提示
+            // 三者全齐 → 先查假传人是否面朝戏台（翻转），翻转不对给翻转提示
             if (placedIds.indexOf('oldman')!==-1 && placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1) {
                 if (!ShadowJudge._isFlipped('oldman'))
-                    return '（师傅盯着老人的影，眉头微皱）人站对了——可脸呢？\n真传人看戏，得面朝台上的角儿。\n（他指了指红线）杆能动，把他转过来——让他看着戏。';
+                    return '（师傅盯着假传人的影，眉头微皱）人站对了——可脸呢？\n假传人看戏，得面朝台上的角儿。\n（他指了指红线）杆能动，把他转过来——让他看着戏。';
                 if (!ShadowJudge._isFlipped('demon'))
                     return '（师傅盯着白骨精的影，眯了眯眼）白骨精——你瞧他现在背冲着孙悟空呢。\n这出《三打》，白骨精得跟那猴子照面才打得起来。\n（他点了点白骨精肩头的红线）杆能动，把他转过来——让他对着孙悟空。';
-                return '（师傅凑近白布，目光从左到右扫过一遍）嗯……老人在左边立着，面朝台上盯着这出戏；白骨精在台中翻过身，正对着右边的孙悟空；孙悟空在右边接住招。\n（他点了点头）位置对了，朝向也对了——白骨精和那猴子，脸对脸。可你再看看——这个"真传人"的影，杆是不是飘的？';
+                return '（师傅凑近白布，目光从左到右扫过一遍）嗯……假传人在左边立着，面朝台上盯着这出戏；白骨精在台中翻过身，正对着右边的孙悟空；孙悟空在右边接住招。\n（他点了点头）位置对了，朝向也对了——白骨精和那猴子，脸对脸。可你再看看——这个"假传人"的影，杆是不是飘的？';
             }
             if (placedIds.indexOf('demon')!==-1 && placedIds.indexOf('monkey')!==-1)
                 return '（师傅摇头）光有白骨精和孙悟空，那是戏班子。\n少了一个在左边盯着的人——这出戏，没魂。';
             if (placedIds.indexOf('oldman')!==-1)
-                return '（师傅眯眼）光一个真传人在左边站着，戏呢？\n《三打白骨精》——白骨精、孙悟空，得让他瞧着。';
+                return '（师傅眯眼）光一个假传人在左边站着，戏呢？\n《三打白骨精》——白骨精、孙悟空，得让他瞧着。';
             return '路师傅点了点头：接着摆。';
         }
         if (sceneId === 'act2_scene2') {
@@ -5962,9 +6010,9 @@ const ShadowJudge = {
                         '（师父路春福，已经走了。\n可这方白布一亮，他的声音又在耳边响起——不是人回来了，是记忆，是心念，是他留在影里的那一缕魂。\n他还想再陪你演最后一场，看你能不能，真正接住这盏灯。）', speed:52 });
                 }
                 var _act2OpenHints = {
-                    'act2_scene1': '（师傅抱着手站在戏台边）「大栅栏的夜市，最不缺假把式。那个人演的《三打白骨精》——白骨精在台中翻，孙悟空在右边打，真传人在左边——面朝台上盯着。（记着：老人得脸朝戏台，背对观众可不行；白骨精也得翻过身，正对着那猴子——背冲着孙悟空，这出戏就散了。）你看的是戏，我让你看的，是杆后头的人。」',
-                    'act2_scene2': '（师傅手指一点）「真传人和假传人，同时演——我念一句，你三十息之内把对的皮影摆上。左侧白骨精、中间竹子、右侧孙悟空，就这三样，别多想。」',
-                    'act2_scene3': '（师傅站定了）「揭穿了，他也不认。老者立在左边，白骨精戳在右边——你看清了，这出戏里谁是真的。」'
+                    'act2_scene1': '（师傅抱着手站在戏台边）「大栅栏的夜市，最不缺假把式。那个人演的《三打白骨精》——白骨精在台中翻，孙悟空在右边打，假传人在左边——面朝台上盯着。（记着：假传人得脸朝戏台，背对观众可不行；白骨精也得翻过身，正对着那猴子——背冲着孙悟空，这出戏就散了。）你看的是戏，我让你看的，是杆后头的人。」',
+                    'act2_scene2': '（师傅手指一点）「真传人和假传人，同时演——我念一句，你三十息之内把对的皮影摆上。左侧白骨精、中间竹子、右侧孙悟空，就这三样，别多想。白骨精——得翻过身，脸朝着台心的竹子；背冲着竹子，这出对决就散了。」',
+                    'act2_scene3': '（师傅站定了）「揭穿了，他也不认。老者立在左边——可他得转过身，面朝着右边的白骨精。你看清了，这出戏里谁是真的。」'
                 };
                 var _h2 = _act2OpenHints[scene.id];
                 if (_h2) EventBus.emit('narration_chunk', { speaker:'路师傅', text:_h2, speed:54 });
