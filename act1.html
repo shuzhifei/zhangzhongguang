@@ -4394,9 +4394,10 @@ const ShadowJudge = {
         if (e.target && (e.target.id === 'btnAsk' || e.target.id === 'btnConfirm' || e.target.id === 'btnNext')) return; // 不拦截控制按钮——否则点击后事件冒泡触发 fastForwardTyping 把刚生成的话瞬间补全
         if (fastForwardTyping()) return;                        // 生成中点击空白 → 直接生成完毕
         onDialogueAdvance();
+        EventBus.emit('dialogue_advance');   // 打字已完成、玩家点击推进旁白 → 供通关画面等监听
     });
     var narrationHintEl0 = document.getElementById('narrationHint');
-    if (narrationHintEl0) narrationHintEl0.addEventListener('click', function(e){ e.stopPropagation(); onDialogueAdvance(); });
+    if (narrationHintEl0) narrationHintEl0.addEventListener('click', function(e){ e.stopPropagation(); onDialogueAdvance(); EventBus.emit('dialogue_advance'); });
     var spBtn = document.getElementById('showPlayBtn');
     if (spBtn) spBtn.addEventListener('click', function(e) { e.stopPropagation(); onShowPlayClick(); });
 
@@ -5174,26 +5175,50 @@ const ShadowJudge = {
         var isAct2 = (actNum === 2);
         var oil = (gameState && gameState.lampOil != null) ? gameState.lampOil : 0;
         var tier, tierClass, comment;
-        if (oil >= 75) {
-            tier = 'SS · 掌灯大师';  tierClass = 'ss';
-            comment = isAct2 ? '油如满月，影随心走。\n真假一辨即明——这盏灯，往后你来掌。'
-                             : '油如满月，影随心走。\n你这双手，是老天爷赏饭吃。';
-        } else if (oil >= 55) {
-            tier = 'S · 传灯弟子';   tierClass = 's';
-            comment = isAct2 ? '油量尚可，火候到位。\n大栅栏这一场，你稳稳接住了。'
-                             : '油量尚可，火候到位。\n照这个路子练下去，不出三年你能独当一面。';
-        } else if (oil >= 35) {
-            tier = 'A · 影坛新秀';   tierClass = 'a';
-            comment = isAct2 ? '油烧得有点快，但真假没看走眼。\n记住——省油就是省命。'
-                             : '油烧得有点快，但戏没散。\n记住——省油就是省命，每一滴都要用在刀刃上。';
-        } else if (oil >= 15) {
-            tier = 'B · 初学乍练';   tierClass = 'b';
-            comment = isAct2 ? '油都快见底了……\n不过这场硬仗，你也扛下来了。'
-                             : '油都快见底了……\n不过能演完第一幕，也算没白来。\n下次悠着点。';
+
+        if (isAct2) {
+            // ===== 第二幕评分（更难，单独档位）=====
+            // 本幕开场满油100，收尾剩余灯油即「本幕得分」(满分100)。
+            // 依据第二幕油耗经济定档（有根据）：
+            //   · 限时场每秒-1油、每次摆影-3油、追问师傅-8油；
+            //   · 干净通关约耗30~35油 → 剩65~70已属顶尖；
+            //   · 偶有失误/耗时偏长 → 剩45~59；明显耗时多次试错 → 剩30~44；
+            //   · 勉强撑住灯将熄 → 剩15~29；接近灭灯 → 剩<15。
+            // 第二幕更难，故 60分(含)以上即 SS。
+            if (oil >= 60) {
+                tier = 'SS · 掌灯大师';  tierClass = 'ss';
+                comment = '油剩过六成，影随心走。\n这盏灯经你手——真假一辨即明，三十息从容摆齐。\n往后这戏台，你来掌。';
+            } else if (oil >= 45) {
+                tier = 'S · 传灯弟子';   tierClass = 's';
+                comment = '油光尚足，火候稳当。\n大栅栏这一场硬仗，你接得干脆。\n离「掌灯」只差临门一脚。';
+            } else if (oil >= 30) {
+                tier = 'A · 影坛新秀';   tierClass = 'a';
+                comment = '油烧得有些快，但真假没看走眼。\n三十息里手没乱——\n记着，省下的每一滴油，都是台上的一条命。';
+            } else if (oil >= 15) {
+                tier = 'B · 初学乍练';   tierClass = 'b';
+                comment = '灯都快闪了……\n不过这最难的一幕，你也硬扛下来了。\n下次，手再快些，油再省些。';
+            } else {
+                tier = 'C · 灯火将尽';   tierClass = 'c';
+                comment = '油……就剩这么丁点。\n灯没灭，是命硬。\n这出戏你留住了，可下回，别这么悬。';
+            }
         } else {
-            tier = 'C · 灯火将尽';   tierClass = 'c';
-            comment = isAct2 ? '油……就剩这么点了。\n还好灯没灭——影，总算留住了。'
-                             : '油……就剩这么点了。\n还好灯没灭——\n但再这么演下去，怕是连影都留不住。';
+            // ===== 第一幕评分（维持原档位）=====
+            if (oil >= 75) {
+                tier = 'SS · 掌灯大师';  tierClass = 'ss';
+                comment = '油如满月，影随心走。\n你这双手，是老天爷赏饭吃。';
+            } else if (oil >= 55) {
+                tier = 'S · 传灯弟子';   tierClass = 's';
+                comment = '油量尚可，火候到位。\n照这个路子练下去，不出三年你能独当一面。';
+            } else if (oil >= 35) {
+                tier = 'A · 影坛新秀';   tierClass = 'a';
+                comment = '油烧得有点快，但戏没散。\n记住——省油就是省命，每一滴都要用在刀刃上。';
+            } else if (oil >= 15) {
+                tier = 'B · 初学乍练';   tierClass = 'b';
+                comment = '油都快见底了……\n不过能演完第一幕，也算没白来。\n下次悠着点。';
+            } else {
+                tier = 'C · 灯火将尽';   tierClass = 'c';
+                comment = '油……就剩这么点了。\n还好灯没灭——\n但再这么演下去，怕是连影都留不住。';
+            }
         }
         var label = isAct2 ? '第二幕 · 演毕' : '第一幕 · 演毕';
 
@@ -5204,7 +5229,7 @@ const ShadowJudge = {
             + '<div class="act1-score-inner">'
             +   '<div class="act1-score-label">'+label+'</div>'
             +   '<div class="act1-score-tier '+tierClass+'">'+tier+'</div>'
-            +   '<div class="act1-score-oil">剩余灯油：'+oil+' / 100</div>'
+            +   '<div class="act1-score-oil">'+(isAct2 ? '本幕得分：'+oil+' / 100（剩余灯油即得分）' : '剩余灯油：'+oil+' / 100')+'</div>'
             +   '<div class="act1-score-comment">'+comment.replace(/\n/g,'<br>')+'</div>'
             +   '<div class="act1-score-hint">▸ 点击任意处继续</div>'
             + '</div>';
@@ -6377,10 +6402,17 @@ const ShadowJudge = {
             var bn=document.getElementById('btnNext'); if(bn)bn.style.display='none';
             var s=document.getElementById('stage'); if(s)s.classList.add('stage-dark');
             updateHeader();
-            // ★ 通关胜利画面：等结局台词播完后弹出（延迟2.5秒给打字机时间）
-            setTimeout(function(){
+            // ★ 通关胜利画面：等师傅把结局台词说完、玩家点击对话框后，再弹出
+            window.__endingShown = false;
+            function _showVictoryNow() {
+                if (window.__endingShown) return;
+                window.__endingShown = true;
                 if (window.showVictoryScreen) window.showVictoryScreen();
-            }, 2500);
+            }
+            function _onDlgAdvance() { _showVictoryNow(); }
+            EventBus.on('dialogue_advance', _onDlgAdvance);
+            // 兜底：台词打完 30 秒内未点击，也自动弹出，避免画面卡死
+            setTimeout(function() { _showVictoryNow(); }, 30000);
         } catch(e) {}
     }
 
