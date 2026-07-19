@@ -900,6 +900,93 @@ body {
     50% { opacity: 0.75; }
 }
 
+/* ---- 通关胜利画面 ---- */
+.victory-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease;
+}
+.victory-overlay.visible { opacity: 1; pointer-events: auto; }
+.victory-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 70% 60% at 50% 48%, rgba(20,12,6,0.60) 0%, rgba(6,3,1,0.94) 75%);
+    backdrop-filter: blur(8px);
+}
+.victory-inner {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 44px 56px 38px;
+    border: 1px solid rgba(232,200,96,0.30);
+    border-radius: 16px;
+    background: linear-gradient(165deg, rgba(35,22,14,0.95) 0%, rgba(15,10,5,0.97) 100%);
+    max-width: 520px;
+    box-shadow:
+        0 0 80px rgba(232,200,96,0.12),
+        0 0 2px rgba(255,220,140,0.15),
+        inset 0 1px 0 rgba(255,220,140,0.10);
+    transform: translateY(24px) scale(0.94);
+    opacity: 0;
+    transition: transform 1s ease 0.2s, opacity 1s ease 0.2s;
+}
+.victory-overlay.visible .victory-inner {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+.victory-title {
+    font-family: 'STKaiti','KaiTi','楷体',serif;
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: #e8c864;
+    letter-spacing: 0.18em;
+    text-shadow: 0 0 40px rgba(232,200,100,0.35);
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+.victory-subtitle {
+    font-family: 'STKaiti','KaiTi','楷体',serif;
+    font-size: 15px;
+    color: #a09068;
+    letter-spacing: 0.12em;
+    margin-bottom: 32px;
+}
+.victory-buttons {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+}
+.victory-btn {
+    font-family: 'STKaiti','KaiTi','楷体',serif;
+    font-size: 15px;
+    padding: 11px 36px;
+    border: 1px solid rgba(232,200,96,0.28);
+    border-radius: 8px;
+    background: linear-gradient(160deg, rgba(45,30,18,0.9) 0%, rgba(25,16,8,0.95) 100%);
+    color: #d4bc82;
+    cursor: pointer;
+    letter-spacing: 0.15em;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,220,140,0.06);
+}
+.victory-btn:hover {
+    background: linear-gradient(160deg, rgba(60,40,22,0.95) 0%, rgba(35,22,12,0.98) 100%);
+    color: #f0da90;
+    border-color: rgba(232,200,96,0.50);
+    box-shadow: 0 0 20px rgba(232,200,96,0.15), inset 0 1px 0 rgba(255,220,140,0.10);
+    transform: translateY(-1px);
+}
+.victory-btn:active {
+    transform: translateY(0);
+}
+
 
 /* ---- 底部字幕 ---- */
 .intro-subtitle {
@@ -2284,7 +2371,8 @@ function triggerMasterEgg() {
 
 // 事件监听
 EventBus.on("puppet_placed", function(data) {
-    LampSystem.burn("puppet_placed");
+    // 放置路师傅不消耗灯油（彩蛋/救援性质的特殊皮影）
+    if (!(data && data.id === "master")) LampSystem.burn("puppet_placed");
     if (data && data.id && gameState.stagedPuppets.indexOf(data.id) === -1) gameState.stagedPuppets.push(data.id);
     // 彩蛋：第二幕第一次把路师傅摆上幕中
     if (data && data.id === "master" && gameState.currentAct === 2 && !window.__masterEggUsedInAct2) {
@@ -4869,6 +4957,37 @@ const ShadowJudge = {
         var p = v.play();
         if (p && p.catch) p.catch(function() {});
     }
+    // 第二幕第一场（真假传人）专属动画：用户提供的 mp4，机制同上（幕中播放、点击跳过、播完恢复皮影）
+    function playAct2Scene1Video(onDone) {
+        var ov = document.createElement('div');
+        ov.id = 'act2Scene1VideoOverlay';
+        ov.innerHTML = '<video id="act2Scene1Video" src="assets/video/act2-scene1.mp4" playsinline autoplay></video>'
+            + '<div class="show-video-hint">点击跳过</div>';
+        var stageEl = document.getElementById('stage');
+        if (stageEl) {
+            stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
+            stageEl.querySelectorAll('.elder-rod-ctrl').forEach(function(r){ r.style.display = 'none'; });
+            var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
+        }
+        (stageEl || document.body).appendChild(ov);
+        var v = ov.querySelector('video');
+        var finished = false;
+        function finish() {
+            if (finished) return; finished = true;
+            try { v.pause(); } catch (e) {}
+            if (ov.parentNode) ov.parentNode.removeChild(ov);
+            if (stageEl) {
+                stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
+                var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
+            }
+            if (onDone) onDone();
+        }
+        v.addEventListener('ended', finish);
+        v.addEventListener('error', finish);
+        ov.addEventListener('click', finish);
+        var p = v.play();
+        if (p && p.catch) p.catch(function() {});
+    }
     // 「展示皮影戏」按钮点击 → 帘子合上 → 进下一场
     function onShowPlayClick() {
         try {
@@ -4950,7 +5069,16 @@ const ShadowJudge = {
             setNarrationLock(false);
             // 第二场（第一幕第二场，currentAct=1 的 else 分支）播放用户提供的微信视频(act2-show.mp4)；
             // 第二幕(currentAct=2)各场复用原皮影戏视频(act1-show.mp4)，避免自定义视频到处重复
-            var videoFn = (gameState.currentAct === 2) ? playAct1ShowVideo : playAct2ShowVideo;
+            // 第二幕第一场(currentAct=2,currentScene=0)播放用户提供的专属动画(act2-scene1.mp4)；
+            // 第二幕其余场次沿用原皮影戏视频(act1-show.mp4)；第一幕第二场用微信视频(act2-show.mp4)
+            var videoFn;
+            if (gameState.currentAct === 2 && gameState.currentScene === 0) {
+                videoFn = playAct2Scene1Video;
+            } else if (gameState.currentAct === 2) {
+                videoFn = playAct1ShowVideo;
+            } else {
+                videoFn = playAct2ShowVideo;
+            }
             playCurtainCloseThenOpen(function() {
                 // 帘子拉开后，在舞台播放本幕皮影戏动画（纯动画，无台词）
                 videoFn(function() {
@@ -5104,6 +5232,53 @@ const ShadowJudge = {
     // 兼容旧调用：第一幕评分卡
     function showAct1ScoreCard(onDone) { return showActScoreCard(1, onDone); }
     window.showAct1ScoreCard = showAct1ScoreCard;
+
+    // ★ 通关胜利画面：居中弹出「恭喜你成功通关」+ 退出/重新开始 按钮
+    function showVictoryScreen() {
+        // 禁用左侧皮影箱
+        var _pb = document.getElementById('puppetBox');
+        if (_pb) _pb.classList.add('intermission-lock', 'speaking-lock');
+
+        var overlay = document.createElement('div');
+        overlay.className = 'victory-overlay';
+        overlay.id = 'victoryOverlay';
+        overlay.innerHTML =
+            '<div class="victory-bg"></div>'
+            + '<div class="victory-inner">'
+            +   '<div class="victory-title">恭喜你成功通关</div>'
+            +   '<div class="victory-subtitle">完成了整个任务</div>'
+            +   '<div class="victory-buttons">'
+            +     '<button class="victory-btn" id="victoryExit">退 出</button>'
+            +     '<button class="victory-btn" id="victoryRestart">重新开始</button>'
+            +   '</div>'
+            + '</div>';
+        document.body.appendChild(overlay);
+
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){
+            overlay.classList.add('visible');
+        }); });
+
+        // 退出按钮：关闭页面效果（归零所有交互）
+        document.getElementById('victoryExit').addEventListener('click', function() {
+            overlay.classList.remove('visible');
+            setTimeout(function(){
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                // 显示一个简单的"感谢游玩"状态，禁用一切
+                var _stage = document.getElementById('stage');
+                if (_stage) _stage.classList.add('stage-dark');
+                var _dlg = document.getElementById('dialogueText');
+                if (_dlg) _dlg.textContent = '—— 剧终 ——';
+                var _spk = document.getElementById('speaker');
+                if (_spk) _spk.textContent = '';
+            }, 1000);
+        });
+
+        // 重新开始按钮：刷新页面
+        document.getElementById('victoryRestart').addEventListener('click', function() {
+            location.reload();
+        });
+    }
+    window.showVictoryScreen = showVictoryScreen;
 
     // 场次标题卡（复用 act-title-overlay 组件）
     function showActTitle(actTitle) {
@@ -5632,7 +5807,10 @@ const ShadowJudge = {
                     var _sceneInfo = _actInfo.scenes[gameState.currentScene];
                     if (_sceneInfo) {
                         var _cardBg = (gameState.currentAct === 2 && gameState.currentScene === 1)
-                            ? 'assets/images/stage-bg-act2-scene2.jpg' : null;
+                            ? 'assets/images/stage-bg-act2-scene2.jpg'
+                            : (gameState.currentAct === 2 && gameState.currentScene === 2)
+                                ? 'assets/images/stage-bg-act2-scene3.jpg'
+                                : null;
                         showTransitionTitleCard(gameState.currentAct, gameState.currentScene + 1, _sceneInfo.name, null, _cardBg);
                     }
                 }
@@ -5689,6 +5867,10 @@ const ShadowJudge = {
                         // 第二场（影速对决）：擂台对决图——真传人假传人同台比影
                         stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2-scene2.jpg')";
                         console.log('[_doStartCurrentScene] ★ 第二场背景已切换为擂台图, currentScene=' + gameState.currentScene);
+                    } else if (gameState.currentScene === 2) {
+                        // 第三场（揭穿之后）：深夜空戏台——人去楼空、灯笼犹亮
+                        stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.18) 0%, rgba(240,200,130,0.08) 40%, transparent 70%), url('assets/images/stage-bg-act2-scene3.jpg')";
+                        console.log('[_doStartCurrentScene] ★ 第三场背景已切换为深夜空戏台图, currentScene=' + gameState.currentScene);
                     } else {
                         // 第一场/第三场：街景戏台
                         stageElS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
@@ -6195,6 +6377,10 @@ const ShadowJudge = {
             var bn=document.getElementById('btnNext'); if(bn)bn.style.display='none';
             var s=document.getElementById('stage'); if(s)s.classList.add('stage-dark');
             updateHeader();
+            // ★ 通关胜利画面：等结局台词播完后弹出（延迟2.5秒给打字机时间）
+            setTimeout(function(){
+                if (window.showVictoryScreen) window.showVictoryScreen();
+            }, 2500);
         } catch(e) {}
     }
 
