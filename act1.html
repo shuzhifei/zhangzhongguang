@@ -1136,6 +1136,16 @@ body {
     100% { opacity: 1;   transform: translateX(-50%) scale(1.06) translateY(-2px); }
 }
 /* .lamp-out 仅作 JS 状态标记（无额外视觉样式），火焰因移除 lamp-lit 自然消失 */
+/* 通关/剧终时舞台变暗，但油灯保持发光不被压死 */
+.stage-dark .stage-puppet.lamp-lit {
+    filter: drop-shadow(0 0 20px rgba(255,190,90,1)) drop-shadow(0 0 50px rgba(255,150,50,0.7)) brightness(1.3);
+}
+.stage-dark .stage-puppet.lamp-lit::after {
+    background: radial-gradient(ellipse at center bottom,
+        rgba(255,220,100,0.9) 0%,
+        rgba(255,140,30,0.5) 45%,
+        transparent 70%);
+}
 .stage-puppet:focus { outline: none !important; }
 
 .stage-puppet svg {
@@ -1674,14 +1684,20 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
     cursor: not-allowed;
 }
 
-@keyframes stageFadeOut {
-    0%   { filter: brightness(1); }
-    50%  { filter: brightness(0.4); }
-    100% { filter: brightness(0.08); }
+@keyframes stageBlacken {
+    to { opacity: 0.95; }
 }
 
-.stage-dark {
-    animation: stageFadeOut 2.5s ease-in-out forwards;
+/* 剧终：舞台背景压黑（用遮罩层，不用 filter，以免把灯也压暗） */
+.stage-dark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    z-index: 2;                 /* 盖住背景，低于皮影(z-index:3) */
+    pointer-events: none;
+    animation: stageBlacken 2.5s ease-in-out forwards;
 }
 
 .flame-gone {
@@ -6507,6 +6523,45 @@ const ShadowJudge = {
             if(bc){bc.disabled=true;bc.textContent='剧终';} if(ba){ba.disabled=true;ba.textContent='谢幕';}
             var bn=document.getElementById('btnNext'); if(bn)bn.style.display='none';
             var s=document.getElementById('stage'); if(s)s.classList.add('stage-dark');
+            // ★ 剧终：保证舞台「一定有一台亮着的灯」——与玩家是否摆放过灯无关
+            try {
+                if (s) {
+                    var _lamp = s.querySelector('.stage-puppet[data-puppet="lamp"]');
+                    if (!_lamp) {
+                        _lamp = document.createElement('div');
+                        _lamp.className = 'stage-puppet';
+                        _lamp.setAttribute('data-puppet', 'lamp');
+                        var _lw = 100;
+                        _lamp.style.width = _lw + 'px';
+                        var _render = (window.PuppetImageRenderer && window.PuppetImageRenderer.render)
+                            ? window.PuppetImageRenderer.render('lamp', { width: _lw, height: 'auto' })
+                            : '<img src="assets/images/lamp.png" alt="lamp" style="width:'+_lw+'px;object-fit:contain;">';
+                        _lamp.innerHTML = _render;
+                        var _sr = s.getBoundingClientRect();
+                        _lamp.style.left = (_sr.width * 0.5 - _lw / 2) + 'px';
+                        _lamp.style.top  = Math.round(_sr.height * 0.6) + 'px';
+                        s.appendChild(_lamp);
+                    }
+                    _lamp.classList.remove('lamp-out');
+                    _lamp.classList.add('lamp-lit');
+                    _lamp.style.pointerEvents = 'none';
+                }
+            } catch(e) {}
+            // ★ 剧终：舞台只留亮着的灯，其余皮影（假传人/白骨精等）淡出消失
+            try {
+                if (s) {
+                    var _pups = s.querySelectorAll('.stage-puppet');
+                    for (var _i = 0; _i < _pups.length; _i++) {
+                        (function(p){
+                            if (p.getAttribute('data-puppet') === 'lamp') return; // 灯留着
+                            p.style.transition = 'opacity 2s ease';
+                            p.style.opacity = '0';
+                            p.style.pointerEvents = 'none';
+                            setTimeout(function(){ if (p && p.parentNode) p.parentNode.removeChild(p); }, 2100);
+                        })(_pups[_i]);
+                    }
+                }
+            } catch(e) {}
             updateHeader();
             // ★ 通关胜利画面：等师傅把结局台词说完、玩家点击对话框后，再弹出
             window.__endingShown = false;
