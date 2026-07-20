@@ -5160,10 +5160,10 @@ const ShadowJudge = {
                         if (cmtHint && cmtHint.parentNode) cmtHint.parentNode.removeChild(cmtHint);
                         document.querySelectorAll('.puppet-card').forEach(function(c){ c.classList.remove('locked'); });
                         speaker.textContent = '路师傅';
-                        typewriter(dialogueText, '第一幕表现的不错，快点击书生手中的信进行第二场的表演吧。', 48);
+                        typewriter(dialogueText, '第一幕表现的不错，快点击书生手中的信，咱们接着演第一幕第二场——信中之秘。', 48);
                         waitForTypingDoneThen(function() {
                             // 点评完 1 秒后，信发亮（聚焦幕上信皮影，引导玩家点击）—— 正规剧情流程入口
-                            setTimeout(function() { focusOnLetter(enterAct2Directly); }, 1000);
+                            setTimeout(function() { focusOnLetter(enterAct1Scene2); }, 1000);
                         });
                     }
                     function onDlgClick(e) {
@@ -5559,6 +5559,20 @@ const ShadowJudge = {
             if (window.updatePuppetCards) window.updatePuppetCards(2); // 切到第二幕皮影箱卡片（白骨精/孙悟空/老者等）
             _silentAct2Enter = true;
             window._silentAct2Enter = true;  // 写入 window，让 startCurrentScene（另一IIFE）能读到
+            if (window.startCurrentScene) window.startCurrentScene();
+            else startCurrentScene();
+        } catch(e) {
+            if (window.showDialogue) window.showDialogue('路师傅', '（师傅顿了顿，接着说）咱们继续——下一场。');
+        }
+    }
+
+    // 第一幕第一场点评后，点信进入「第一幕第二场·信中之秘」，而非直接跳第二幕
+    // （原 enterAct2Directly 会直接 currentAct=2，导致正常首场流程跳过信中之秘）
+    function enterAct1Scene2() {
+        try {
+            gameState.currentAct = 1;
+            gameState.currentScene = 1;   // act1_scene2 信中之秘
+            if (window.updatePuppetCards) window.updatePuppetCards(1); // 确保皮影箱为第一幕（老者/金蟾/书生）
             if (window.startCurrentScene) window.startCurrentScene();
             else startCurrentScene();
         } catch(e) {
