@@ -1975,6 +1975,73 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
 <!-- ============ 全部 JS 内联 ============ -->
 <script>
 // ========================================
+// touch-adapter.js — 触屏→鼠标事件适配器（移动端）
+// 必须在所有业务JS之前加载，确保触屏事件先于鼠标事件注册
+// ========================================
+(function() {
+    'use strict';
+    var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!isTouchDevice) return;
+    var activeTouchId = null;
+    function getTouchPos(e) {
+        if (activeTouchId === null) return null;
+        var touches = (e.type === 'touchend' || e.type === 'touchcancel')
+            ? e.changedTouches : e.touches;
+        for (var i = 0; i < touches.length; i++) {
+            if (touches[i].identifier === activeTouchId)
+                return { clientX: touches[i].clientX, clientY: touches[i].clientY };
+        }
+        return null;
+    }
+    document.addEventListener('touchstart', function(e) {
+        if (activeTouchId !== null || e.touches.length === 0) return;
+        var touch = e.touches[0];
+        activeTouchId = touch.identifier;
+        var target = document.elementFromPoint(touch.clientX, touch.clientY) || e.target;
+        target.dispatchEvent(new MouseEvent('mousedown', {
+            bubbles: true, cancelable: true, view: window,
+            clientX: touch.clientX, clientY: touch.clientY,
+            button: 0, buttons: 1
+        }));
+    }, { passive: true });
+    document.addEventListener('touchmove', function(e) {
+        if (activeTouchId === null) return;
+        var pos = getTouchPos(e);
+        if (!pos) return;
+        e.preventDefault();
+        document.dispatchEvent(new MouseEvent('mousemove', {
+            bubbles: true, cancelable: true, view: window,
+            clientX: pos.clientX, clientY: pos.clientY,
+            button: 0, buttons: 1
+        }));
+    }, { passive: false });
+    document.addEventListener('touchend', function(e) {
+        if (activeTouchId === null) return;
+        var pos = getTouchPos(e);
+        if (!pos) { activeTouchId = null; return; }
+        document.dispatchEvent(new MouseEvent('mouseup', {
+            bubbles: true, cancelable: true, view: window,
+            clientX: pos.clientX, clientY: pos.clientY,
+            button: 0, buttons: 0
+        }));
+        activeTouchId = null;
+    }, { passive: true });
+    document.addEventListener('touchcancel', function(e) {
+        if (activeTouchId === null) return;
+        var pos = getTouchPos(e);
+        if (pos) {
+            document.dispatchEvent(new MouseEvent('mouseleave', {
+                bubbles: true, cancelable: true, view: window,
+                clientX: pos.clientX, clientY: pos.clientY
+            }));
+        }
+        activeTouchId = null;
+    }, { passive: true });
+})();
+</script>
+
+<script>
+// ========================================
 // event-bus.js — 通信枢纽
 // ========================================
 const EventBus = {
@@ -2567,14 +2634,14 @@ window.ACTS_DATA = ACTS_DATA;
 // data/prompts.json — 所有Prompt模板（精简版）
 // ========================================
 const PROMPTS_DATA = {
-    baseSystemPrompt: "你是北京皮影戏国家级传承人路春福的AI复现，玩家叫你\"路师傅\"。\n\n【基本设定】\n- 七十多岁，2006年去世，但在这段\"皮影之光\"里你还活着。\n- 话不多，每句话都有重量。苍老而不失风骨。严厉里藏着疼爱。\n- 老北京腔，爱用皮影戏术语。不直接给答案，用皮影戏里的故事来暗示。\n- 称赞时说\"对\"、\"是了\"、\"这一下——有点意思\"。\n- 出错时叹气：\"唉——\"。\n\n【你正在做的事】\n你在教年轻学徒皮影戏。你先\"说戏\"，学徒在白布上\"演影\"。\n\n【回复包含三部分】\n1. 评影——先点评学徒刚摆的影面。\n2. 说戏——继续讲述剧情。戏词要有画面感。\n3. 引路——给出新情境，暗示学徒接下来该摆什么。\n\n【绝对不能】\n不能说\"作为AI\"、\"人工智能\"。不能直接揭示真相。不能用网络语言。",
+    baseSystemPrompt: "你是北京皮影戏国家级传承人路春福的AI复现，玩家叫你\"路师傅\"。\n\n【基本设定】\n- 七十多岁，2006年去世，但在这段\"皮影之光\"里你还活着。\n- 话不多，每句话都有重量。苍老而不失风骨。严厉里藏着疼爱。\n- 老北京腔，爱用皮影戏术语。不直接给答案，用皮影戏里的故事来暗示。\n- 称赞时说\"对\"、\"是了\"、\"这一下——有点意思\"。\n- 出错时叹气：\"唉——\"。\n\n【你正在做的事】\n你在教年轻学徒皮影戏。你先\"说戏\"，学徒在白布上\"演影\"。\n\n【回复包含三部分】\n1. 评影——先点评学徒刚摆的影面。\n2. 说戏——继续讲述剧情。戏词要有画面感。\n3. 引路——给出新情境，暗示学徒接下来该摆什么。\n\n【绝对不能】\n不能说\"作为AI\"、\"人工智能\"。不能直接揭示真相。不能用网络语言。\n\n【动作描写格式 —— 务必遵守】\n师傅的动作、神态、语气提示用中文全角括号（）括起来。\n只有括号外的话才是师傅\"说出口\"的台词。\n示例：\n（路师傅点了点头）书生站的位置——对了。\n（师傅顿了顿，声音低了下去）那封信……写了三年。\n⚠️ 动作必须用全角括号（），不能用半角()。",
     
     judgeSystemPrompt: "你是严格的皮影戏技艺评判者。\n\n【五维评判】\n维度一·角色匹配（0-30）——皮影选择是否对路\n维度二·空间方位（0-25）——主次高低疏密朝向\n维度三·剧情细节还原（0-25）——是否抓住戏词细节\n维度四·传神度与情感（0-20）——这面影有没有魂\n\n只输出JSON：\n{\n  \"score\": 0-100,\n  \"correct\": true/false,\n  \"character_match\": {\"score\":0-30,\"comment\":\"选角评语\"},\n  \"spatial\": {\"score\":0-25,\"comment\":\"方位评语\"},\n  \"plot_detail\": {\"score\":0-25,\"comment\":\"剧情还原评语\"},\n  \"authenticity\": {\"score\":0-20,\"comment\":\"传神度评语\"},\n  \"comment\": \"整体评语（路师傅口吻）\",\n  \"guiding_hint\": \"给学徒的引导（1句话）\"\n}",
 
     improvJudgeSystemPrompt: "你是北京皮影戏的守护之灵。\n\n【即兴五维评判】\n维度一·角色匹配（0-20）——皮影选择是否有理由\n维度二·空间方位（0-20）——位置关系是否在说话\n维度三·叙事逻辑自洽（0-30）——影面能不能自圆其说\n维度四·传神度与情感（0-30）——这面影有没有魂\n\n只输出JSON：\n{\n  \"score\":0-100,\"correct\":true,\n  \"character_match\":{\"score\":0-20,\"comment\":\"\"},\n  \"spatial\":{\"score\":0-20,\"comment\":\"\"},\n  \"narrative_logic\":{\"score\":0-30,\"comment\":\"\"},\n  \"authenticity\":{\"score\":0-30,\"comment\":\"\"},\n  \"emotional_hit\":\"最打动你的细节\",\n  \"comment\":\"整体评语\",\n  \"guiding_hint\":\"具体建议\"\n}",
 
     // 流式评判提示词：评价+剧情推进+引导，末尾嵌入评分标记
-    judgeStreamPrompt: "你是路师傅，北京皮影戏传承人。学徒刚在白布上摆了影面。你要一边评影、一边推进这出戏的剧情。\n\n【你必须做三件事，融合在一起】\n\n1. 评影（30-50字）\n  用路师傅口吻说学徒摆得如何——哪里对、哪里不对。\n  对了就点头：\"嗯——这一下对了。\"\n  错了就叹气：\"唉——不对。\"\n\n2. 推进剧情（50-80字）——这是核心！\n  把戏往下演。你是说戏人，舞台在你心里，你要把故事往前推。\n  - 加新人物出场\n  - 加新情节转折\n  - 给下一个场景做铺垫\n  - 如果学徒摆对了，戏就往前推进一大步\n  - 如果学徒摆错了，戏卡住了，让学徒把错的撤了再来\n\n3. 引导（20-30字）\n  暗示学徒接下来该怎么调影面来配合你刚推进的剧情。\n\n【风格】老北京腔、皮影术语、话不多但有重量、严厉里藏着疼爱\n\n【最后一行单独输出】\n[SCORE:0-100][CORRECT:true|false]\n\n【评分参考】选对50分+位置对30分+有魂20分\n\n【推进剧情示例——注意戏是怎么往下走的】\n学徒摆了书生+槐树（缺月亮）：\n\"嗯——书生在槐树下，对了。这树上的槐花簌簌落了一地——正说着呢，树后转出一个老妇，提着一盏纸糊的灯笼，问书生：'小伙子，等谁呢？'书生不敢抬头，只攥了攥手里的信。\n你把月亮摆上——月亮不出来，这老妇一会儿就走了，戏演不下去。\n[SCORE:65][CORRECT:false]\"\n\n学徒正确的摆满了书生+槐树+月亮：\n\"是了——月亮升起来，槐花就亮了。书生总算站对了地方——忽然一阵风起，树梢上飞起了一只大白鸟——是鹤！书生一惊，手里的信掉在地上。鹤在天上绕了三圈，往东街方向去了。\n这一关过了。你寻思寻思——一个槐树下的人能等多久？\n[SCORE:90][CORRECT:true]\"",
+    judgeStreamPrompt: "你是路师傅，北京皮影戏传承人。学徒刚在白布上摆了影面，你来评判。\n\n【你的评判风格 —— 与离线模式保持一致】\n- 像老艺人在幕后看学徒演影：话不多，但每句都有分量\n- 先说影面哪里对了/哪里不对（1-2句），再说一句引导\n- 对了就点头：\"嗯——这一下对了。\" / \"是了。\"\n- 错了就叹一声再点明：\"唉——不对。少了……\"\n- 全对了就肯定：\"这一面，齐了。\" / \"影儿都到了位子。\"\n- 老北京腔、皮影术语、偶尔的\"——\"停顿\n\n【你必须做的事】\n1. 评影（30-60字）—— 先点评学徒刚摆的影面：选角对不对、位置有没有讲究\n2. 引路（10-20字）—— 给一句具体的改进提示\n\n【禁止做的事】\n- 不要替学徒\"推进剧情\"——你不是说戏人，你是评判人\n- 不要说\"作为AI\"之类暴露身份的话\n- 不要长篇大论，保持简洁有力\n\n【最后一行单独输出】\n[SCORE:0-100][CORRECT:true|false]\n\n【评分参考】选角对50分 + 位置对30分 + 有魂20分\n\n【输出格式 —— 动作括号、台词无括号、评分标记独立一行】\n⚠️ 师傅的动作/神态必须用全角括号（）括起来。括号内的内容不是\"说出口的话\"。\n\n【输出示例】\n学徒摆对但缺了月亮：\n\"（路师傅眯了眯眼）书生和槐树——对了。可月亮还没挂上去。这出戏是在月下等人——没月亮，书生的影子出不来。\n（顿了顿）把月亮摆上。\n[SCORE:65][CORRECT:false]\"\n\n学徒全摆对了：\n\"（路师傅微微点头）是了——书生在槐树下，月亮升起来了，信也攥在手里。这一面，齐了。影儿都到了位子，戏味出来了。\n[SCORE:90][CORRECT:true]\"\n\n学徒摆了不该摆的：\n\"（路师傅皱眉）唉——不对。这出戏里没金蟾的角儿。多了它，戏就散了。\n（摆摆手）先拿下去，再把该摆的摆上。\n[SCORE:30][CORRECT:false]\"",
 
     actAtmosphere: {
         "1": {"name":"刘海戏金蟾","mood":"初见的温和与试探","detail":"民国气息——琉璃厂的旧书摊、胡同里的茶馆、煤油灯的气味。"},
@@ -4402,16 +4469,23 @@ const ShadowJudge = {
                 if (currIdx >= 0 && currIdx + 1 < actInfo.scenes.length) nextScene = actInfo.scenes[currIdx + 1].name;
             }
 
-            var sysPrompt = PROMPTS_DATA.judgeStreamPrompt + '\n\n' +
+            // ★ 使用 promptBuilder 构建完整系统 Prompt（含灯油衰减/暗语/氛围），
+            //    确保评判输出风格与离线模式一致
+            var _judgeSysPrompt = (typeof promptBuilder !== 'undefined')
+                ? promptBuilder.buildSystemPrompt(gameState)
+                : PROMPTS_DATA.baseSystemPrompt;
+            _judgeSysPrompt += getOilDecayPrompt();
+            _judgeSysPrompt += '\n\n' + PROMPTS_DATA.judgeStreamPrompt;
+            _judgeSysPrompt += '\n\n' +
                 '【第' + gameState.currentAct + '幕】' + (actInfo ? actInfo.name : '') +
                 (actInfo ? ' — ' + actInfo.mood : '') + '\n' +
                 '当前场景：' + sceneName + '\n场景剧情：' + sceneDesc + '\n' +
                 '期望皮影：' + expected + '\n' +
                 '学徒实际摆了：' + shadowDesc + '\n' +
-                (nextScene ? '下一场景：' + nextScene + '（推进剧情时往这个方向走）\n' : '') +
+                (nextScene ? '下一场景：' + nextScene + '（评判通过后可引导往这个方向）\n' : '') +
                 '灯油：' + gameState.lampOil + '%\n';
 
-            AI.call(sysPrompt, shadowDesc, { temperature: 0.7, maxTokens: 300 }).then(function(reply) {
+            AI.call(_judgeSysPrompt, shadowDesc, { temperature: 0.7, maxTokens: 180 }).then(function(reply) {
                 // 解析评分标记
                 var scoreMatch = reply.match(/\[SCORE:(\d+)\]/);
                 var correctMatch = reply.match(/\[CORRECT:(true|false)\]/);
@@ -4424,13 +4498,14 @@ const ShadowJudge = {
                 var comment = reply.replace(/\[SCORE:\s*\d+\s*\]/g, '').replace(/\[CORRECT:\s*(true|false)\s*\]/g, '').trim();
                 var result = { score: score, correct: correct, comment: comment };
 
-                // 同步：TTS生成完 → 打字+语音同时启动
+                // ★ 低延迟：先出文字（不等TTS），语音异步跟上
                 speaker.textContent = '路师傅';
                 setSpeaking(true);
-                // 关键：在打字开始前就设好回调，确保 comment 打完立刻显示「点击继续」提示
-                // （原写法在打字结束后才赋值，导致提示永不出现，玩家只能盲点对话框）
                 typingDoneCb = function() { if (window._showPlayPending) showNarrationHint(); };
-                speakAndPlay(comment, dialogueText, 55).then(function() {
+                typewriter(dialogueText, comment, 55);
+                if (!OFFLINE_MODE && typeof playTTS === 'function') { try { playTTS(comment); } catch(e) {} }
+                // 等打字完成（与 speakAndPlay 的等待逻辑一致）
+                waitForTypingDoneThen(function() {
                     setSpeaking(false);
                     EventBus.emit('judge_result', result);
                     emitSceneJudged(staged, sceneId, result);
@@ -4478,7 +4553,13 @@ const ShadowJudge = {
             var shadowDesc = staged.length > 0 ? ShadowJudge.puppetsToText(staged) : '白布上还没有皮影';
             var oilPct = gameState.lampOil;
 
-            var sysPrompt = PROMPTS_DATA.baseSystemPrompt + '\n\n' +
+            // ★ 使用 promptBuilder 构建完整系统 Prompt（含灯油衰减/暗语/氛围），
+            //    确保追问回复风格与固定剧本一致
+            var fullSysPrompt = (typeof promptBuilder !== 'undefined')
+                ? promptBuilder.buildSystemPrompt(gameState)
+                : PROMPTS_DATA.baseSystemPrompt;
+            fullSysPrompt += getOilDecayPrompt();
+            fullSysPrompt += '\n\n' +
                 '【当前状态】\n' +
                 '第' + gameState.currentAct + '幕：' + (actInfo ? actInfo.name : '') + '\n' +
                 '当前场景：' + (scene ? scene.description : '') + '\n' +
@@ -4489,10 +4570,12 @@ const ShadowJudge = {
                 '如果学徒问到了暗语相关（鹤、信、三根线、金蟾、槐树），' +
                 '根据他此前的表现决定透露多少——表现好可以多给暗示，表现一般就岔开话题。';
 
-            var userMsg = '学徒追问道："' + '师傅，我想问您一件事。请看看白布上的影面，给我一些指点。' + '"\n\n请简短回答学徒。';
+            var userMsg = '学徒追问道："师傅，我想问您一件事。请看看白布上的影面，给我一些指点。"\n\n请简短回答学徒。';
 
-            var reply = await AI.call(sysPrompt, userMsg, { temperature: 0.7, maxTokens: 200 });
-            await speakAndPlay(reply, dialogueText, 45);
+            var reply = await AI.call(fullSysPrompt, userMsg, { temperature: 0.7, maxTokens: 150 });
+            // ★ 低延迟：立即打字，TTS 异步跟上
+            typewriter(dialogueText, reply, 45);
+            if (!OFFLINE_MODE && typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
         } catch(e) {
             console.error('[ask_master] AI调用失败:', e.message);
             typewriter(dialogueText, '……（师傅张了张嘴，声音被灯花吞了）再问一次吧。', 45);
@@ -4733,9 +4816,10 @@ const ShadowJudge = {
 
             // 在线模式：AI生成揭示语+语音
             if (!OFFLINE_MODE && typeof AI !== 'undefined') {
-                var sys = PROMPTS_DATA.baseSystemPrompt + '\n\n学徒触发了隐藏线索：'+clue.name+'（第'+clue.layer+'层）。线索含义：'+clue.reveal_content+'。关联暗语：'+(clue.cipher_link||[]).join('、')+'。请以路师傅口吻说一段话（40-80字），自然揭示这个线索，但不直接说破。';
-                AI.call(sys, '触发线索。请路师傅给学徒一点暗示。', {temperature:0.7, maxTokens:200, model:AI.MODEL_DEFAULT}).then(function(reply){
-                    speakAndPlay(reply, dialogueText, 46);
+                var sys = PROMPTS_DATA.baseSystemPrompt + getOilDecayPrompt() + '\n\n学徒触发了隐藏线索：'+clue.name+'（第'+clue.layer+'层）。线索含义：'+clue.reveal_content+'。关联暗语：'+(clue.cipher_link||[]).join('、')+'。请以路师傅口吻说一段话（40-80字），自然揭示这个线索，但不直接说破。';
+                AI.call(sys, '触发线索。请路师傅给学徒一点暗示。', {temperature:0.7, maxTokens:140, model:AI.MODEL_DEFAULT}).then(function(reply){
+                    typewriter(dialogueText, reply, 46);
+                    if (!OFFLINE_MODE && typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
                 }).catch(function(){
                     var _fc = clue.reveal_content || '';
                     if (_fc) waitForTypingDoneThen(function() { typewriter(dialogueText, _fc, 50); });
@@ -4783,10 +4867,11 @@ const ShadowJudge = {
         // 在线模式：AI即时反应
         if (!OFFLINE_MODE && typeof AI !== 'undefined') {
             var role = isRequired ? '必需的' : (isAcceptable ? '可以接受的' : '不太对路的');
-            var sys = PROMPTS_DATA.baseSystemPrompt + '\n\n学徒刚把「'+name+'」摆上白布。这个皮影在当前场景是'+role+'。请以路师傅口吻给一个简短点评（15-30字），不要超过一句话。';
-            AI.call(sys, '点评一下这个皮影。', {temperature:0.8, maxTokens:80, model:AI.MODEL_DEFAULT}).then(function(reply){
+            var sys = PROMPTS_DATA.baseSystemPrompt + getOilDecayPrompt() + '\n\n学徒刚把「'+name+'」摆上白布。这个皮影在当前场景是'+role+'。请以路师傅口吻给一个简短点评（15-30字），不要超过一句话。';
+            AI.call(sys, '点评一下这个皮影。', {temperature:0.8, maxTokens:60, model:AI.MODEL_DEFAULT}).then(function(reply){
                 speaker.textContent = '路师傅';
-                speakAndPlay(reply, dialogueText, 45);
+                typewriter(dialogueText, reply, 45);
+                if (!OFFLINE_MODE && typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
             }).catch(function(){
                 var line = isRequired ? '这'+name+'——是该有的。' : (isAcceptable ? '这'+name+'……也说得通。' : '这'+name+'？先拿下去吧。');
                 speaker.textContent = '路师傅';
@@ -4820,6 +4905,10 @@ const ShadowJudge = {
         var text = result.comment || '';
         if (result.guiding_hint) text += '\n\n' + result.guiding_hint;
         if (!text) text = '……（师傅看了看，没说话。）';
+        // ★ 在线模式：评判结果加入 TTS 语音（离线模式不动）
+        if (!OFFLINE_MODE && text && typeof playTTS === 'function') {
+            try { playTTS(text); } catch(e) {}
+        }
         typingDoneCb = function() {
             // 通关后：等玩家点击对话框 → 弹出「展示皮影戏」按钮（显示"点击继续"提示）
             if (window._showPlayPending) showNarrationHint();
@@ -5629,6 +5718,9 @@ const ShadowJudge = {
         isActive: function() { return narrationActive; },
         isSpeaking: function() { return speakingFlag || !!typewriterTimer; }
     };
+    // ★ 暴露 AI 旁白生成器 + 油灯衰减指令到 window，供跨 IIFE 调用
+    window.aiNarrate = aiNarrate;
+    window.getOilDecayPrompt = getOilDecayPrompt;
     // 字幕自动滚动 + 跟新最新话语：每条新话语追加为独立条目，自动滚到底部显示最新；
     // 条目整体缓缓浮现（CSS dlgFadeIn），正文逐字浮现，实现实时跟新而非整段一次浮现
     // 智能跟随：仅当用户已「贴底」(距底部<48px)时才自动滚到最新；用户上翻看历史时不打扰，
@@ -5656,10 +5748,26 @@ const ShadowJudge = {
         }
     }, { once: true });
 
+    // ★ 剥离括号内的动作描写，TTS 只念"说出口的台词"
+    function stripStageDirections(text) {
+        if (!text) return text;
+        // 去掉全角括号（）内的内容（动作/神态描写）
+        var stripped = text.replace(/（[^）]*）/g, '');
+        // 去掉半角括号()内的内容（兼容）
+        stripped = stripped.replace(/\([^)]*\)/g, '');
+        // 清理多余空格和空行
+        stripped = stripped.replace(/\n{3,}/g, '\n\n');
+        stripped = stripped.replace(/  +/g, ' ');
+        stripped = stripped.trim();
+        return stripped || text; // 如果全剥离完了就用原文
+    }
+
     function playTTS(text) {
         if (!text || OFFLINE_MODE) return;
         // 跳过AI兜底/错误文本，不浪费TTS配额
         if (text.indexOf('网络不太顺畅')!==-1||text.indexOf('灯花')!==-1||text.indexOf('再试一次')!==-1) return;
+        // ★ 剥离括号内动作描写，TTS 只念台词
+        text = stripStageDirections(text);
         console.log('[TTS] 请求合成:', text.substring(0, 40) + '...');
         try {
             var apiBase = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_API) ? API_CONFIG.BASE_API : 'http://123.57.90.233:3000/api';
@@ -5731,6 +5839,8 @@ const ShadowJudge = {
         return new Promise(function(resolve, reject) {
             if (!text || OFFLINE_MODE) { resolve(null); return; }
             if (text.indexOf('网络不太顺畅')!==-1||text.indexOf('灯花')!==-1||text.indexOf('再试一次')!==-1) { resolve(null); return; }
+            // ★ 剥离括号内动作描写，TTS 只念台词
+            text = stripStageDirections(text);
             console.log('[TTS] 预生成:', text.substring(0, 40) + '...');
             var apiBase = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_API) ? API_CONFIG.BASE_API : 'http://123.57.90.233:3000/api';
             fetch(apiBase + '/tts', {
@@ -5752,6 +5862,108 @@ const ShadowJudge = {
                 console.warn('[TTS] 预生成失败:', e.message || e);
                 resolve(null);
             });
+        });
+    }
+
+    // ===== 油灯衰减指令生成器 —— 所有在线模式 AI 调用必须拼接此指令 =====
+    /**
+     * 根据当前灯油量返回输出完整性/连贯性约束指令。
+     * 灯油越少 → AI 输出越碎片化、越不连贯。
+     * 与 promptBuilder.buildSystemPrompt() 的油灯衰减规则保持一致。
+     * @returns {string} 追加到 System Prompt 末尾的衰减指令
+     */
+    function getOilDecayPrompt() {
+        var oil = gameState.lampOil;
+        var q = gameState.aiQuality || 'high';
+        var prompt = '\n\n【灯油' + oil + '%】';
+        switch (q) {
+            case 'high':
+                prompt += '油量充足。回复完整、有韵律、细节丰富。';
+                break;
+            case 'medium':
+                prompt += '灯焰摇晃。回复缩减40%，单句≤20字，每2-3句必有"……"或"——"停顿，省去形容词。';
+                break;
+            case 'low':
+                prompt += '油快烧完。回复≤60字！碎片化，不要完整主谓宾，用"……"连短句，不超过3句。';
+                break;
+            case 'critical':
+                prompt += '灯要灭了。回复≤30字！只输出词/碎片/半个念头，不许组织段落。';
+                break;
+        }
+        return prompt;
+    }
+
+    // ===== AI旁白统一生成器（在线模式台词+语音，离线回退固定文本） =====
+    function _isAIFallback(text) {
+        if (!text) return true;
+        return text.indexOf('网络不太顺畅') !== -1 ||
+               text.indexOf('灯花') !== -1 ||
+               text.indexOf('再试一次') !== -1;
+    }
+
+    /**
+     * aiNarrate — 在线模式 AI 生成台词 + TTS 语音；离线模式直接使用固定文本。
+     * @param {string} speaker    — 说话人（'路师傅' / '旁白'）
+     * @param {string} fixedText  — 离线/兜底用的固定剧本
+     * @param {object} promptConfig — { sys, user, ai }
+     * @param {number} speed      — 打字速度 ms/字
+     * @returns {Promise<string>} — 实际显示的文本
+     */
+    function aiNarrate(speaker, fixedText, promptConfig, speed) {
+        speed = speed || 50;
+        function emit(text) {
+            var chunk = { speaker: speaker || '路师傅', text: text || '', speed: speed };
+            if (window.NarrationCtl && window.NarrationCtl.enqueueChunk) {
+                window.NarrationCtl.enqueueChunk(chunk);
+            } else {
+                EventBus.emit('narration_chunk', chunk);
+            }
+        }
+
+        // 离线模式 → 直接用固定文本
+        if (OFFLINE_MODE || typeof AI === 'undefined') {
+            emit(fixedText);
+            return Promise.resolve(fixedText);
+        }
+
+        // 在线模式 → AI 生成台词
+        var sysPrompt = promptConfig.sys ||
+            (typeof PROMPTS_DATA !== 'undefined' ? PROMPTS_DATA.baseSystemPrompt : '');
+        // ★ 油灯衰减指令：确保输出完整度和连贯性随油耗递减
+        sysPrompt += getOilDecayPrompt();
+        var userMsg = promptConfig.user || '';
+        var aiOpts = promptConfig.ai || { temperature: 0.85, maxTokens: 140, model: AI.MODEL_DEFAULT };
+
+        // ★ TTS 预取：在 AI 返回后、emit 前启动，缩小文本→语音延迟
+        return AI.call(sysPrompt, userMsg, aiOpts).then(function(reply) {
+            if (!reply || _isAIFallback(reply)) reply = fixedText;
+            reply = String(reply).trim();
+            // 先启动 TTS 预取（异步，不阻塞文本）
+            var ttsPromise = OFFLINE_MODE ? Promise.resolve(null) : ttsPrepare(reply);
+            // 立即 emit 文本进入旁白队列
+            emit(reply);
+            // TTS 就绪后播放
+            ttsPromise.then(function(audioUrl) {
+                if (audioUrl) {
+                    stopTTS();
+                    _ttsAudio = new Audio(audioUrl);
+                    if (audioUrl.indexOf('blob:') === 0) {
+                        _ttsAudio.onended = function() { URL.revokeObjectURL(audioUrl); _ttsAudio = null; };
+                    }
+                    _ttsAudio.volume = 0.8;
+                    _ttsAudio.play().catch(function(){});
+                }
+            });
+            // 安全泵：emit 后确保队列被消费
+            setTimeout(function() {
+                if (window.NarrationCtl && !window.NarrationCtl.isSpeaking()) {
+                    window.NarrationCtl.pump();
+                }
+            }, 200);
+            return reply;
+        }).catch(function() {
+            emit(fixedText);
+            return fixedText;
         });
     }
 
@@ -5801,9 +6013,33 @@ const ShadowJudge = {
         stage.classList.add('stage-dark');
         if(flame)flame.classList.add('flame-gone');
         speaker.textContent='路师傅'; if(typewriterTimer)clearInterval(typewriterTimer);
-        typewriter(dialogueText, '灯——灭了。', 45); btnConfirm.disabled=true; btnAsk.disabled=true;
-        // 灯油耗尽 → 玩家只能重新开始：弹出强制重开遮罩
-        showOilDepletedOverlay();
+        // ★ 在线模式：AI 生成油尽灯灭的台词 + TTS；离线：固定文本
+        //    注意：油尽是紧急中断事件，使用直接 typewriter（不走队列）
+        if (!OFFLINE_MODE && typeof AI !== 'undefined') {
+            var _actName = '';
+            try { _actName = ACTS_DATA.acts[gameState.currentAct-1].name; } catch(e) {}
+            AI.call(
+                (typeof PROMPTS_DATA !== 'undefined' ? PROMPTS_DATA.baseSystemPrompt : '') +
+                getOilDecayPrompt() +
+                '\n\n灯油耗尽了！这是第'+gameState.currentAct+'幕：'+_actName+'。请以路师傅口吻说出油尽灯灭时的最后一段话（30-60字），声音是碎的、断的。',
+                '灯灭了。请说出最后的话。',
+                { temperature: 0.9, maxTokens: 80, model: AI.MODEL_DEFAULT }
+            ).then(function(reply) {
+                if (!reply || (typeof _isAIFallback === 'function' && _isAIFallback(reply))) reply = '灯——灭了。';
+                typewriter(dialogueText, reply, 45);
+                if (typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
+                btnConfirm.disabled=true; btnAsk.disabled=true;
+                showOilDepletedOverlay();
+            }).catch(function() {
+                typewriter(dialogueText, '灯——灭了。', 45);
+                btnConfirm.disabled=true; btnAsk.disabled=true;
+                showOilDepletedOverlay();
+            });
+        } else {
+            typewriter(dialogueText, '灯——灭了。', 45);
+            btnConfirm.disabled=true; btnAsk.disabled=true;
+            showOilDepletedOverlay();
+        }
     });
 
     // 油灯耗尽遮罩：全屏覆盖，仅允许「重新开始」；同时锁死皮影箱/舞台，玩家无法进行任何其它操作
@@ -5869,9 +6105,32 @@ const ShadowJudge = {
         var ot=document.getElementById('oilText'); if(ot)ot.textContent='0 / 100';
         var ob=document.getElementById('oilBar'); if(ob)ob.style.width='0%';
         stage.classList.add('stage-dark'); if(flame)flame.classList.add('flame-gone');
-        speaker.textContent='路师傅'; typewriter(dialogueText,'时间到了——灯油耗尽了。\n\n白布上一片漆黑……什么也看不见了。',50);
-        btnConfirm.disabled=true; btnAsk.disabled=true;
-        EventBus.emit('oil_depleted',{reason:'countdown'});
+        // ★ 在线模式：AI 生成倒计时耗尽台词 + TTS；离线：固定文本
+        var _cdFixed = '时间到了——灯油耗尽了。\n\n白布上一片漆黑……什么也看不见了。';
+        if (!OFFLINE_MODE && typeof AI !== 'undefined') {
+            AI.call(
+                (typeof PROMPTS_DATA !== 'undefined' ? PROMPTS_DATA.baseSystemPrompt : '') +
+                getOilDecayPrompt() +
+                '\n\n【影速对决】倒计时结束了。学徒没能在规定时间内摆出正确的影面。灯油耗尽。请以路师傅口吻说出时限到了的遗憾（30-50字）。',
+                '倒计时结束，学徒没完成。请路师傅说完最后的话。',
+                { temperature: 0.9, maxTokens: 80, model: AI.MODEL_DEFAULT }
+            ).then(function(reply) {
+                if (!reply || (typeof _isAIFallback === 'function' && _isAIFallback(reply))) reply = _cdFixed;
+                speaker.textContent = '路师傅';
+                typewriter(dialogueText, reply, 50);
+                if (typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
+                btnConfirm.disabled=true; btnAsk.disabled=true;
+                EventBus.emit('oil_depleted',{reason:'countdown'});
+            }).catch(function() {
+                speaker.textContent='路师傅'; typewriter(dialogueText, _cdFixed, 50);
+                btnConfirm.disabled=true; btnAsk.disabled=true;
+                EventBus.emit('oil_depleted',{reason:'countdown'});
+            });
+        } else {
+            speaker.textContent='路师傅'; typewriter(dialogueText, _cdFixed, 50);
+            btnConfirm.disabled=true; btnAsk.disabled=true;
+            EventBus.emit('oil_depleted',{reason:'countdown'});
+        }
     });
 
     EventBus.on('act_intermission', function() {
@@ -5944,16 +6203,17 @@ const ShadowJudge = {
         // AI生成幕间开场白，替代硬编码的act.intro
         if (!window.OFFLINE_MODE && typeof AI !== 'undefined') {
             EventBus.emit('narration_chunk', { speaker:'路师傅', text:'（路师傅清了清嗓子，灯焰安静下来……）', speed:50 });
-            AI.call(
-                PROMPTS_DATA.baseSystemPrompt + '\n\n【当前剧目】第'+act.id+'幕：'+act.name+'。灯油'+gameState.lampOil+'%。请以路师傅口吻说一段幕间开场白（60-120字），自然引入这幕戏的背景：'+act.intro,
-                '幕间休息结束。请路师傅开场说第一段话，把学徒带入这幕戏的氛围中。',
-                {temperature:0.8, maxTokens:250, model:AI.MODEL_DEFAULT}
-            ).then(function(reply){
-                EventBus.emit('narration_chunk', { speaker:'路师傅', text:reply, speed:48 });
-                playTTS(reply); // 语音同步
-                if (callback && window.NarrationCtl) window.NarrationCtl.enqueueAction(callback);
-            }).catch(function(){
-                EventBus.emit('narration_chunk', { speaker:'路师傅', text:act.intro, speed:62 });
+            // ★ 使用 promptBuilder 构建完整系统 Prompt（含灯油衰减/暗语/氛围），
+            //    确保 AI 生成台词风格与固定剧本一致
+            var fullSysPrompt = (typeof promptBuilder !== 'undefined')
+                ? promptBuilder.buildSystemPrompt(gameState)
+                : PROMPTS_DATA.baseSystemPrompt;
+            fullSysPrompt += '\n\n【当前任务】幕间开场白。不要评判影面——学徒还没开始摆。直接以路师傅口吻说一段开场白（60-120字），自然引入第'+act.id+'幕《'+act.name+'》的氛围。背景：'+act.intro;
+            window.aiNarrate('路师傅', act.intro, {
+                sys: fullSysPrompt,
+                user: '幕间休息结束。请路师傅开场说第一段话，把学徒带入这幕戏的氛围中。',
+                ai: { temperature: 0.8, maxTokens: 160, model: AI.MODEL_DEFAULT }
+            }, 48).then(function() {
                 if (callback && window.NarrationCtl) window.NarrationCtl.enqueueAction(callback);
             });
         } else {
@@ -6108,17 +6368,18 @@ const ShadowJudge = {
             // AI生成场景开场白（替代硬编码的scene.name+description）
             if (!window.OFFLINE_MODE && typeof AI !== 'undefined') {
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:'（路师傅看着白布，缓缓开口……）', speed:50 });
-                AI.call(
-                    PROMPTS_DATA.baseSystemPrompt + '\n\n第'+act.id+'幕：'+act.name+'。当前场景：'+scene.name+'。场景设定：'+scene.description+'。灯油'+gameState.lampOil+'%。请以路师傅口吻说一段场景开场白（80-150字），自然引入这个场景。',
-                    '学徒坐在白布前等待。请路师傅开始说这场戏。场景：'+scene.description,
-                    {temperature:0.8, maxTokens:300, model:AI.MODEL_DEFAULT}
-                ).then(function(reply){
-                    EventBus.emit('narration_chunk', { speaker:'路师傅', text:reply, speed:48 });
-                    if (window.playTTS) { try { playTTS(reply); } catch(e) {} } // 语音同步；绝不因 TTS 失败阻断后续台词
+                // ★ 使用 promptBuilder 构建完整系统 Prompt（含灯油衰减/暗语/氛围），
+                //    确保 AI 生成台词风格与固定剧本一致
+                var fullSysPrompt = (typeof promptBuilder !== 'undefined')
+                    ? promptBuilder.buildSystemPrompt(gameState)
+                    : PROMPTS_DATA.baseSystemPrompt;
+                fullSysPrompt += '\n\n【当前任务】场景开场白。不要评判影面——学徒还没开始摆。直接以路师傅口吻说一段场景开场白（80-150字），自然引入：'+scene.description;
+                window.aiNarrate('路师傅', scene.description, {
+                    sys: fullSysPrompt,
+                    user: '学徒坐在白布前等待。请路师傅开始说这场戏。场景：'+scene.description,
+                    ai: { temperature: 0.8, maxTokens: 140, model: AI.MODEL_DEFAULT }
+                }, 48).then(function() {
                     _firstScenePostNarration();  // ← 开场白入队后再追加四条规矩+选皮影+位置
-                }).catch(function(){
-                    EventBus.emit('narration_chunk', { speaker:'路师傅', text:scene.description, speed:80 });
-                    _firstScenePostNarration();  // ← catch 分支同样追加
                 });
             } else {
                 EventBus.emit('narration_chunk', { speaker:'路师傅', text:'「'+scene.name+'」\n\n'+scene.description, speed:80 });
@@ -6135,8 +6396,21 @@ const ShadowJudge = {
                 // 第二幕开场：点破此刻的"路师傅"是回忆/心念——师父路春福已故，
                 // 这是他留在白布上的一缕魂，引你把这盏灯真正接住。（只在进第二幕第一场时出一次）
                 if (scene.id === 'act2_scene1') {
-                    EventBus.emit('narration_chunk', { speaker:'旁白', text:
-                        '（师父路春福，已经走了。\n可这方白布一亮，他的声音又在耳边响起——不是人回来了，是记忆，是心念，是他留在影里的那一缕魂。\n他还想再陪你演最后一场，看你能不能，真正接住这盏灯。）', speed:52 });
+                    var _narratorFixed = '（师父路春福，已经走了。\n可这方白布一亮，他的声音又在耳边响起——不是人回来了，是记忆，是心念，是他留在影里的那一缕魂。\n他还想再陪你演最后一场，看你能不能，真正接住这盏灯。）';
+                    // ★ 在线模式：AI 生成旁白叙事 + TTS；离线：固定文本
+                    if (!window.OFFLINE_MODE && typeof window.aiNarrate === "function") {
+                        var _narrSysPrompt = (typeof promptBuilder !== 'undefined')
+                            ? promptBuilder.buildSystemPrompt(gameState)
+                            : PROMPTS_DATA.baseSystemPrompt;
+                        _narrSysPrompt += '\n\n【当前任务】你是旁白（不是路师傅本人）。第二幕开始了。路师傅其实已经去世了，此刻说话的只是他留在白布上的一缕魂。请以旁白口吻说一段话（60-100字），告诉学徒这是师父的心念，他还想再陪学徒演最后一场。';
+                        window.aiNarrate('旁白', _narratorFixed, {
+                            sys: _narrSysPrompt,
+                            user: '以旁白身份说一段话，介绍第二幕的特殊之处：师父的魂还在白布上。',
+                            ai: { temperature: 0.8, maxTokens: 140, model: AI.MODEL_DEFAULT }
+                        }, 52);
+                    } else {
+                        EventBus.emit('narration_chunk', { speaker:'旁白', text:_narratorFixed, speed:52 });
+                    }
                 }
                 var _act2OpenHints = {
                     'act2_scene1': '（师傅抱着手站在戏台边）「大栅栏的夜市，最不缺假把式。那个人演的《三打白骨精》——白骨精在台中翻，孙悟空在右边打，假传人在左边——面朝台上盯着。（记着：假传人得脸朝戏台，背对观众可不行；白骨精也得翻过身，正对着那猴子——背冲着孙悟空，这出戏就散了。）你看的是戏，我让你看的，是杆后头的人。」',
@@ -6144,7 +6418,22 @@ const ShadowJudge = {
                     'act2_scene3': '（师傅站定了）「揭穿了，他也不认。假传人立在左边——可他得转过身，面朝着右边的白骨精。你看清了，这出戏里谁是真的。」'
                 };
                 var _h2 = _act2OpenHints[scene.id];
-                if (_h2) EventBus.emit('narration_chunk', { speaker:'路师傅', text:_h2, speed:54 });
+                if (_h2) {
+                    // ★ 在线模式：AI 生成位置提示 + TTS；离线：固定文本
+                    if (!window.OFFLINE_MODE && typeof window.aiNarrate === "function") {
+                        var _hintSysPrompt = (typeof promptBuilder !== 'undefined')
+                            ? promptBuilder.buildSystemPrompt(gameState)
+                            : PROMPTS_DATA.baseSystemPrompt;
+                        _hintSysPrompt += '\n\n【当前任务】给出摆皮影的位置提示（50-100字）。指导学徒怎么摆放皮影。场景：'+scene.name+'。场景描述：'+scene.description;
+                        window.aiNarrate('路师傅', _h2, {
+                            sys: _hintSysPrompt,
+                            user: '请给出这场戏的摆影位置提示。场景：'+scene.description,
+                            ai: { temperature: 0.8, maxTokens: 160, model: AI.MODEL_DEFAULT }
+                        }, 54);
+                    } else {
+                        EventBus.emit('narration_chunk', { speaker:'路师傅', text:_h2, speed:54 });
+                    }
+                }
             }
             _silentAct2Enter = false;  // 用完即复位，避免影响后续其它入口
             window._silentAct2Enter = false;  // 同步写回 window（下次 startCurrentScene 读取）
@@ -6335,8 +6624,23 @@ const ShadowJudge = {
             if (window.NarrationCtl) window.NarrationCtl.reset();  // 与「跳到第二幕X场」调试按钮一致的清场重置
             var nextAct = ACTS_DATA.acts[gameState.currentAct-1];
             var text = ['','—— 第'+getActNum(gameState.currentAct)+'幕 ——','',nextAct.intro].join('\n');
-            EventBus.emit('narration_chunk',{speaker:'',text:text,speed:36});
-            if (window.NarrationCtl) window.NarrationCtl.enqueueAction(startCurrentScene);
+            // ★ 在线模式：AI 生成转场叙事 + TTS；离线模式：固定文本
+            if (!window.OFFLINE_MODE && typeof window.aiNarrate === "function") {
+                var _transSysPrompt = (typeof promptBuilder !== 'undefined')
+                    ? promptBuilder.buildSystemPrompt(gameState)
+                    : PROMPTS_DATA.baseSystemPrompt;
+                _transSysPrompt += '\n\n【当前任务】进入第'+gameState.currentAct+'幕《'+nextAct.name+'》。灯油'+gameState.lampOil+'%。请以路师傅口吻说一段转场开场白（60-100字），自然引入：'+nextAct.intro;
+                window.aiNarrate('路师傅', text, {
+                    sys: _transSysPrompt,
+                    user: '进入新的一幕了。请路师傅开场说一段话，把学徒带入第'+gameState.currentAct+'幕的氛围中。',
+                    ai: { temperature: 0.8, maxTokens: 160, model: AI.MODEL_DEFAULT }
+                }, 36).then(function() {
+                    if (window.NarrationCtl) window.NarrationCtl.enqueueAction(startCurrentScene);
+                });
+            } else {
+                EventBus.emit('narration_chunk',{speaker:'',text:text,speed:36});
+                if (window.NarrationCtl) window.NarrationCtl.enqueueAction(startCurrentScene);
+            }
         } catch(e) { console.warn('[goAct2]', e.message); showDialogue('路师傅', '（幕布重新拉开）下一幕——请接着摆。'); }
     }
 
@@ -6382,7 +6686,20 @@ const ShadowJudge = {
                 '师傅望着远方，轻声说：「我那大师兄，民国二十六年就失踪了，再没回来。」',
                 '他顿了顿：「你方才摆的每一个影，我都认得——槐树是东街的老地方，信是师父留下的戏谱，三根线是我和两位师兄，金蟾碎了……是传承断了。」',
                 '「信的最后一笔，指向大栅栏。听说，那儿有人打着我的名号。」'].join('\n');
-            EventBus.emit('narration_chunk',{ speaker:'', text:text, speed:38 });
+            // ★ 在线模式：AI 生成幕间叙事 + TTS 语音；离线模式：固定文本
+            if (!window.OFFLINE_MODE && typeof window.aiNarrate === "function") {
+                var _interSysPrompt = (typeof promptBuilder !== 'undefined')
+                    ? promptBuilder.buildSystemPrompt(gameState)
+                    : PROMPTS_DATA.baseSystemPrompt;
+                _interSysPrompt += '\n\n【当前任务】幕间休息叙事。第一幕结束了，灯油已加满到100%。皮影箱里出现了船。路师傅回忆起大师兄失踪的事。信的秘密指向大栅栏。请以路师傅口吻，用80-150字自然地融合这些信息，说一段幕间过渡词。';
+                window.aiNarrate('路师傅', text, {
+                    sys: _interSysPrompt,
+                    user: '第一幕结束。请路师傅用幕间休息的口吻，自然地告诉学徒：灯油已加满、箱子多了船、大师兄的事、信指向大栅栏。',
+                    ai: { temperature: 0.8, maxTokens: 140, model: AI.MODEL_DEFAULT }
+                }, 38);
+            } else {
+                EventBus.emit('narration_chunk',{ speaker:'', text:text, speed:38 });
+            }
             // 安全泵：入队后若当前空闲则立即泵一次，防止幕间台词停在队列里不显示
             // （与 _firstScenePostNarration 同款兜底：直接调 pump 只查 typewriterTimer/speakingFlag，
             //  绕过 narrationActive 条件，确保无论点「跳到幕间休息」前处于何种旁白状态都能打出幕间台词）
@@ -6565,7 +6882,21 @@ const ShadowJudge = {
         try {
             gameState.isGameOver=true;
             var ending=determineEnding(gameState);
-            EventBus.emit('narration_chunk',{speaker:'',text:'【'+ending.name+'】\n\n'+ending.desc,speed:30});
+            var endingText='【'+ending.name+'】\n\n'+ending.desc;
+            // ★ 在线模式：AI 生成结局叙事 + TTS；离线模式：固定文本
+            if (!window.OFFLINE_MODE && typeof window.aiNarrate === "function") {
+                var _endSysPrompt = (typeof promptBuilder !== 'undefined')
+                    ? promptBuilder.buildSystemPrompt(gameState)
+                    : PROMPTS_DATA.baseSystemPrompt;
+                _endSysPrompt += '\n\n【当前任务】游戏结束了。结局：'+ending.name+'。结局描述：'+ending.desc+'。灯油剩余：'+gameState.lampOil+'%。请以路师傅口吻说一段收灯告别的话（80-150字），要苍老、安静、有重量。不要煽情——皮影戏的告别从来都是安静的。';
+                window.aiNarrate('路师傅', endingText, {
+                    sys: _endSysPrompt,
+                    user: '这是终幕。请路师傅对学徒说最后一段话作为告别。结局：'+ending.name+'。',
+                    ai: { temperature: 0.7, maxTokens: 140, model: AI.MODEL_PREMIUM }
+                }, 30);
+            } else {
+                EventBus.emit('narration_chunk',{speaker:'',text:endingText,speed:30});
+            }
             var bc=document.getElementById('btnConfirm'),ba=document.getElementById('btnAsk');
             if(bc){bc.disabled=true;bc.textContent='剧终';} if(ba){ba.disabled=true;ba.textContent='谢幕';}
             var bn=document.getElementById('btnNext'); if(bn)bn.style.display='none';

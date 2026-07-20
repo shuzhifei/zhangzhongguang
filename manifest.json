@@ -1,1 +1,99 @@
-{"@platforms":["android"],"id":"com.zhangzhongguang.app","name":"掌中光","version":{"name":"1.0.0","code":"100"},"description":"皮影戏AI互动影游","launch_path":"act1.html","permissions":{"Internet":{}},"plus":{"statusbar":{"immersed":false},"screenOrientation":["portrait-primary","landscape-primary"],"runmode":"normal","splashscreen":{"autoclose":true,"waiting":true,"delay":2000},"distribute":{"android":{"packagename":"com.zhangzhongguang.app","targetSdkVersion":30,"minSdkVersion":21,"abiFilters":["armeabi-v7a","arm64-v8a"]}}}}
+{
+    "@platforms" : [ "android" ],
+    "id" : "H51822877",
+    "name" : "zhangzhongguang",
+    "version" : {
+        "name" : "1.0.0",
+        "code" : "100"
+    },
+    "description" : "皮影戏AI互动影游 — 沉浸式皮影戏交互体验",
+    "launch_path" : "act1.html",
+    "icons" : {
+        "android" : {
+            "mdpi" : "assets/icons/icon-48x48.png",
+            "hdpi" : "assets/icons/icon-72x72.png",
+            "xhdpi" : "assets/icons/icon-96x96.png",
+            "xxhdpi" : "assets/icons/icon-144x144.png",
+            "xxxhdpi" : "assets/icons/icon-192x192.png"
+        }
+    },
+    "permissions" : {
+        "Internet" : {
+            "description" : "访问AI服务生成皮影戏剧情"
+        },
+        "Vibrate" : {
+            "description" : "游戏触觉反馈"
+        }
+    },
+    "plus" : {
+        "statusbar" : {
+            "immersed" : true,
+            "style" : "dark"
+        },
+        "screenOrientation" : [ "landscape-primary", "landscape-secondary" ],
+        "runmode" : "normal",
+        "splashscreen" : {
+            "autoclose" : true,
+            "waiting" : true,
+            "delay" : 2000
+        },
+        "kernel" : {
+            "ios" : "WKWebview",
+            "android" : "X5Webview"
+        },
+        "useragent" : {
+            "concatenate" : true,
+            "value" : "ZhangZhongGuang/1.0"
+        },
+        "cache" : {
+            "mode" : "safe"
+        },
+        "error" : {
+            "url" : "error.html"
+        },
+        "distribute" : {
+            "android" : {
+                "packagename" : "com.zhangzhongguang.app",
+                "targetSdkVersion" : 33,
+                "minSdkVersion" : 21,
+                "abiFilters" : [ "armeabi-v7a", "arm64-v8a", "x86" ],
+                "permissions" : [
+                    "<uses-permission android:name=\"android.permission.INTERNET\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.VIBRATE\"/>",
+                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>"
+                ],
+                "custompermissions" : false,
+                "screenOrientation" : [ "landscape" ],
+                "resizeableActivity" : true,
+                "schemes" : [ "zhangzhongguang" ],
+                "urltypes" : "掌中光",
+                "urlschemewakeup" : true
+            },
+            "icons" : {
+                "android" : {
+                    "mdpi" : "assets/icons/icon-48x48.png",
+                    "hdpi" : "assets/icons/icon-72x72.png",
+                    "xhdpi" : "assets/icons/icon-96x96.png",
+                    "xxhdpi" : "assets/icons/icon-144x144.png",
+                    "xxxhdpi" : "assets/icons/icon-192x192.png"
+                }
+            },
+            "ios" : {
+                "dSYMs" : false
+            }
+        },
+        "nativeUI" : {
+            "titleBar" : false,
+            "popGesture" : "none"
+        },
+        "webView" : {
+            "scrollIndicator" : "none",
+            "bounce" : "none",
+            "hardwareAccelerated" : true,
+            "backButtonAutoClose" : "none"
+        }
+    }
+}
