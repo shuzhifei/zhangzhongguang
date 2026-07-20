@@ -6267,10 +6267,30 @@ const ShadowJudge = {
         try {
             EventBus.emit('countdown_stop_request');
             var act = ACTS_DATA.acts[gameState.currentAct-1];
-            if (gameState.currentScene+1<act.scenes.length) {
-                gameState.currentScene++;
-                // 直接入队下一场启动（不再发"——"，按钮点击已替代场景分隔符）
-                if (window.NarrationCtl) {
+        if (gameState.currentScene+1<act.scenes.length) {
+            gameState.currentScene++;
+            // ★ 同步预设目标场景背景（不等 NarrationCtl 异步队列）：
+            //   正常推进时 _doStartCurrentScene 通过 enqueueAction 延迟 3-6 秒才执行，
+            //   这段时间 devLayer 用旧规则渲染、背景图未切换 → 用户看到"坐标范围不一样"。
+            //   在此立即切到正确背景，与跳转按钮的"同步 startCurrentScene"行为一致。
+            if (gameState.currentAct === 2) {
+                var _preS = document.getElementById('stage');
+                if (_preS) {
+                    _preS.classList.remove('night', 'act2-bg');
+                    if (gameState.currentScene === 1) {
+                        _preS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2-scene2.jpg')";
+                    } else if (gameState.currentScene === 2) {
+                        _preS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.18) 0%, rgba(240,200,130,0.08) 40%, transparent 70%), url('assets/images/stage-bg-act2-scene3.jpg')";
+                    } else {
+                        _preS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
+                    }
+                }
+                EventBus.emit('act_intermission');
+                if (window.resetSceneState) window.resetSceneState();
+                if (window.NarrationCtl) window.NarrationCtl.reset();
+            }
+            // 直接入队下一场启动（不再发"——"，按钮点击已替代场景分隔符）
+            if (window.NarrationCtl) {
                     window.NarrationCtl.enqueueAction(startCurrentScene);
                     // 启动队列：startCurrentScene 内会 emit narration_chunk 接力 pump；
                     // 此处首次 pump 触发它执行（仅当前叙事空闲时）
@@ -6312,6 +6332,7 @@ const ShadowJudge = {
             EventBus.emit('act_intermission');
             updatePuppetCards(gameState.currentAct);
             updateHeader();
+            if (window.NarrationCtl) window.NarrationCtl.reset();  // 与「跳到第二幕X场」调试按钮一致的清场重置
             var nextAct = ACTS_DATA.acts[gameState.currentAct-1];
             var text = ['','—— 第'+getActNum(gameState.currentAct)+'幕 ——','',nextAct.intro].join('\n');
             EventBus.emit('narration_chunk',{speaker:'',text:text,speed:36});
