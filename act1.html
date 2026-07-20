@@ -2598,7 +2598,7 @@ const ACTS_DATA = {
             ],
             "scenes": [
                 {"id":"act1_scene1","name":"月夜等人","description":"琉璃厂旧书铺的后院，一方白布戏台。月色斜照，槐树影静。木箱里睡着几枚皮影：书生、老者、金蟾、槐树、月亮。\n书生是读书人，他总在等人——可戏台前空着一座，他等的不是戏里的人，是台下能接住这出戏的人。","standard_puppets":["scholar","tree","moon","letter"],"acceptable_extras":["lamp"],"perfect_score":40,"hidden_clue":"琉璃厂的记忆坐标","hidden_clue_ids":["clue_1","clue_2"],"cipher_triggers":["槐树"],"cipher_guidance":"学徒摆了槐树→路师傅提到'我认得一棵槐树，在东街第三个书摊后面'；学徒摆了信→路师傅说'那封信写了三年——不是我写的，是我师父'（同样指向槐树/作坊记忆）"},
-                {"id":"act1_scene2","name":"信中之秘","description":"书生打开了手中的旧信，边角烧焦。信上不是家书，而是一段残缺的戏词：\n老者三根线，不是吊人吊金蟾；琉璃厂里，谁人坐门前。\n这话和《刘海戏金蟾》对不上——原戏里没有琉璃厂，也没有\"老者三根线\"。像是有人，趁人不注意，把暗语塞进了戏里。","standard_puppets":["scholar","elder","frog"],"acceptable_extras":["tree","lamp"],"perfect_score":30,"hidden_clue":"三根操纵杆=三位传承人","hidden_clue_ids":["clue_3","clue_4","clue_5","clue_6"],"cipher_triggers":["三根线","金蟾碎了","槐树"],"cipher_guidance":"学徒摆了老者+金蟾→触发'三根线的秘密'；摆齐全套（老者+金蟾+书生）→触发'金蟾为什么碎了'；学徒追问'老者是谁'→触发'两个师兄弟'"}
+                {"id":"act1_scene2","name":"信中之秘","description":"书生打开了手中的旧信，边角烧焦。信上不是家书，而是一段残缺的戏词：\n老者三根线，不是吊人吊金蟾；琉璃厂里，谁人坐门前。\n这话和《刘海戏金蟾》对不上——原戏里没有琉璃厂，也没有\"老者三根线\"。像是有人，趁人不注意，把暗语塞进了戏里。","standard_puppets":["scholar","elder","frog"],"acceptable_extras":["lamp"],"perfect_score":30,"hidden_clue":"三根操纵杆=三位传承人","hidden_clue_ids":["clue_3","clue_4","clue_5","clue_6"],"cipher_triggers":["三根线","金蟾碎了","槐树"],"cipher_guidance":"学徒摆了老者+金蟾→触发'三根线的秘密'；摆齐全套（老者+金蟾+书生）→触发'金蟾为什么碎了'；学徒追问'老者是谁'→触发'两个师兄弟'"}
             ]
         },
         {
@@ -5214,6 +5214,68 @@ const ShadowJudge = {
         var p = v.play();
         if (p && p.catch) p.catch(function() {});
     }
+    // 第二幕第二场（影速对决）专属动画：用户提供的 mp4，机制同上（幕中播放、点击跳过、播完恢复皮影）
+    function playAct2Scene2Video(onDone) {
+        var ov = document.createElement('div');
+        ov.id = 'act2Scene2VideoOverlay';
+        ov.innerHTML = '<video id="act2Scene2Video" src="assets/video/act2-scene2.mp4" playsinline autoplay></video>'
+            + '<div class="show-video-hint">点击跳过</div>';
+        var stageEl = document.getElementById('stage');
+        if (stageEl) {
+            stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
+            stageEl.querySelectorAll('.elder-rod-ctrl').forEach(function(r){ r.style.display = 'none'; });
+            var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
+        }
+        (stageEl || document.body).appendChild(ov);
+        var v = ov.querySelector('video');
+        var finished = false;
+        function finish() {
+            if (finished) return; finished = true;
+            try { v.pause(); } catch (e) {}
+            if (ov.parentNode) ov.parentNode.removeChild(ov);
+            if (stageEl) {
+                stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
+                var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
+            }
+            if (onDone) onDone();
+        }
+        v.addEventListener('ended', finish);
+        v.addEventListener('error', finish);
+        ov.addEventListener('click', finish);
+        var p = v.play();
+        if (p && p.catch) p.catch(function() {});
+    }
+    // 第二幕第三场（揭穿之后）专属动画：用户提供的 mp4，机制同上（幕中播放、点击跳过、播完恢复皮影）
+    function playAct2Scene3Video(onDone) {
+        var ov = document.createElement('div');
+        ov.id = 'act2Scene3VideoOverlay';
+        ov.innerHTML = '<video id="act2Scene3Video" src="assets/video/act2-scene3.mp4" playsinline autoplay></video>'
+            + '<div class="show-video-hint">点击跳过</div>';
+        var stageEl = document.getElementById('stage');
+        if (stageEl) {
+            stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
+            stageEl.querySelectorAll('.elder-rod-ctrl').forEach(function(r){ r.style.display = 'none'; });
+            var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
+        }
+        (stageEl || document.body).appendChild(ov);
+        var v = ov.querySelector('video');
+        var finished = false;
+        function finish() {
+            if (finished) return; finished = true;
+            try { v.pause(); } catch (e) {}
+            if (ov.parentNode) ov.parentNode.removeChild(ov);
+            if (stageEl) {
+                stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
+                var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
+            }
+            if (onDone) onDone();
+        }
+        v.addEventListener('ended', finish);
+        v.addEventListener('error', finish);
+        ov.addEventListener('click', finish);
+        var p = v.play();
+        if (p && p.catch) p.catch(function() {});
+    }
     // 「展示皮影戏」按钮点击 → 帘子合上 → 进下一场
     function onShowPlayClick() {
         try {
@@ -5299,11 +5361,15 @@ const ShadowJudge = {
             // 第二幕其余场次沿用原皮影戏视频(act1-show.mp4)；第一幕第二场用微信视频(act2-show.mp4)
             var videoFn;
             if (gameState.currentAct === 2 && gameState.currentScene === 0) {
-                videoFn = playAct2Scene1Video;
+                videoFn = playAct2Scene1Video;          // 第二幕第一场：专属动画
+            } else if (gameState.currentAct === 2 && gameState.currentScene === 1) {
+                videoFn = playAct2Scene2Video;          // 第二幕第二场（影速对决）：专属动画
+            } else if (gameState.currentAct === 2 && gameState.currentScene === 2) {
+                videoFn = playAct2Scene3Video;          // 第二幕第三场（揭穿之后）：专属动画
             } else if (gameState.currentAct === 2) {
-                videoFn = playAct1ShowVideo;
+                videoFn = playAct1ShowVideo;            // 第二幕其余场次：原皮影戏视频
             } else {
-                videoFn = playAct2ShowVideo;
+                videoFn = playAct2ShowVideo;            // 第一幕各场：微信视频
             }
             playCurtainCloseThenOpen(function() {
                 // 帘子拉开后，在舞台播放本幕皮影戏动画（纯动画，无台词）
@@ -5569,7 +5635,7 @@ const ShadowJudge = {
             void curtainWrap.offsetHeight;
         }, 2300);
         // 标题卡（第二场场次名）
-        if (actTitle) setTimeout(function() { showActTitle(actTitle); }, 2500);
+        if (actTitle) setTimeout(function() { showActTitle(actTitle); window.__letterRevealTitleShown = true; }, 2500);
         setTimeout(function() { overlay.classList.add('fading'); }, 3100);
         setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 4000);
         // 帘子还合着时，提前切到信中之秘背景（琉璃厂街景 stage-bg-scene2.jpg）
@@ -5640,30 +5706,18 @@ const ShadowJudge = {
         hot.addEventListener('click', done);
     }
 
-    // 进第二场（信中之秘）：设置场景后走统一入口 startCurrentScene（含 act2-bg 背景切换 + 完整旁白）
-    // 信转场专属开关：为 true 时进入第二场只露背景、不自动出任何开场台词/AI旁白
+    // 进【第一幕·第二场：信中之秘】：设置场景后走统一入口 startCurrentScene（含街景背景切换 + 完整开场白）
+    // ★ 修复：此前误将状态设为 currentAct=2/currentScene=0（第二幕第一场），导致点信后整个第一幕第二场被跳过。
+    //   正规流程应是：第一幕第一场 → 点信 → 第一幕第二场（信中之秘）→ 演完 → 评分卡 → 幕间 → 第二幕。
+    // 信转场专属开关（历史命名，勿改：startCurrentScene 经 window._silentAct2Enter 读取）：true=只露背景不出台词。
     var _silentAct2Enter = false;
-    function enterAct2Directly() {
-        try {
-            gameState.currentAct = 2;
-            gameState.currentScene = 0;
-            if (window.updatePuppetCards) window.updatePuppetCards(2); // 切到第二幕皮影箱卡片（白骨精/孙悟空/老者等）
-            _silentAct2Enter = true;
-            window._silentAct2Enter = true;  // 写入 window，让 startCurrentScene（另一IIFE）能读到
-            if (window.startCurrentScene) window.startCurrentScene();
-            else startCurrentScene();
-        } catch(e) {
-            if (window.showDialogue) window.showDialogue('路师傅', '（师傅顿了顿，接着说）咱们继续——下一场。');
-        }
-    }
-
-    // 第一幕第一场点评后，点信进入「第一幕第二场·信中之秘」，而非直接跳第二幕
-    // （原 enterAct2Directly 会直接 currentAct=2，导致正常首场流程跳过信中之秘）
     function enterAct1Scene2() {
         try {
             gameState.currentAct = 1;
-            gameState.currentScene = 1;   // act1_scene2 信中之秘
-            if (window.updatePuppetCards) window.updatePuppetCards(1); // 确保皮影箱为第一幕（老者/金蟾/书生）
+            gameState.currentScene = 1;   // 第一幕·第二场：信中之秘
+            if (window.updatePuppetCards) window.updatePuppetCards(1); // 仍是第一幕皮影箱（含 书生/老者/金蟾）
+            _silentAct2Enter = false;     // 不静默：正常出「信中之秘……」开场白 + 位置提示，引导玩家摆影
+            window._silentAct2Enter = false; // 同步 window，让 startCurrentScene（另一IIFE）读到
             if (window.startCurrentScene) window.startCurrentScene();
             else startCurrentScene();
         } catch(e) {
@@ -6246,7 +6300,13 @@ const ShadowJudge = {
                             : (gameState.currentAct === 2 && gameState.currentScene === 2)
                                 ? 'assets/images/stage-bg-act2-scene3.jpg'
                                 : null;
-                        showTransitionTitleCard(gameState.currentAct, gameState.currentScene + 1, _sceneInfo.name, null, _cardBg);
+                        // 信转场路径已在 playLetterReveal 中展示过专属标题卡（act-title-overlay），
+                        // 避免同一场连弹两张标题卡；其余正常场间推进仍弹过渡卡。
+                        if (window.__letterRevealTitleShown === true) {
+                            window.__letterRevealTitleShown = false;
+                        } else {
+                            showTransitionTitleCard(gameState.currentAct, gameState.currentScene + 1, _sceneInfo.name, null, _cardBg);
+                        }
                     }
                 }
             }
