@@ -2238,7 +2238,7 @@ window.gameState = gameState;
 
 // 结局判定：仅基于唯一数值变量「油灯」(lampOil) 与剧情真相线索（解锁密文）。
 // 【对话弹药式】每条已解锁暗语 = 终幕师傅独白的一段"真话"素材；集齐全部核心暗语+灯油充足 → 传灯（完整真相闭环）。
-//   核心暗语（3条，无前置锁，靠摆对组合各自独立解锁）：槐树 / 三根线 / 金蟾碎了
+//   核心暗语（5条，无前置锁，靠摆对组合各自独立解锁）：槐树 / 三根线 / 金蟾碎了 / 火眼金睛 / 竹节
 function determineEnding(state) {
     var lampOil = state.lampOil||0;
     // 灯油耗尽 → 强制灯灭
@@ -2248,16 +2248,20 @@ function determineEnding(state) {
     var hasLoc     = ciphers.indexOf('槐树')      >= 0;   // 琉璃厂东街老槐树作坊
     var hasLine    = ciphers.indexOf('三根线')    >= 0;   // 三代传承人
     var hasBroken  = ciphers.indexOf('金蟾碎了')  >= 0;   // 线断，戏需人接
+    var hasFire    = ciphers.indexOf('火眼金睛')  >= 0;   // 认得真才能识破假
+    var hasBamboo  = ciphers.indexOf('竹节')      >= 0;   // 传承人节骨
 
     // 每条暗语 → 终幕独白素材库里的一段师傅真话
     var fragments = [];
     if (hasLoc)    fragments.push("琉璃厂东街，第三个书摊后面，有棵老槐树。师父的作坊，就在那棵树底下——我七岁进去，一辈子没出来。");
     if (hasLine)   fragments.push("师父手里的杆，本来有三根。大师兄走了，二师兄没了，剩我一个人——三根线，成了我一个人的担子。");
     if (hasBroken) fragments.push("金蟾碎了那天，我放下操纵杆，再没拿起来。「线不能断。」我说。可我手上，只剩这一根了。");
+    if (hasFire)   fragments.push("大栅栏那方戏台，猴子的火眼金睛认得真——你也得先认得真的，才看得穿那个假徒弟的影。");
+    if (hasBamboo) fragments.push("竹子一节一节，有节骨。做皮影的人，该演的演，不该演的不演——这一节，假徒弟身上没有。");
 
-    var truthFull = hasLoc && hasLine && hasBroken;
+    var truthFull = hasLoc && hasLine && hasBroken && hasFire && hasBamboo;
 
-    // 集齐三暗语 + 灯油充足 → 传灯：师傅把整段传承讲完，灯交到你手里；你接住了，他也就安心走了
+    // 集齐全部暗语(5条) + 灯油充足 → 传灯：师傅把整段传承讲完，灯交到你手里；你接住了，他也就安心走了
     if (truthFull && lampOil >= 15) {
         return { name: "传灯", desc: "（师傅的声音很轻，但字字清楚）\n" + fragments.join("\n") + "\n\n（他把手里的灯，递到了你面前）\n灯，交给你了。\n\n（你这才明白，陪你说了一路戏的师傅，其实早已不在了——这是他留在这方白布上的一缕心念。如今戏你接住了，灯也传下去了。）\n（他最后看了你一眼，像卸下了背了六十一年的担子，轻轻笑了。）\n「好孩子……这下，我能安心走了。」\n（影淡了。白布上只剩你一个人，和那盏，还亮着的灯。）", fragments: fragments };
     }
@@ -2538,6 +2542,10 @@ const ACTS_DATA = {
                 {"id":"act2_scene1","name":"真假传人","description":"大栅栏的夜市。一个自称'路春福真传弟子'的人在演《三打白骨精》。路师傅让你仔细看——看那个人的操影手法。","standard_puppets":["demon","monkey","oldman"],"acceptable_extras":["lamp"],"perfect_score":40},
                 {"id":"act2_scene2","name":"影速对决","description":"真传人和假传人同时演——AI快速描述一段剧情，学徒必须在30秒内用正确的皮影组合回应：左侧白骨精、中间竹子、右侧孙悟空。","standard_puppets":["demon","bamboo","monkey"],"acceptable_extras":[],"time_limit":30},
                 {"id":"act2_scene3","name":"揭穿之后","description":"假传人被揭穿。但他不认——他说路师傅死前没有定下传承人，谁都可以说是真传。","standard_puppets":["oldman","demon"],"acceptable_extras":["lamp","monkey","master"]}
+            ],
+            "hidden_clues": [
+                {"id":"clue_7","name":"火眼金睛","layer":2,"scene_id":"act2_scene1","trigger":"学徒在Scene1中同时摆了孙悟空（monkey）和白骨精（demon）","trigger_puppets":["monkey","demon"],"reveal_content":"路师傅盯着影面：'那猴子——火眼金睛不是天生的。他挨了师父念咒，被撵回花果山，还回头望了师父一眼。能识破假的，是因为他先认得真的。'","cipher_link":["火眼金睛"],"game_impact":"解锁暗语'火眼金睛'","difficulty":"medium"},
+                {"id":"clue_8","name":"竹有节骨","layer":2,"scene_id":"act2_scene2","trigger":"学徒在Scene2中摆了竹子（bamboo）","trigger_puppets":["bamboo"],"reveal_content":"路师傅看着竹子：'它一节一节，有节骨。做皮影的人也得有节骨——该演的演，不该演的不演。那个假徒弟，缺的就是这一节。'","cipher_link":["竹节"],"game_impact":"解锁暗语'竹节'","difficulty":"easy"}
             ]
         }
     ],
@@ -2575,7 +2583,9 @@ const PROMPTS_DATA = {
     cipherLexicon: {
         "三根线":{"surface":"操纵皮影的线","hidden":"三位传承人","usage":"提到操纵杆时数字永远有含义。"},
         "金蟾碎了":{"surface":"《刘海戏金蟾》剧情","hidden":"传承断裂的象征","usage":"说到金蟾时语气会变——从说戏变成自言自语。"},
-        "槐树":{"surface":"书生等人处的槐树","hidden":"师父种在皮影作坊门口的老槐树（琉璃厂东街）","usage":"提到槐树时总带着特殊的温柔或哀伤。"}
+        "槐树":{"surface":"书生等人处的槐树","hidden":"师父种在皮影作坊门口的老槐树（琉璃厂东街）","usage":"提到槐树时总带着特殊的温柔或哀伤。"},
+        "火眼金睛":{"surface":"孙悟空的神通","hidden":"认得真才能识破假","usage":"提到真假时总说'你先得认得真的'。"},
+        "竹节":{"surface":"竹子的节","hidden":"传承人的骨气与节气","usage":"提到竹子时总说'一节一节，不能断'。"}
     }
 };
 </script>
@@ -4737,7 +4747,9 @@ const ShadowJudge = {
                     var cipherDisplay = {
                         '三根线':'金蟾需要三根线，舞这戏的也有三个人',
                         '金蟾碎了':'金蟾碎了——断了两根线，只有他一个人了',
-                        '槐树':'琉璃厂东街那棵老槐树'
+                        '槐树':'琉璃厂东街那棵老槐树',
+                        '火眼金睛':'那猴子火眼金睛，认得真才识得破假',
+                        '竹节':'竹子一节一节，有节骨'
                     };
                     var displayNames = (clue.cipher_link||[]).map(function(c){ return cipherDisplay[c] || c; });
                     msg += '\n\n【暗语解锁】你听懂了——' + displayNames.join('、') + '。';
