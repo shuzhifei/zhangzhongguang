@@ -6269,11 +6269,13 @@ const ShadowJudge = {
             var act = ACTS_DATA.acts[gameState.currentAct-1];
         if (gameState.currentScene+1<act.scenes.length) {
             gameState.currentScene++;
-            // ★ 同步预设目标场景背景（不等 NarrationCtl 异步队列）：
-            //   正常推进时 _doStartCurrentScene 通过 enqueueAction 延迟 3-6 秒才执行，
-            //   这段时间 devLayer 用旧规则渲染、背景图未切换 → 用户看到"坐标范围不一样"。
-            //   在此立即切到正确背景，与跳转按钮的"同步 startCurrentScene"行为一致。
+            // ★ 第二幕：与「跳转」按钮走完全相同的同步路径 ★
+            //   旧代码用 NarrationCtl.enqueueAction(startCurrentScene) 异步执行，
+            //   导致背景切换/场景初始化延迟 3-6 秒，用户看到坐标范围与跳转不一致。
+            //   现在改为：同步清场 + 帘子过渡(如有) + 同步 startCurrentScene()，
+            //   与 makeAct2Btn 跳转按钮 100% 行为一致，彻底消除差异。
             if (gameState.currentAct === 2) {
+                // 1. 同步预设目标场景背景
                 var _preS = document.getElementById('stage');
                 if (_preS) {
                     _preS.classList.remove('night', 'act2-bg');
@@ -6285,28 +6287,35 @@ const ShadowJudge = {
                         _preS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
                     }
                 }
+                // 2. 清场重置（与跳转按钮一致）
                 EventBus.emit('act_intermission');
                 if (window.resetSceneState) window.resetSceneState();
                 if (window.NarrationCtl) window.NarrationCtl.reset();
+                // 3. 同步启动下一场（不再入队，与跳转按钮行为完全对齐）
+                var _doStartNext = function() {
+                    try { if (window.stopAllDialogue) window.stopAllDialogue(); } catch(e){}
+                    try { EventBus.emit('countdown_stop_request'); } catch(e){}
+                    try { if (window.resetSceneState) window.resetSceneState(); } catch(e){}
+                    try { if (window.NarrationCtl) window.NarrationCtl.reset(); } catch(e){}
+                    try { if (window.startCurrentScene) window.startCurrentScene(); else startCurrentScene(); } catch(e){ console.error('[advanceScene] startCurrentScene异常:',e); }
+                };
+                try {
+                    if (window.playCurtainCloseThenOpen) { window.playCurtainCloseThenOpen(null, _doStartNext); }
+                    else { _doStartNext(); }
+                } catch(e) { console.error('[advanceScene] 帘子异常,直接启动:', e); _doStartNext(); }
+                return; // 第二幕已处理完毕，不走下面的 NarrationCtl 队列路径
             }
-            // 直接入队下一场启动（不再发"——"，按钮点击已替代场景分隔符）
+            // 非第二幕：保持原有NarrationCTL队列路径不变
             if (window.NarrationCtl) {
                     window.NarrationCtl.enqueueAction(startCurrentScene);
-                    // 启动队列：startCurrentScene 内会 emit narration_chunk 接力 pump；
-                    // 此处首次 pump 触发它执行（仅当前叙事空闲时）
                     if (!window.NarrationCtl.isActive()) window.NarrationCtl.pump();
-                    // ★ 安全泵兜底：pump 可能因 typewriterTimer/speakingFlag 为 true 而直接 return，
-                    //   导致队首 action(startCurrentScene) 暂不执行。延时重试保证下一场一定启动，
-                    //   避免任何途径下"帘子拉开后卡住进不了第二场"。
                     var _safePump = function(tries) {
                         tries = tries || 0;
                         try {
-                            // 场景已正常初始化（背景已切到任何 stage-bg 图）即视为成功，停止重试
-                            // 注意：不看 narrationActive——台词播不播不影响"场景已就绪"
                             var _stageEl = document.getElementById('stage');
                             var _bgOk = _stageEl && _stageEl.style.backgroundImage &&
                                         _stageEl.style.backgroundImage.indexOf('stage-bg') !== -1;
-                            if (_bgOk) return; // 已就绪，停止安全泵
+                            if (_bgOk) return;
                             if (tries > 8) { console.error('[advanceScene] 安全泵超限, 强制直接启动下一场'); startCurrentScene(); return; }
                             window.NarrationCtl.pump();
                             setTimeout(function(){ _safePump(tries+1); }, 250);
@@ -6315,7 +6324,6 @@ const ShadowJudge = {
                     setTimeout(function(){ _safePump(0); }, 400);
                 }
             } else {
-                // 可提交范围：到达本构建最后可玩幕 → 直接结算（支持"只交第一幕"）
                 if (gameState.currentAct >= GAME_CONFIG.maxPlayableAct) {
                     endGame();
                 } else {
