@@ -1022,7 +1022,9 @@ body {
         url('assets/images/stage-bg.jpg');
     background-size: cover;
     background-position: center;
-    transition: background 1.2s ease, box-shadow 1.2s ease;
+    /* 注：原 transition: background 1.2s 已移除 — 切场时背景必须即时生效，
+       否则 CSS 过渡动画 + 双次设置背景(advanceScene + _doStartCurrentScene)会导致
+       正常推进与跳转按钮的背景渲染不一致（容差圈视觉大小不同）。 */
     border-radius: 3px;
     box-shadow:
         inset 0 0 80px rgba(180,120,50,0.2),
@@ -6050,7 +6052,9 @@ const ShadowJudge = {
                     }
                 }
                 stageElS.style.backgroundSize = 'cover';
-                // background-position 不在此统一设；各场景沿用 CSS 默认值（.stage=center, .act2-bg=center bottom）
+                stageElS.style.backgroundPosition = 'center center';
+                // 强制同步重排：确保浏览器立即渲染背景（消除 CSS transition 已移除后的任何潜在异步渲染差异）
+                void stageElS.offsetHeight;
             }
             var btnC=document.getElementById('btnConfirm'), btnA=document.getElementById('btnAsk');
             if(btnC)btnC.disabled=false; if(btnA)btnA.disabled=false;
@@ -6270,28 +6274,16 @@ const ShadowJudge = {
         if (gameState.currentScene+1<act.scenes.length) {
             gameState.currentScene++;
             // ★ 第二幕：与「跳转」按钮走完全相同的同步路径 ★
-            //   旧代码用 NarrationCtl.enqueueAction(startCurrentScene) 异步执行，
-            //   导致背景切换/场景初始化延迟 3-6 秒，用户看到坐标范围与跳转不一致。
-            //   现在改为：同步清场 + 帘子过渡(如有) + 同步 startCurrentScene()，
-            //   与 makeAct2Btn 跳转按钮 100% 行为一致，彻底消除差异。
+            //   关键修复：同时去掉了 .stage 的 CSS transition: background（见 ~1025 行），
+            //   避免双次设置背景(此处 + _doStartCurrentScene)触发过渡动画中间态。
+            //   此处不再预设背景——让 startCurrentScene → _doStartCurrentScene 统一设置，
+            //   与跳转按钮(makeAct2Btn)的"只设一次"行为完全对齐。
             if (gameState.currentAct === 2) {
-                // 1. 同步预设目标场景背景
-                var _preS = document.getElementById('stage');
-                if (_preS) {
-                    _preS.classList.remove('night', 'act2-bg');
-                    if (gameState.currentScene === 1) {
-                        _preS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2-scene2.jpg')";
-                    } else if (gameState.currentScene === 2) {
-                        _preS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.18) 0%, rgba(240,200,130,0.08) 40%, transparent 70%), url('assets/images/stage-bg-act2-scene3.jpg')";
-                    } else {
-                        _preS.style.backgroundImage = "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255,230,160,0.25) 0%, rgba(240,200,130,0.10) 40%, transparent 70%), url('assets/images/stage-bg-act2.jpg')";
-                    }
-                }
-                // 2. 清场重置（与跳转按钮一致）
+                // 1. 清场重置（与跳转按钮一致）
                 EventBus.emit('act_intermission');
                 if (window.resetSceneState) window.resetSceneState();
                 if (window.NarrationCtl) window.NarrationCtl.reset();
-                // 3. 同步启动下一场（不再入队，与跳转按钮行为完全对齐）
+                // 2. 同步启动下一场（不再入队，与跳转按钮行为完全对齐）
                 var _doStartNext = function() {
                     try { if (window.stopAllDialogue) window.stopAllDialogue(); } catch(e){}
                     try { EventBus.emit('countdown_stop_request'); } catch(e){}
