@@ -1539,9 +1539,9 @@ body.typing-lock .dialogue-area { pointer-events: auto !important; }
 .curtain-hint-side.right { right: 6%; text-align: left; }
 
 /* 第一场展示皮影戏：在舞台（幕中）区域内播放 mp4 动画 */
-#act1ShowVideoOverlay { position: absolute; inset: 0; z-index: 16; background: rgba(0,0,0,0.92);
+.stage-video-overlay { position: absolute; inset: 0; z-index: 16; background: rgba(0,0,0,0.92);
     display: flex; align-items: center; justify-content: center; cursor: pointer; }
-#act1ShowVideoOverlay video { max-width: 100%; max-height: 100%; object-fit: contain; }
+.stage-video-overlay video { max-width: 100%; max-height: 100%; object-fit: contain; }
 .show-video-hint { position: absolute; bottom: 22px; right: 22px; color: rgba(255,255,255,.55);
     font-size: 13px; letter-spacing: 1px; }
 
@@ -5110,13 +5110,19 @@ const ShadowJudge = {
     // 跨 IIFE 暴露：幕间休息等跨 IIFE 场景需要调用
     window.playCurtainCloseOnly = playCurtainCloseOnly;
     // 第一场展示皮影戏：在舞台（幕中）区域内播放 mp4 动画，播完/点击/出错则继续
-    function playAct1ShowVideo(onDone) {
+    // 「展示皮影戏」统一视频播放：动画挂载在 #stage（幕中）区域，播放期间锁定左侧皮影箱（不可点击/拖拽），
+    // 点击/播完/出错则恢复幕中皮影并解锁皮影箱。第二幕各场与通用皮影戏视频都走此同一实现，行为完全一致。
+    function playStageVideo(videoSrc, overlayId, videoId, onDone) {
         var ov = document.createElement('div');
-        ov.id = 'act1ShowVideoOverlay';
-        ov.innerHTML = '<video id="act1ShowVideo" src="assets/video/act1-show.mp4" playsinline autoplay></video>'
+        ov.id = overlayId;
+        ov.className = 'stage-video-overlay';
+        ov.innerHTML = '<video id="' + videoId + '" src="' + videoSrc + '" playsinline autoplay></video>'
             + '<div class="show-video-hint">点击跳过</div>';
-        // 挂载到 #stage 内：动画只在幕中区域播放，不遮挡对话框/皮影箱等外围 UI
         var stageEl = document.getElementById('stage');
+        var pb = document.getElementById('puppetBox');
+        // 播放动画期间锁定左侧皮影箱（与「其他形式」一致：演出时不可操作皮影）
+        if (pb) pb.classList.add('intermission-lock', 'speaking-lock');
+        // 挂载到 #stage 内：动画只在幕中区域播放，不遮挡对话框/皮影箱等外围 UI
         // 播放动画前隐藏幕中玩家摆放的皮影与操纵杆，避免与视频画面穿帮（播完进下一场会自动清空/恢复）
         if (stageEl) {
             stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
@@ -5131,8 +5137,10 @@ const ShadowJudge = {
             if (finished) return; finished = true;
             try { v.pause(); } catch (e) {}
             if (ov.parentNode) ov.parentNode.removeChild(ov);
+            // 恢复左侧皮影箱可交互（若调用方后续仍需锁定，会自行再加，如首场点评后的卡片锁）
+            if (pb) pb.classList.remove('intermission-lock', 'speaking-lock');
             // 视频结束：恢复播放前隐藏的幕中皮影(.stage-puppet)与提示(.stage-hint)，
-            // 让后续「点对话框→路师傅点评→信发亮(聚焦)」流程里人物与信都正常可见、可点击。
+            // 让后续「点对话框→路师傅点评→信发亮(聚焦)」等流程里人物与信都正常可见、可点击。
             // 操纵杆(.elder-rod-ctrl)不在此恢复——它只在需要时（摆放老者/金蟾等）自行生成显示。
             if (stageEl) {
                 stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
@@ -5146,136 +5154,15 @@ const ShadowJudge = {
         var p = v.play();
         if (p && p.catch) p.catch(function() {});
     }
-    // 第二场展示皮影戏：与第一场同机制，在舞台（幕中）区域内播放第二场 mp4 动画，播完/点击/出错则继续
-    function playAct2ShowVideo(onDone) {
-        var ov = document.createElement('div');
-        ov.id = 'act2ShowVideoOverlay';
-        ov.innerHTML = '<video id="act2ShowVideo" src="assets/video/act2-show.mp4" playsinline autoplay></video>'
-            + '<div class="show-video-hint">点击跳过</div>';
-        // 挂载到 #stage 内：动画只在幕中区域播放，不遮挡对话框/皮影箱等外围 UI
-        var stageEl = document.getElementById('stage');
-        // 播放动画前隐藏幕中玩家摆放的皮影与操纵杆，避免与视频画面穿帮（播完进下一场会自动清空/恢复）
-        if (stageEl) {
-            stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
-            stageEl.querySelectorAll('.elder-rod-ctrl').forEach(function(r){ r.style.display = 'none'; });
-            var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
-        }
-        (stageEl || document.body).appendChild(ov);
-        // 演出是纯动画：播放动画期间不再清空对话框，已生成的台词保留在框内（玩家要求：生成的话不要消失）
-        var v = ov.querySelector('video');
-        var finished = false;
-        function finish() {
-            if (finished) return; finished = true;
-            try { v.pause(); } catch (e) {}
-            if (ov.parentNode) ov.parentNode.removeChild(ov);
-            // 视频结束：恢复播放前隐藏的幕中皮影(.stage-puppet)与提示(.stage-hint)，
-            // 让后续「点对话框→路师傅点评→信发亮(聚焦)」流程里人物与信都正常可见、可点击。
-            // 操纵杆(.elder-rod-ctrl)不在此恢复——它只在需要时（摆放老者/金蟾等）自行生成显示。
-            if (stageEl) {
-                stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
-                var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
-            }
-            if (onDone) onDone();
-        }
-        v.addEventListener('ended', finish);
-        v.addEventListener('error', finish);
-        ov.addEventListener('click', finish);
-        var p = v.play();
-        if (p && p.catch) p.catch(function() {});
-    }
-    // 第二幕第一场（真假传人）专属动画：用户提供的 mp4，机制同上（幕中播放、点击跳过、播完恢复皮影）
-    function playAct2Scene1Video(onDone) {
-        var ov = document.createElement('div');
-        ov.id = 'act2Scene1VideoOverlay';
-        ov.innerHTML = '<video id="act2Scene1Video" src="assets/video/act2-scene1.mp4" playsinline autoplay></video>'
-            + '<div class="show-video-hint">点击跳过</div>';
-        var stageEl = document.getElementById('stage');
-        if (stageEl) {
-            stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
-            stageEl.querySelectorAll('.elder-rod-ctrl').forEach(function(r){ r.style.display = 'none'; });
-            var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
-        }
-        (stageEl || document.body).appendChild(ov);
-        var v = ov.querySelector('video');
-        var finished = false;
-        function finish() {
-            if (finished) return; finished = true;
-            try { v.pause(); } catch (e) {}
-            if (ov.parentNode) ov.parentNode.removeChild(ov);
-            if (stageEl) {
-                stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
-                var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
-            }
-            if (onDone) onDone();
-        }
-        v.addEventListener('ended', finish);
-        v.addEventListener('error', finish);
-        ov.addEventListener('click', finish);
-        var p = v.play();
-        if (p && p.catch) p.catch(function() {});
-    }
-    // 第二幕第二场（影速对决）专属动画：用户提供的 mp4，机制同上（幕中播放、点击跳过、播完恢复皮影）
-    function playAct2Scene2Video(onDone) {
-        var ov = document.createElement('div');
-        ov.id = 'act2Scene2VideoOverlay';
-        ov.innerHTML = '<video id="act2Scene2Video" src="assets/video/act2-scene2.mp4" playsinline autoplay></video>'
-            + '<div class="show-video-hint">点击跳过</div>';
-        var stageEl = document.getElementById('stage');
-        if (stageEl) {
-            stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
-            stageEl.querySelectorAll('.elder-rod-ctrl').forEach(function(r){ r.style.display = 'none'; });
-            var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
-        }
-        (stageEl || document.body).appendChild(ov);
-        var v = ov.querySelector('video');
-        var finished = false;
-        function finish() {
-            if (finished) return; finished = true;
-            try { v.pause(); } catch (e) {}
-            if (ov.parentNode) ov.parentNode.removeChild(ov);
-            if (stageEl) {
-                stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
-                var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
-            }
-            if (onDone) onDone();
-        }
-        v.addEventListener('ended', finish);
-        v.addEventListener('error', finish);
-        ov.addEventListener('click', finish);
-        var p = v.play();
-        if (p && p.catch) p.catch(function() {});
-    }
-    // 第二幕第三场（揭穿之后）专属动画：用户提供的 mp4，机制同上（幕中播放、点击跳过、播完恢复皮影）
-    function playAct2Scene3Video(onDone) {
-        var ov = document.createElement('div');
-        ov.id = 'act2Scene3VideoOverlay';
-        ov.innerHTML = '<video id="act2Scene3Video" src="assets/video/act2-scene3.mp4" playsinline autoplay></video>'
-            + '<div class="show-video-hint">点击跳过</div>';
-        var stageEl = document.getElementById('stage');
-        if (stageEl) {
-            stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = 'none'; });
-            stageEl.querySelectorAll('.elder-rod-ctrl').forEach(function(r){ r.style.display = 'none'; });
-            var _sh = stageEl.querySelector('.stage-hint'); if (_sh) _sh.style.display = 'none';
-        }
-        (stageEl || document.body).appendChild(ov);
-        var v = ov.querySelector('video');
-        var finished = false;
-        function finish() {
-            if (finished) return; finished = true;
-            try { v.pause(); } catch (e) {}
-            if (ov.parentNode) ov.parentNode.removeChild(ov);
-            if (stageEl) {
-                stageEl.querySelectorAll('.stage-puppet').forEach(function(p){ p.style.display = ''; });
-                var _sh2 = stageEl.querySelector('.stage-hint'); if (_sh2) _sh2.style.display = '';
-            }
-            if (onDone) onDone();
-        }
-        v.addEventListener('ended', finish);
-        v.addEventListener('error', finish);
-        ov.addEventListener('click', finish);
-        var p = v.play();
-        if (p && p.catch) p.catch(function() {});
-    }
+    // 以下均为「展示皮影戏」统一入口的薄封装，保证各场次调用处签名不变（仍传 onDone）
+    function playAct1ShowVideo(onDone) { playStageVideo('assets/video/act1-show.mp4', 'act1ShowVideoOverlay', 'act1ShowVideo', onDone); }
+    function playAct2ShowVideo(onDone) { playStageVideo('assets/video/act2-show.mp4', 'act2ShowVideoOverlay', 'act2ShowVideo', onDone); }
+    // 第二幕第一场（真假传人）专属动画：用户提供的 mp4，幕中播放、点击跳过、播完恢复皮影，演出期间锁左侧皮影箱
+    function playAct2Scene1Video(onDone) { playStageVideo('assets/video/act2-scene1.mp4', 'act2Scene1VideoOverlay', 'act2Scene1Video', onDone); }
+    // 第二幕第二场（影速对决）专属动画：用户提供的 mp4，幕中播放、点击跳过、播完恢复皮影，演出期间锁左侧皮影箱
+    function playAct2Scene2Video(onDone) { playStageVideo('assets/video/act2-scene2.mp4', 'act2Scene2VideoOverlay', 'act2Scene2Video', onDone); }
+    // 第二幕第三场（揭穿之后）专属动画：用户提供的 mp4，幕中播放、点击跳过、播完恢复皮影，演出期间锁左侧皮影箱
+    function playAct2Scene3Video(onDone) { playStageVideo('assets/video/act2-scene3.mp4', 'act2Scene3VideoOverlay', 'act2Scene3Video', onDone); }
     // 「展示皮影戏」按钮点击 → 帘子合上 → 进下一场
     function onShowPlayClick() {
         try {
@@ -5288,7 +5175,7 @@ const ShadowJudge = {
 
             var isFirstScene = (gameState.currentAct === 1 && gameState.currentScene === 0);
             var act2Info = (ACTS_DATA && ACTS_DATA.acts && ACTS_DATA.acts[1]) ? ACTS_DATA.acts[1] : null;
-            var isAct2FinalTransition = (gameState.currentAct === 2 && act2Info && (gameState.currentScene + 1) >= act2Info.scenes.length);
+            var isAct2FinalTransition = (gameState.currentAct === 2 && act2Info && (gameState.currentScene + 1) > act2Info.scenes.length);
             if (isFirstScene) {
             // 第一场：帘子合上 → 停1秒 → 帘子拉开 → 播放 mp4 动画 → 点对话框 → 路师傅点评 → 信发亮(聚焦) → 点信 → 信全屏打开 → 白光 → 进第二场（还原"之前的代码"正规剧情流程）
             playCurtainCloseThenOpen(function() {
@@ -5420,7 +5307,22 @@ const ShadowJudge = {
                             };
                         });
                     } else {
-                        console.log('[onShowPlayClick] 中间场次视频播完, 帘子收尾后进下一场');
+                        // ★ 第二幕最后一场（如第三场·揭穿之后）：播完专属视频后走终场结算
+                        var _isLastOfAct2 = (gameState.currentAct === 2 && act2Info &&
+                            (gameState.currentScene + 1) >= act2Info.scenes.length);
+                        if (_isLastOfAct2) {
+                            console.log('[onShowPlayClick] 第二幕最后一场视频播完, 进终场结算');
+                            playCurtainCloseThenOpen(null, function() {
+                                var _showScore = window.showActScoreCard;
+                                function _afterScore() {
+                                    playCurtainCloseThenOpen(null, function() {
+                                        if (window.advanceScene) window.advanceScene();
+                                    });
+                                }
+                                if (_showScore) _showScore(2, _afterScore);
+                                else _afterScore();
+                            });
+                        } else {
                         // ★ 彻底修复：不再依赖 NarrationCtl 队列/泵/pump 时序（它们因 _busy/narrationActive 可能延迟或跳过执行）
                         // 直接在 onClosed 回调里同步完成：场景号递增 + 场景初始化，保证帘子拉开时下一场已就绪
                         playCurtainCloseThenOpen(null, function() {
@@ -5439,12 +5341,13 @@ const ShadowJudge = {
                                     window.startCurrentScene();
                                     console.log('[onShowPlayClick] startCurrentScene 已直接调用');
                                 }
-                            } catch(_directErr) {
+                            }                             catch(_directErr) {
                                 console.error('[onShowPlayClick] 直接场景切换异常:', _directErr);
                                 // 兜底：尝试通过原 advanceScene 路径恢复
                                 if (window.advanceScene) window.advanceScene();
                             }
                         });
+                    }  // ← _isLastOfAct2 else（中间场次正常递增）
                     }
                 });
             });
