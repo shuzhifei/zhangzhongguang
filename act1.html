@@ -6275,7 +6275,8 @@ const ShadowJudge = {
                     }
                 }
                 stageElS.style.backgroundSize = 'cover';
-                stageElS.style.backgroundPosition = 'center center';
+                // 第一幕第二场（信中之秘）：街景图须锚定底部，否则 cover 缩放下画面整体上移
+                stageElS.style.backgroundPosition = (gameState.currentAct === 1 && gameState.currentScene === 1) ? 'center bottom' : 'center center';
                 // 强制同步重排：确保浏览器立即渲染背景（消除 CSS transition 已移除后的任何潜在异步渲染差异）
                 void stageElS.offsetHeight;
             }
