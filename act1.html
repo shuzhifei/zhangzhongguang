@@ -781,14 +781,14 @@ body {
     background-position: center;
     filter: blur(8px);
 }
-/* 第二场（信中之秘）开场标题卡：背景为琉璃厂街景（荣宝斋/大渊阁），虚化浮现 */
+/* 第一幕第二场（信中之秘）开场标题卡：琉璃厂街景底 + 重暗遮罩，虚化后隐约透出场景 */
 .act-title-overlay.act2 .act-title-bg {
     background:
-        radial-gradient(ellipse 75% 65% at 50% 50%, rgba(10,6,3,0.35) 0%, rgba(6,3,1,0.72) 75%),
+        radial-gradient(ellipse 75% 65% at 50% 55%, rgba(8,4,2,0.72) 0%, rgba(4,2,0,0.92) 70%),
         url('assets/images/stage-bg-scene2.jpg');
     background-size: cover;
     background-position: center bottom;
-    filter: blur(7px);
+    filter: blur(6px) brightness(0.45);
 }
 /* 第二幕（大栅栏）标题卡：背景为街景戏台（观众/灯笼/同仁堂），虚化浮现 */
 .act-title-overlay.act2-title .act-title-bg {
@@ -2394,13 +2394,16 @@ const LampSystem = {
             if (secondsLeft <= 0) { clearInterval(countdownTimer); countdownTimer = null; EventBus.emit("countdown_expired"); }
         }, 1000);
     },
-    startCountdown() {
-        secondsLeft = 30;
+    startCountdown(limit) {
+        secondsLeft = (typeof limit === 'number' && limit > 0) ? limit : 30;
         this._runTimer();
     },
     stopCountdown() {
         if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
         secondsLeft = 0;
+        // ★ 同时移除倒计时显示层，避免“冻结的倒计时”残留在其它场景（如第二幕第一场）
+        var _cd = document.getElementById('countdownDisplay');
+        if (_cd) _cd.remove();
     },
     // 暂停：清掉 interval 但保留剩余秒数（确认摆影判定期间用）
     pauseCountdown() {
@@ -4496,6 +4499,7 @@ const ShadowJudge = {
                 //   → 「展示皮影戏」按钮不出现 → 玩家卡住无法进下一场
                 var correct = correctMatch ? (correctMatch[1] === 'true') : (localResult.correct || true);
                 var comment = reply.replace(/\[SCORE:\s*\d+\s*\]/g, '').replace(/\[CORRECT:\s*(true|false)\s*\]/g, '').trim();
+                comment = degradeText(comment);
                 var result = { score: score, correct: correct, comment: comment };
 
                 // ★ 低延迟：先出文字（不等TTS），语音异步跟上
@@ -4574,6 +4578,7 @@ const ShadowJudge = {
 
             var reply = await AI.call(fullSysPrompt, userMsg, { temperature: 0.7, maxTokens: 150 });
             // ★ 低延迟：立即打字，TTS 异步跟上
+            reply = degradeText(reply);
             typewriter(dialogueText, reply, 45);
             if (!OFFLINE_MODE && typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
         } catch(e) {
@@ -4818,6 +4823,7 @@ const ShadowJudge = {
             if (!OFFLINE_MODE && typeof AI !== 'undefined') {
                 var sys = PROMPTS_DATA.baseSystemPrompt + getOilDecayPrompt() + '\n\n学徒触发了隐藏线索：'+clue.name+'（第'+clue.layer+'层）。线索含义：'+clue.reveal_content+'。关联暗语：'+(clue.cipher_link||[]).join('、')+'。请以路师傅口吻说一段话（40-80字），自然揭示这个线索，但不直接说破。';
                 AI.call(sys, '触发线索。请路师傅给学徒一点暗示。', {temperature:0.7, maxTokens:140, model:AI.MODEL_DEFAULT}).then(function(reply){
+                    reply = degradeText(reply);
                     typewriter(dialogueText, reply, 46);
                     if (!OFFLINE_MODE && typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
                 }).catch(function(){
@@ -4870,6 +4876,7 @@ const ShadowJudge = {
             var sys = PROMPTS_DATA.baseSystemPrompt + getOilDecayPrompt() + '\n\n学徒刚把「'+name+'」摆上白布。这个皮影在当前场景是'+role+'。请以路师傅口吻给一个简短点评（15-30字），不要超过一句话。';
             AI.call(sys, '点评一下这个皮影。', {temperature:0.8, maxTokens:60, model:AI.MODEL_DEFAULT}).then(function(reply){
                 speaker.textContent = '路师傅';
+                reply = degradeText(reply);
                 typewriter(dialogueText, reply, 45);
                 if (!OFFLINE_MODE && typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
             }).catch(function(){
@@ -5500,10 +5507,21 @@ const ShadowJudge = {
     window.showVictoryScreen = showVictoryScreen;
 
     // 场次标题卡（复用 act-title-overlay 组件）
-    function showActTitle(actTitle) {
+    // bgImage 可选：内联写死背景图，绕开 CSS class 层叠/缓存歧义（默认仍用 CSS .act2 的 stage-bg-scene2.jpg）
+    function showActTitle(actTitle, bgImage) {
         var ov = document.createElement('div');
         ov.className = 'act-title-overlay act2';
         ov.innerHTML = '<div class="act-title-bg"></div><div class="act-title-text">'+actTitle+'</div>';
+        // 内联背景：优先用传入图（如第一幕第二场幕中背景 stage-bg-scene2.jpg），确保与幕中一致
+        if (bgImage) {
+            var _bgEl = ov.querySelector('.act-title-bg');
+            if (_bgEl) {
+                _bgEl.style.background = "radial-gradient(ellipse 75% 65% at 50% 55%, rgba(8,4,2,0.72) 0%, rgba(4,2,0,0.92) 70%), url('" + bgImage + "')";
+                _bgEl.style.backgroundSize = 'cover';
+                _bgEl.style.backgroundPosition = 'center bottom';
+                _bgEl.style.filter = 'blur(6px) brightness(0.45)';
+            }
+        }
         document.body.appendChild(ov);
         requestAnimationFrame(function(){ requestAnimationFrame(function(){ ov.classList.add('visible'); }); });
         setTimeout(function(){ ov.classList.add('fade-out'); }, 1300);
@@ -5538,7 +5556,7 @@ const ShadowJudge = {
             void curtainWrap.offsetHeight;
         }, 2300);
         // 标题卡（第二场场次名）
-        if (actTitle) setTimeout(function() { showActTitle(actTitle); window.__letterRevealTitleShown = true; }, 2500);
+        if (actTitle) setTimeout(function() { showActTitle(actTitle, 'assets/images/stage-bg-scene2.jpg'); window.__letterRevealTitleShown = true; }, 2500);
         setTimeout(function() { overlay.classList.add('fading'); }, 3100);
         setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 4000);
         // 帘子还合着时，提前切到信中之秘背景（琉璃厂街景 stage-bg-scene2.jpg）
@@ -5824,31 +5842,82 @@ const ShadowJudge = {
 
     // ===== 油灯衰减指令生成器 —— 所有在线模式 AI 调用必须拼接此指令 =====
     /**
-     * 根据当前灯油量返回输出完整性/连贯性约束指令。
-     * 灯油越少 → AI 输出越碎片化、越不连贯。
-     * 与 promptBuilder.buildSystemPrompt() 的油灯衰减规则保持一致。
+     * 根据【当前实时灯油】返回输出质量约束指令。
+     * 灯油越少 → AI 台词质量越差（碎片化、忘词、说混皮影名、语病、残词）。
+     * ★ 关键修复：此前仅读取初始化时算好的 gameState.aiQuality（永不更新），
+     *   导致衰减形同虚设。现改为每次调用都按 lampOil 实时重算。
      * @returns {string} 追加到 System Prompt 末尾的衰减指令
      */
     function getOilDecayPrompt() {
-        var oil = gameState.lampOil;
-        var q = gameState.aiQuality || 'high';
-        var prompt = '\n\n【灯油' + oil + '%】';
+        // ★ 实时按当前灯油重算质量等级（aiQuality 字段可能滞后，这里直接以 lampOil 为准）
+        if (gameState && typeof gameState.updateAIQuality === 'function') gameState.updateAIQuality();
+        var oil = gameState ? gameState.lampOil : 100;
+        var q = (gameState && gameState.aiQuality) || 'high';
+        var prompt = '\n\n【灯油' + oil + '% · 台词质量：' + q + '】';
         switch (q) {
             case 'high':
-                prompt += '油量充足。回复完整、有韵律、细节丰富。';
+                prompt += '灯油充足。请输出完整、连贯、富有戏味与画面感的台词：字正腔圆，老北京腔与皮影术语自然流露，动作描写（全角括号）与形容词都到位。';
                 break;
             case 'medium':
-                prompt += '灯焰摇晃。回复缩减40%，单句≤20字，每2-3句必有"……"或"——"停顿，省去形容词。';
+                prompt += '灯焰开始摇晃。台词明显减短变简：单句不超过20字，每两三句必带一个"……"或"——"的停顿；形容词变少，偶尔重复半句；意思仍清楚，但没那么利落。不要写长段落。';
                 break;
             case 'low':
-                prompt += '油快烧完。回复≤60字！碎片化，不要完整主谓宾，用"……"连短句，不超过3句。';
+                prompt += '油快见底，师傅脑子也跟着浑了。台词破碎、词不达意：会突然忘词、把皮影名说混（如把"金蟾"说成别的）、自言自语；有明显语病与断句错乱，半句就收住；偶尔蹦出毫不相干的字眼。整段不超过60字，最多三句，多用"……"黏连。';
                 break;
             case 'critical':
-                prompt += '灯要灭了。回复≤30字！只输出词/碎片/半个念头，不许组织段落。';
+                prompt += '灯芯将灭，师傅已说不出整话。只吐残词、半句、含混的气声：一个字、两个字的碎片、黏连的"……"，拼不出完整意思；语序错乱，音节糊成一团。整段不超过30字，禁止组织完整句子或段落。';
                 break;
         }
         return prompt;
     }
+    // 暴露给其它脚本块（如 6110+ 的 promptBuilder）使用
+    window.getOilDecayPrompt = getOilDecayPrompt;
+
+    /**
+     * degradeText — 确定性文本降级（在线模式专用）。
+     * 在 AI 已生成的台词上，按当前灯油"物理地"制造质量瑕疵，
+     * 保证「油越少、话越烂」的真实观感，不依赖模型是否听话。
+     * - 离线模式 / 高油(>=60%) 原样返回（不动固定剧本）
+     * - 仅作用于展示文本，绝不碰评分等结构化内容
+     */
+    function degradeText(text) {
+        if (!text) return text;
+        if (OFFLINE_MODE) return text;
+        var oil = (typeof gameState !== 'undefined' && gameState) ? gameState.lampOil : 100;
+        if (oil >= 60) return text;
+        var sev = oil >= 30 ? 0.22 : (oil > 0 ? 0.5 : 0.85);  // 中 / 低 / 极低
+        var chars = Array.from(text);
+        var out = '';
+        for (var i = 0; i < chars.length; i++) {
+            var ch = chars[i];
+            var r = Math.random();
+            // 随机吞字（低油更狠）
+            if (r < sev * 0.4 && /[一-龥a-zA-Z]/.test(ch)) continue;
+            out += ch;
+            // 在标点处随机插入停顿碎片，制造断续感
+            if (r > 1 - sev * 0.6 && (ch === '，' || ch === '。' || ch === '；' || ch === '、' || ch === '）')) {
+                out += (Math.random() < 0.5 ? '……' : '——');
+            }
+        }
+        // 低油：偶发黏连/截半句，制造含混
+        if (oil < 30 && out.length > 8 && Math.random() < sev) {
+            var cut = Math.max(2, Math.floor(out.length * 0.45));
+            out = out.slice(0, cut) + '……' + out.slice(cut, cut + 2);
+        }
+        return out.trim();
+    }
+
+    // ===== 在线模式统一系统提示构造器（全局，供 6110+ 脚本块复用） =====
+    // 此前 promptBuilder 从未定义，导致大量在线 AI 调用回落到裸 baseSystemPrompt、丢失灯油衰减。
+    // 现统一定义：baseSystemPrompt + 实时灯油衰减指令。
+    window.promptBuilder = {
+        buildSystemPrompt: function(state) {
+            var base = (typeof PROMPTS_DATA !== 'undefined' && PROMPTS_DATA.baseSystemPrompt) ? PROMPTS_DATA.baseSystemPrompt : '';
+            var decay = (typeof window.getOilDecayPrompt === 'function') ? window.getOilDecayPrompt() : '';
+            return base + decay;
+        }
+    };
+
 
     // ===== AI旁白统一生成器（在线模式台词+语音，离线回退固定文本） =====
     function _isAIFallback(text) {
@@ -5884,10 +5953,13 @@ const ShadowJudge = {
         }
 
         // 在线模式 → AI 生成台词
-        var sysPrompt = promptConfig.sys ||
-            (typeof PROMPTS_DATA !== 'undefined' ? PROMPTS_DATA.baseSystemPrompt : '');
-        // ★ 油灯衰减指令：确保输出完整度和连贯性随油耗递减
-        sysPrompt += getOilDecayPrompt();
+        var sysPrompt = promptConfig.sys;
+        if (!sysPrompt) {
+            // 调用方未提供 sys 时，使用默认系统提示并补上灯油衰减指令
+            // （调用方已含衰减时不再重复拼接，避免指令重复）
+            sysPrompt = (typeof PROMPTS_DATA !== 'undefined' ? PROMPTS_DATA.baseSystemPrompt : '');
+            sysPrompt += getOilDecayPrompt();
+        }
         var userMsg = promptConfig.user || '';
         var aiOpts = promptConfig.ai || { temperature: 0.85, maxTokens: 140, model: AI.MODEL_DEFAULT };
 
@@ -5895,6 +5967,8 @@ const ShadowJudge = {
         return AI.call(sysPrompt, userMsg, aiOpts).then(function(reply) {
             if (!reply || _isAIFallback(reply)) reply = fixedText;
             reply = String(reply).trim();
+            // ★ 确定性降级：按当前灯油物理制造质量瑕疵，确保「油越少话越烂」可见
+            reply = degradeText(reply);
             // 先启动 TTS 预取（异步，不阻塞文本）
             var ttsPromise = OFFLINE_MODE ? Promise.resolve(null) : ttsPrepare(reply);
             // 立即 emit 文本进入旁白队列
@@ -5983,6 +6057,7 @@ const ShadowJudge = {
                 { temperature: 0.9, maxTokens: 80, model: AI.MODEL_DEFAULT }
             ).then(function(reply) {
                 if (!reply || (typeof _isAIFallback === 'function' && _isAIFallback(reply))) reply = '灯——灭了。';
+                reply = degradeText(reply);
                 typewriter(dialogueText, reply, 45);
                 if (typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
                 btnConfirm.disabled=true; btnAsk.disabled=true;
@@ -6073,6 +6148,7 @@ const ShadowJudge = {
                 { temperature: 0.9, maxTokens: 80, model: AI.MODEL_DEFAULT }
             ).then(function(reply) {
                 if (!reply || (typeof _isAIFallback === 'function' && _isAIFallback(reply))) reply = _cdFixed;
+                reply = degradeText(reply);
                 speaker.textContent = '路师傅';
                 typewriter(dialogueText, reply, 50);
                 if (typeof playTTS === 'function') { try { playTTS(reply); } catch(e) {} }
@@ -6415,8 +6491,20 @@ const ShadowJudge = {
             if (scene.time_limit && window.LampSystem) {
                 (function _deferCountdown() {
                     var _reminded = false;
+                    // ★ 捕获“本应限时”的场景身份，启动前必须复核——若玩家已跳转去别的场（如第二幕第一场），
+                    //   绝不在错误的场景里启动倒计时（否则会看到“第二幕第二场的30秒计时跑到第一场”）
+                    var _timedAct = gameState.currentAct;
+                    var _timedScene = gameState.currentScene;
+                    var _inTimedScene = function() {
+                        return gameState.currentAct === _timedAct && gameState.currentScene === _timedScene;
+                    };
+                    var _abortCountdown = function() {
+                        try { window.LampSystem.stopCountdown(); } catch(e) {}
+                    };
                     function _poll() {
                         try {
+                            // 场景已切换：放弃启动倒计时，并清理可能残留的显示层
+                            if (!_inTimedScene()) { _abortCountdown(); return; }
                             var _nc = window.NarrationCtl;
                             // 不在打字 + 队列空闲 = 全部台词已完毕
                             if (_nc && !_nc.isSpeaking() && !_nc.isActive()) {
@@ -6433,9 +6521,10 @@ const ShadowJudge = {
                                     setTimeout(function() { if (_nc && !_nc.isSpeaking()) try{ _nc.pump(); }catch(e){} }, 100);
                                     setTimeout(_poll, 600);  // 继续等提醒台词也打完
                                 } else {
-                                    // 第二次空闲（提醒也说完了）：真正启动倒计时
+                                    // 第二次空闲（提醒也说完了）：确认仍在限时场，才真正启动倒计时
+                                    if (!_inTimedScene()) { _abortCountdown(); return; }
                                     console.log('[countdown] 提醒台词也打完了, LampSystem.startCountdown()');
-                                    window.LampSystem.startCountdown();
+                                    window.LampSystem.startCountdown(scene.time_limit);
                                 }
                             } else {
                                 // 还在说话，继续轮询
@@ -6443,7 +6532,7 @@ const ShadowJudge = {
                             }
                         } catch(_e) {
                             console.warn('[countdown] 轮询异常，fallback 直接启动:', _e);
-                            try { window.LampSystem.startCountdown(); } catch(__e) {}
+                            try { if (_inTimedScene()) window.LampSystem.startCountdown(scene.time_limit); else _abortCountdown(); } catch(__e) {}
                         }
                     }
                     // 初始延迟：等场景初始化 + AI 开场白生成 + 首句台词入队（约 1.5s）
