@@ -2934,9 +2934,9 @@ const ShadowJudge = {
     // ==========================================================
     POSITION_RULES: {
         'act1_scene1': {
-            tree:    { type:'abs',   cx:0.80, cy:0.72, r:0.13, label:'槐树·右下角' },
+            tree:    { type:'abs',   cx:0.84, cy:0.78, r:0.175, label:'槐树·右下角' },
             moon:    { type:'night',                        label:'月亮·天空(变黑即可)' },
-            scholar: { type:'rel', to:'tree',    dx:-0.08, dy:0.08, r:0.09, label:'书生·槐树左下' },
+            scholar: { type:'rel', to:'tree',    dx:-0.12, dy:0.08, r:0.09, label:'水生·槐树左下' },
             letter:  { type:'rel', to:'scholar', dx:-0.05, dy:0.01, r:0.04, label:'信·书生手里' }
         },
         // —— 第二场：信中之秘 —— 背景为琉璃厂街景：大渊阁(x≈0.25)、珍奇斋(右)
@@ -2954,12 +2954,12 @@ const ShadowJudge = {
             monkey:  { type:'abs', cx:0.58, cy:0.66, r:0.035, label:'孙悟空·右中' }
         },
         'act2_scene1': {
-            oldman:  { type:'abs', cx:0.18, cy:0.82, r:0.07, label:'假传人·台下观戏' },
+            oldman:  { type:'abs', cx:0.18, cy:0.82, r:0.12, label:'假传人·台下观戏' },
             demon:   { type:'abs', cx:0.43, cy:0.605, r:0.07, label:'白骨精·台左' },
             monkey:  { type:'abs', cx:0.57, cy:0.605, r:0.07, label:'孙悟空·台右' }
         },
         'act2_scene3': {
-            oldman:  { type:'abs', cx:0.42, cy:0.66, r:0.083, label:'假传人·台中左' },
+            oldman:  { type:'abs', cx:0.42, cy:0.66, r:0.10, label:'假传人·台中左' },
             demon:   { type:'abs', cx:0.58, cy:0.66, r:0.083, label:'白骨精·台中右' }
         }
     },
@@ -3141,7 +3141,7 @@ const ShadowJudge = {
         }
         // ===== 确认按钮只说简短判断（对/不对），具体提示留给"追问师傅" =====
         var okComments = {
-            'act1_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，眯着眼细细打量了一番）\n月夜下等人——老者在左，金蟾在旁，书生远远候着。\n这出戏的味道，有了。',
+            'act1_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，眯着眼细细打量了一番）\n月夜下等人——老者在左，金蟾在旁，水生在槐树左边候着。\n这出戏的味道，有了。',
             'act1_scene2': '好！这一面，齐了。\n\n（师傅点了点头）\n书生读着信——犹如身临其境，仿佛置身于他熟悉的珍奇斋下。\n老者在大渊阁阶前，金蟾伏在他脚边。\n这封信里的秘密，你看见了。',
             // —— 第二幕过关评语（仿第一幕 okComments，路师傅口吻）——
             'act2_scene1': '嗯……这一面，齐了。\n\n（师傅凑近白布，目光从左到右扫过一遍——假传人在左边立着，面朝台上；白骨精在台中转过身，正对着右边的孙悟空；孙悟空在右边接住招）\n大栅栏的夜市灯火通明，可这方戏台上的真假——一目了然。\n假传人看的是戏，白骨精对着猴子——你看的，是杆后头的人。',
@@ -3537,6 +3537,11 @@ const ShadowJudge = {
         pup.addEventListener('mousedown', onStagePuppetDown);
 
         stage.appendChild(pup);
+
+        // ★ 关键修复：新皮影上场时强制把全局翻转标志复位为「未翻」，
+        //   否则上一场景残留的 window['__flip_'+pid]=true 会让 _isFlipped 直接返回 true，
+        //   导致「皮影没转身却判定通过」的 bug（settle 写入的残留状态跨场景泄漏）。
+        window['__flip_' + puppetId] = false;
 
         var hint = stage.querySelector('.stage-hint');
         if (hint) hint.style.display = 'none';
@@ -4681,11 +4686,13 @@ const ShadowJudge = {
             }
         }
 
-        // —— 翻转判定（第二幕 scene2 白骨精 / scene3 老者 必须翻转；阵容+位置都对了才查）——
-        if ((sceneId === 'act2_scene2' || sceneId === 'act2_scene3') && missing.length === 0 && extra.length === 0) {
+        // —— 翻转判定（第二幕三场：白骨精/假传人必须翻转；阵容+位置都对了才查）——
+        if ((sceneId === 'act2_scene1' || sceneId === 'act2_scene2' || sceneId === 'act2_scene3') && missing.length === 0 && extra.length === 0) {
             var pcF = ShadowJudge._checkPositions(staged, sceneId);
             if (pcF && pcF.ok) {
-                var _flipReq = (sceneId === 'act2_scene2') ? ['demon'] : ['oldman'];
+                var _flipReq = (sceneId === 'act2_scene2') ? ['demon']
+                              : (sceneId === 'act2_scene3') ? ['oldman']
+                              : ['oldman', 'demon'];   // act2_scene1：假传人+白骨精都要翻转
                 var _unflipped = [];
                 staged.forEach(function(p) {
                     if (_flipReq.indexOf(p.puppetId) !== -1 && !ShadowJudge._isFlipped(p.puppetId)) _unflipped.push(p.puppetId);
@@ -4694,8 +4701,11 @@ const ShadowJudge = {
                 if (_unflipped.length > 0) {
                     if (sceneId === 'act2_scene2') {
                         parts.push('（师傅盯着白骨精的影，眯了眯眼）白骨精——你瞧他现在背冲着竹子呢。\n这出《三打》的对决，白骨精得跟那竹子、猴子照面才打得起来。\n（他点了点白骨精肩头的红线）杆能动，把他转过来——让他对着台心。');
-                    } else {
+                    } else if (sceneId === 'act2_scene3') {
                         parts.push('（师傅盯着假传人的影，眉头微皱）人站对了——可脸呢？\n假传人立着，得面朝着右边的白骨精。\n（他指了指红线）杆能动，把他转过来——让他看着戏。');
+                    } else {
+                        // act2_scene1：假传人 + 白骨精 都得转身
+                        parts.push('（师傅盯着台上的影，眉头微皱）他俩都站对了——可脸呢？\n假传人立在左边，得转过身面朝戏台；白骨精在台左，也得转过来对着右边的孙悟空。\n（他指了指红线）杆能动，把他俩都转过来——让他俩看着戏。');
                     }
                 }
             }
@@ -6036,6 +6046,13 @@ const ShadowJudge = {
                 if (stage._rodCleanups[k]) stage._rodCleanups[k]();
             });
         }
+        // ★ 关键修复：清空所有「全局翻转标志」，彻底切断跨场景残留
+        //   （settle 直接写 window['__flip_'+pid]，remove 元素不会清它；
+        //    不清则下一场景刚摆上去的皮影会被误判为「已翻转」）
+        Object.keys(window).forEach(function(k) {
+            if (k.indexOf('__flip_') === 0) delete window[k];
+        });
+        if (window.__flippedPuppets) window.__flippedPuppets = {};
         gameState.stagedPuppets=[];
         var hint=stage.querySelector('.stage-hint'); if(hint) hint.style.display='';
     }
@@ -6378,7 +6395,7 @@ const ShadowJudge = {
                     '四、拖回箱子收回（扣3滴油）。\n\n'+
                     '油用完了，戏也就停了。';
                 var _pickPuppetText = '（从皮影箱里，选一枚皮影，放在白布上——接住这出戏。）';
-                var _posHintText = '（望着白布像望记忆）「槐树在右下方，影儿铺一地；书生挨着槐树站着，等他那一封信。月亮挂上去，天一黑，戏就活了。」';
+                var _posHintText = '（望着白布像望记忆）「槐树挪到了右下方，影儿铺一地；水生挨着槐树左边站着，等他那一封信。月亮挂上去，天一黑，戏就活了。」';
                 var _chunks = [
                     { speaker:'路师傅', text:_oilRulesText, speed:38 },
                     { speaker:'路师傅', text:_pickPuppetText, speed:68 },
